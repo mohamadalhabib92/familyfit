@@ -1,0 +1,47 @@
+{
+  "expo": {
+    "name": "FamilyFit",
+    "slug": "familyfit",
+    "scheme": "familyfit",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "description": "FamilyFit — agenda familial partagé (grégorien + hégirien), rituels et bien-être.",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#F6F4EF"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "ch.bissabi.familyfit"
+    },
+    "android": {
+      "package": "ch.bissabi.familyfit",
+      "adaptiveIcon": {
+        "backgroundColor": "#2F4B43",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "output": "single",
+      "bundler": "metro",
+      "name": "FamilyFit",
+      "shortName": "FamilyFit",
+      "themeColor": "#2F4B43",
+      "backgroundColor": "#F6F4EF",
+      "lang": "fr"
+    },
+    "plugins": [
+      "expo-router"
+    ],
+    "experiments": {
+      "baseUrl": "/familyfit"
+    }
+  }
+}

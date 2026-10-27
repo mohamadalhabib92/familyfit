@@ -1,0 +1,31 @@
+{
+  "name": "FamilyFit",
+  "short_name": "FamilyFit",
+  "description": "FamilyFit — agenda familial partagé (grégorien + hégirien), rituels et bien-être.",
+  "lang": "fr",
+  "id": "/familyfit/",
+  "start_url": "/familyfit/",
+  "scope": "/familyfit/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "theme_color": "#2F4B43",
+  "background_color": "#F6F4EF",
+  "icons": [
+    {
+      "src": "/familyfit/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/familyfit/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "/familyfit/icons/maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
