@@ -6,7 +6,7 @@
 |---|---|
 | Nom (≤ 30) | FamilyFit – Rituels en famille (30 car.) |
 | Sous-titre (≤ 30) | Agenda hégirien et bien-être (28 car.) |
-| Bundle ID | `ch.mohamadba.familyfit` |
+| Bundle ID | `com.vibecode.familyfit-lpshhx` |
 | SKU proposé | `familyfit-ios-001` |
 | Projet EAS | `3104d765-4dcb-492e-ab04-ade0c86471d9` (compte habib548) |
 | Version / build | 1.0.0 / numéro de build géré par EAS (remote, autoIncrement) |
