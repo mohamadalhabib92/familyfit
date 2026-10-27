@@ -15,7 +15,7 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "ch.mohamadba.familyfit",
+      "bundleIdentifier": "com.vibecode.familyfit-lpshhx",
       "buildNumber": "1",
       "config": {
         "usesNonExemptEncryption": false
