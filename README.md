@@ -69,5 +69,5 @@ Pour tout retirer : Famille → « Supprimer les données démo ».
 - Les données restent **locales à l’appareil**. Supabase sert à la connexion OTP et aux RPC famille et invitations ; la synchronisation complète des événements, rituels et sessions n’est pas encore branchée (le schéma est prêt).
 - En mode démo, un code d’invitation ne peut être accepté que **sur le même appareil**.
 - Les rappels (notifications locales) ne fonctionnent que dans l’app iOS / Android, pas dans la PWA.
-- Le calendrier hégirien est calculé (tabulaire / Umm al-Qura approché). L’ajustement manuel ±2 jours couvre l’observation locale.
+- Le calendrier hégirien est **tabulaire** (arithmétique) : il peut différer de ±1–2 jours de l’observation du croissant ou d’Umm al-Qura. Un ajustement manuel de ±2 jours est disponible dans Famille → Réglages.
 - Pas de saisie de date native : les dates se tapent au format JJ.MM.AAAA.
