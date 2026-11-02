@@ -1,4 +1,4 @@
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Text, View } from 'react-native';
 import { confirmAsk } from '@/lib/confirm';
@@ -6,7 +6,9 @@ import { useData } from '@/lib/data';
 import { todayISO } from '@/lib/dates';
 import { isTime } from '@/lib/dates';
 import { CATEGORIES, RITUAL_TEMPLATES, ROLE_LABEL, type Category, type Invitation, type Role } from '@/lib/model';
+import { onboardingReplaceTarget } from '@/lib/gate';
 import { shareInvitation } from '@/lib/share';
+import { supabaseConfigured } from '@/lib/supabase';
 import { uid } from '@/lib/storage';
 import { Button, Card, Chip, Eyebrow, Field, H1, Muted, Notice, Row, Screen, Segmented, Spacer, Toggle } from '@/ui/kit';
 import { theme as t } from '@/ui/theme';
@@ -31,6 +33,8 @@ export default function Onboarding() {
   useEffect(() => { const id = setInterval(() => setSec(Math.round((Date.now() - t0) / 1000)), 1000); return () => clearInterval(id); }, [t0]);
 
   const finish = () => { setPrefs((p) => ({ ...p, onboarded: true, trialMode: false, trialDeclined: true })); router.replace(session ? '/' : '/auth'); };
+  const leave = onboardingReplaceTarget({ supabaseConfigured, session }, replacing);
+  if (leave) return <Redirect href={leave} />;
 
   const steps = ['Famille', 'Inviter', 'Premier événement'];
   return (

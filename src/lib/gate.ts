@@ -22,30 +22,66 @@ export function routeAfterReady(input: GateInput): GateDest {
   return 'app';
 }
 
-/** Contrat de signOut : la session tombe, la famille reste. */
-export function stateAfterSignOut<F>(state: { session: unknown; family: F }): { session: null; family: F } {
-  return { session: null, family: state.family };
+export type LocalState = {
+  supabaseConfigured: boolean;
+  session: { userId: string } | null;
+  family: { id: string } | null;
+  onboarded: boolean;
+  trialDeclined: boolean;
+};
+
+function toGate(state: LocalState): GateInput {
+  return {
+    supabaseConfigured: state.supabaseConfigured,
+    hasSession: !!state.session,
+    hasFamily: !!state.family,
+    onboarded: state.onboarded,
+    trialDeclined: state.trialDeclined,
+  };
+}
+
+/** La session tombe. La famille reste le même objet. */
+export function signOut(state: LocalState): LocalState {
+  return { ...state, session: null };
+}
+
+/** Bouton Terminer de l'onboarding : prefs mises à jour, puis la route. */
+export function finishOnboarding(state: LocalState): { state: LocalState; href: '/' | '/auth' } {
+  const next: LocalState = { ...state, onboarded: true, trialDeclined: true };
+  return { state: next, href: next.session ? '/' : '/auth' };
+}
+
+/** /onboarding?replace=1 sans session et sans Supabase renvoie à la connexion. */
+export function onboardingReplaceTarget(state: { supabaseConfigured: boolean; session: unknown }, replace: boolean): '/auth' | null {
+  if (!state.session && !state.supabaseConfigured && replace) return '/auth';
+  return null;
 }
 
 export function runGateSelfTests(): { name: string; ok: boolean }[] {
   const out: { name: string; ok: boolean }[] = [];
   const check = (name: string, ok: boolean) => out.push({ name, ok });
-  const family = { id: 'fam_kept', name: 'Famille Martin' };
-  const signedOut = stateAfterSignOut({ session: { mode: 'demo', userId: 'u1' }, family });
-  check('la déconnexion garde la famille', signedOut.session === null && signedOut.family === family);
-
-  const localSignedOut: GateInput = {
+  const family = { id: 'fam_kept' };
+  let state: LocalState = {
     supabaseConfigured: false,
-    hasSession: false,
-    hasFamily: true,
+    session: { userId: 'u1' },
+    family,
     onboarded: true,
     trialDeclined: false,
   };
-  const first: string = routeAfterReady(localSignedOut);
-  const afterFinish: string = routeAfterReady(localSignedOut);
-  check('sans session locale, la route est /auth', first === 'auth');
-  check('revenir à / après la déconnexion reste sur /auth', afterFinish === 'auth');
-  check('la famille reste et la route n’est pas l’onboarding', localSignedOut.hasFamily === true && first === 'auth');
+  check('avant déconnexion, l’app est ouverte', routeAfterReady(toGate(state)) === 'app');
+  state = signOut(state);
+  check('la déconnexion garde la même famille', state.session === null && state.family === family);
+  check('après déconnexion, l’écran est la connexion', routeAfterReady(toGate(state)) === 'auth');
+  check(
+    'onboarding?replace=1 sans session locale va vers /auth',
+    onboardingReplaceTarget(state, true) === '/auth',
+  );
+  const done = finishOnboarding(state);
+  check('terminer sans session va vers /auth', done.href === '/auth');
+  check(
+    'après terminer, on reste sur la connexion et la famille est là',
+    routeAfterReady(toGate(done.state)) === 'auth' && done.state.family === family,
+  );
 
   check(
     'première ouverture locale sans famille : essai, pas une boucle',

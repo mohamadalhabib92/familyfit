@@ -161,10 +161,31 @@ create policy "membres modifiés sans promotion" on public.family_members
   for update using (public.is_family_manager(family_id))
   with check (public.can_write_member_role(family_id, role, id));
 create policy "membres retirés par gestionnaire" on public.family_members
-  for delete using (public.is_family_manager(family_id));
+  for delete using (
+    public.is_family_manager(family_id)
+    and (role <> 'admin' or public.is_family_admin(family_id))
+  );
 
 drop policy if exists "invitations gérées par admin/parent" on public.invitations;
-create policy "invitations gérées par admin/parent" on public.invitations for all using (is_family_manager(family_id)) with check (is_family_manager(family_id));
+drop policy if exists "invitations lisibles par gestionnaire" on public.invitations;
+drop policy if exists "invitations créées sans admin usurpé" on public.invitations;
+drop policy if exists "invitations modifiées sans admin usurpé" on public.invitations;
+drop policy if exists "invitations révoquées par gestionnaire" on public.invitations;
+create policy "invitations lisibles par gestionnaire" on public.invitations
+  for select using (public.is_family_manager(family_id));
+create policy "invitations créées sans admin usurpé" on public.invitations
+  for insert with check (
+    public.is_family_manager(family_id)
+    and (role <> 'admin' or public.is_family_admin(family_id))
+  );
+create policy "invitations modifiées sans admin usurpé" on public.invitations
+  for update using (public.is_family_manager(family_id))
+  with check (
+    public.is_family_manager(family_id)
+    and (role <> 'admin' or public.is_family_admin(family_id))
+  );
+create policy "invitations révoquées par gestionnaire" on public.invitations
+  for delete using (public.is_family_manager(family_id));
 
 do $$
 declare t text;
@@ -194,6 +215,7 @@ declare c text;
 begin
   if not is_family_manager(p_family_id) then raise exception 'Réservé aux parents/admin'; end if;
   if p_role not in ('admin','parent','member') then raise exception 'Rôle invalide'; end if;
+  if p_role = 'admin' and not public.is_family_admin(p_family_id) then raise exception 'Réservé aux administrateurs'; end if;
   loop
     c := upper(substr(translate(encode(gen_random_bytes(8), 'base64'), '+/=0O1IL', ''), 1, 6));
     exit when length(c) = 6 and not exists (select 1 from invitations where code = c);
@@ -211,6 +233,12 @@ begin
   if inv.id is null then raise exception 'Code inconnu'; end if;
   if inv.status <> 'pending' then raise exception 'Invitation déjà utilisée ou révoquée'; end if;
   if inv.expires_at < now() then raise exception 'Invitation expirée'; end if;
+  if inv.role = 'admin' and not exists (
+    select 1 from public.family_members
+    where family_id = inv.family_id and user_id = inv.created_by and role = 'admin'
+  ) then
+    raise exception 'Invitation admin refusée';
+  end if;
   insert into profiles(id, display_name) values (auth.uid(), p_display_name)
     on conflict (id) do update set display_name = excluded.display_name;
   insert into family_members(family_id, user_id, display_name, role)
@@ -256,6 +284,63 @@ revoke all on function public.is_family_admin(uuid) from public, anon;
 revoke all on function public.can_write_member_role(uuid, text, uuid) from public, anon;
 grant execute on function public.is_family_admin(uuid) to authenticated;
 grant execute on function public.can_write_member_role(uuid, text, uuid) to authenticated;
+
+-- OLD.role : un changement d'id ne doit pas faire oublier qu'une ligne est admin.
+-- id, family_id et user_id sont immuables.
+create or replace function public.family_members_guard()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if tg_op = 'UPDATE' then
+    if new.id is distinct from old.id
+       or new.family_id is distinct from old.family_id
+       or new.user_id is distinct from old.user_id then
+      raise exception 'Identité du membre immuable';
+    end if;
+    if old.role = 'admin' and not public.is_family_admin(old.family_id) then
+      raise exception 'Réservé aux administrateurs';
+    end if;
+    if new.role = 'admin' and old.role is distinct from 'admin' and not public.is_family_admin(old.family_id) then
+      raise exception 'Réservé aux administrateurs';
+    end if;
+    return new;
+  end if;
+  if tg_op = 'DELETE' then
+    if old.role = 'admin' and not public.is_family_admin(old.family_id) then
+      raise exception 'Réservé aux administrateurs';
+    end if;
+    return old;
+  end if;
+  return new;
+end $$;
+
+drop trigger if exists family_members_guard on public.family_members;
+create trigger family_members_guard
+  before update or delete on public.family_members
+  for each row execute function public.family_members_guard();
+
+create or replace function public.invitations_guard_admin_role()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if new.role = 'admin' and not (tg_op = 'UPDATE' and old.role = 'admin') then
+    if not public.is_family_admin(new.family_id) then
+      raise exception 'Réservé aux administrateurs';
+    end if;
+  end if;
+  return new;
+end $$;
+
+drop trigger if exists invitations_guard_admin_role on public.invitations;
+create trigger invitations_guard_admin_role
+  before insert or update on public.invitations
+  for each row execute function public.invitations_guard_admin_role();
 
 -- Suppression de compte (Apple 5.1.1). Additive : ne modifie aucune ligne tant qu'elle n'est pas appelée.
 -- Une famille ne reste jamais sans administrateur : transfert exigé, sinon suppression de la famille

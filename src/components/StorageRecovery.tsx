@@ -29,7 +29,7 @@ export function StorageRecovery({ keys, onRetry, onReset }: { keys: CorruptKey[]
         variant="danger"
         style={{ marginTop: 8 }}
         onPress={() => confirmAsk(
-          `Remplacer ${names} par une valeur vide ? Exportez le brut avant si vous voulez le conserver. Cette étape est irréversible.`,
+          `Remplacer ${names} par une valeur vide ? Exportez le brut avant si vous voulez le conserver. Cette étape est irréversible.${keys.some((k) => k.key === 'family') ? ' Réinitialiser family puis repasser par l’onboarding recrée la famille et remplace les listes.' : ''}`,
           () => onReset(keys.map((k) => k.key)),
           'Réinitialiser',
         )}

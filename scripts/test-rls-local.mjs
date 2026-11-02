@@ -6,8 +6,16 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
-const bins = ['/usr/lib/postgresql/16/bin', '/usr/lib/postgresql/15/bin', '/usr/lib/postgresql/14/bin', '/usr/bin'];
-const bin = (name) => bins.map((d) => join(d, name)).find((p) => existsSync(p)) ?? name;
+const bins = ['/usr/lib/postgresql/17/bin', '/usr/lib/postgresql/16/bin', '/usr/lib/postgresql/15/bin', '/usr/lib/postgresql/14/bin', '/usr/bin'];
+const findBin = (name) => bins.map((d) => join(d, name)).find((p) => existsSync(p));
+
+const initdb = findBin('initdb');
+const pgCtl = findBin('pg_ctl');
+const psql = findBin('psql');
+if (!initdb || !pgCtl || !psql) {
+  console.log('○ initdb absent : test RLS local ignoré. Aucun projet Supabase n’est contacté.');
+  process.exit(0);
+}
 
 function run(cmd, args) {
   const r = spawnSync(cmd, args, { encoding: 'utf8' });
@@ -24,9 +32,8 @@ const sock = join(dir, 'sock');
 mkdirSync(sock);
 const port = '55432';
 try {
-  run(bin('initdb'), ['-D', data, '--username', process.env.USER || 'familyfit', '--auth', 'trust', '--no-instructions']);
-  run(bin('pg_ctl'), ['-D', data, '-l', join(dir, 'log'), '-o', `-p ${port} -k ${sock} -c listen_addresses=`, 'start']);
-  const psql = bin('psql');
+  run(initdb, ['-D', data, '--username', process.env.USER || 'familyfit', '--auth', 'trust', '--no-instructions']);
+  run(pgCtl, ['-D', data, '-l', join(dir, 'log'), '-o', `-p ${port} -k ${sock} -c listen_addresses=`, 'start']);
   const base = ['-h', sock, '-p', port, '-v', 'ON_ERROR_STOP=1'];
   const preamble = join(dir, 'preamble.sql');
   writeFileSync(preamble, `
@@ -46,6 +53,6 @@ try {
   run(psql, [...base, '-d', 'postgres', '-f', join(root, 'supabase/tests/rls_family_isolation.sql')]);
   console.log('✓ isolation RLS locale (familles A/B, anon, promotion parent, rollback)');
 } finally {
-  spawnSync(bin('pg_ctl'), ['-D', data, '-m', 'immediate', 'stop'], { encoding: 'utf8' });
+  spawnSync(pgCtl, ['-D', data, '-m', 'immediate', 'stop'], { encoding: 'utf8' });
   rmSync(dir, { recursive: true, force: true });
 }

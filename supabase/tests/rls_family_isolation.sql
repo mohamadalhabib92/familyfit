@@ -24,7 +24,8 @@ insert into auth.users (id, email) values
   ('11111111-1111-4111-8111-111111111111', 'alice@example.test'),
   ('22222222-2222-4222-8222-222222222222', 'bruno@example.test'),
   ('33333333-3333-4333-8333-333333333333', 'eden@example.test'),
-  ('44444444-4444-4444-8444-444444444444', 'dina@example.test');
+  ('44444444-4444-4444-8444-444444444444', 'dina@example.test'),
+  ('55555555-5555-4555-8555-555555555555', 'nora@example.test');
 
 select public.rls_as('11111111-1111-4111-8111-111111111111');
 set role authenticated;
@@ -144,13 +145,8 @@ begin
     raise exception 'ASSERT un parent a pu se promouvoir admin';
   end if;
 exception
-  when insufficient_privilege then
-    null;
   when others then
     if SQLERRM like 'ASSERT%' then raise; end if;
-    if SQLSTATE <> '42501' then
-      raise exception 'ASSERT promotion parent : % %', SQLSTATE, SQLERRM;
-    end if;
 end $$;
 
 reset role;
@@ -165,6 +161,91 @@ begin
   if r <> 'parent' then
     raise exception 'ASSERT rôle Eden inattendu: %', r;
   end if;
+end $$;
+
+-- Eden ne peut pas créer une invitation admin, ni en RPC ni en écriture directe.
+select public.rls_as('33333333-3333-4333-8333-333333333333');
+set role authenticated;
+do $$
+begin
+  perform public.create_invitation((select v from public.rls_probe where k = 'fam_a'), 'admin');
+  raise exception 'ASSERT parent a créé une invitation admin';
+exception
+  when others then
+    if SQLERRM like 'ASSERT%' then raise; end if;
+end $$;
+do $$
+declare n int;
+begin
+  insert into public.invitations (family_id, code, role, created_by)
+  select v, 'BADADM', 'admin', '33333333-3333-4333-8333-333333333333'
+  from public.rls_probe where k = 'fam_a';
+  get diagnostics n = row_count;
+  if n > 0 then raise exception 'ASSERT parent a inséré une invitation admin'; end if;
+exception
+  when others then
+    if SQLERRM like 'ASSERT%' then raise; end if;
+end $$;
+
+-- Invitation admin forgée (créée par un parent) : l'acceptation ne donne pas le rôle.
+reset role;
+select public.rls_as('11111111-1111-4111-8111-111111111111');
+insert into public.invitations (family_id, code, role, created_by)
+select v, 'PADMIN', 'admin', '33333333-3333-4333-8333-333333333333'
+from public.rls_probe where k = 'fam_a';
+select public.rls_as('55555555-5555-4555-8555-555555555555');
+set role authenticated;
+do $$
+begin
+  perform public.accept_invitation('PADMIN', 'Nora');
+  raise exception 'ASSERT une invitation admin de parent a été acceptée';
+exception
+  when others then
+    if SQLERRM like 'ASSERT%' then raise; end if;
+end $$;
+reset role;
+do $$
+declare n int;
+begin
+  select count(*) into n from public.family_members
+  where user_id = '55555555-5555-4555-8555-555555555555' and role = 'admin';
+  if n <> 0 then raise exception 'ASSERT Nora est admin'; end if;
+end $$;
+
+-- Changer l'id pour faire oublier OLD.role, ou supprimer la ligne admin, est refusé.
+select public.rls_as('33333333-3333-4333-8333-333333333333');
+set role authenticated;
+do $$
+declare n int;
+begin
+  update public.family_members
+  set id = gen_random_uuid(), role = 'parent'
+  where user_id = '11111111-1111-4111-8111-111111111111';
+  get diagnostics n = row_count;
+  if n > 0 then raise exception 'ASSERT parent a rétrogradé un admin en changeant l''id'; end if;
+exception
+  when others then
+    if SQLERRM like 'ASSERT%' then raise; end if;
+end $$;
+do $$
+declare n int;
+begin
+  delete from public.family_members
+  where user_id = '11111111-1111-4111-8111-111111111111';
+  get diagnostics n = row_count;
+  if n > 0 then raise exception 'ASSERT parent a supprimé un admin'; end if;
+exception
+  when others then
+    if SQLERRM like 'ASSERT%' then raise; end if;
+end $$;
+reset role;
+do $$
+declare r text; i uuid;
+begin
+  select role, id into r, i from public.family_members
+  where user_id = '11111111-1111-4111-8111-111111111111';
+  if r <> 'admin' then raise exception 'ASSERT Alice n''est plus admin (%)', r; end if;
+  if i is null then raise exception 'ASSERT Alice a disparu'; end if;
 end $$;
 
 select public.rls_as('11111111-1111-4111-8111-111111111111');

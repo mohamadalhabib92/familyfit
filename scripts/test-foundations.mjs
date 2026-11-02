@@ -94,7 +94,7 @@ for (const table of tables) {
 if (!schema.includes('is_family_member(family_id)') && !schema.includes('is_family_member(family_id)')) bad('politique famille');
 if (!schema.includes('function public.delete_my_account')) bad('delete_my_account absent du schéma');
 else ok('delete_my_account dans le schéma');
-if (!read('supabase/migrations/20261102_delete_account.sql').includes('delete_my_account')) bad('migration suppression');
+if (!read('supabase/migrations/20261102100000_delete_account.sql').includes('delete_my_account')) bad('migration suppression');
 else ok('migration suppression présente');
 const rlsTest = read('supabase/tests/rls_family_isolation.sql');
 for (const needle of ['Famille A', 'Famille B', 'ASSERT Bruno', 'rollback']) {
