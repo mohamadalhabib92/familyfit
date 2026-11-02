@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { useData } from '@/lib/data';
 import { todayISO } from '@/lib/dates';
+import { HEALTH_DISCLAIMER } from '@/lib/health';
 import { displayName, MOODS, type Session } from '@/lib/model';
 import { uid } from '@/lib/storage';
 import { Button, Card, Chip, Empty, Field, H1, Ionicons, Muted, Row, Screen, Spacer, styles } from '@/ui/kit';
@@ -60,6 +61,7 @@ export default function SessionScreen() {
         })}
       </Row>
       <Field label="Note (optionnel)" value={s.note ?? ''} onChangeText={(v) => setS({ ...s, note: v })} multiline placeholder="Un moment fort de la journée…" />
+      <Muted style={{ fontSize: 12, marginBottom: 8 }}>{HEALTH_DISCLAIMER}</Muted>
       <Button title="Terminer la session" icon="checkmark-done" onPress={() => persist(true)} />
       <Spacer h={8} />
       <Button variant="ghost" title="Enregistrer pour plus tard" onPress={() => persist(false)} />

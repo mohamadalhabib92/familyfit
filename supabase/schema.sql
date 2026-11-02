@@ -193,3 +193,132 @@ revoke all on function public.accept_invitation(text, text) from public, anon;
 grant execute on function public.create_family(text, text) to authenticated;
 grant execute on function public.create_invitation(uuid, text) to authenticated;
 grant execute on function public.accept_invitation(text, text) to authenticated;
+
+-- Le propriétaire d'une table contourne la RLS, sauf FORCE.
+-- Un superutilisateur (rôle postgres de Supabase) la contourne encore : l'API anon/authenticated, non.
+do $$
+declare t text;
+begin
+  foreach t in array array['profiles','families','family_members','invitations','events','rituals','sessions','goals','activities'] loop
+    execute format('alter table public.%I force row level security', t);
+  end loop;
+end $$;
+
+-- Rôles présents sur Supabase ; créés seulement pour un Postgres local de test.
+do $$
+begin
+  if not exists (select 1 from pg_roles where rolname = 'anon') then
+    create role anon nologin;
+  end if;
+  if not exists (select 1 from pg_roles where rolname = 'authenticated') then
+    create role authenticated nologin;
+  end if;
+end $$;
+
+grant usage on schema public to anon, authenticated;
+grant select, insert, update, delete on all tables in schema public to authenticated;
+grant select on all tables in schema public to anon;
+grant execute on function public.is_family_member(uuid), public.is_family_manager(uuid) to anon, authenticated;
+
+-- Suppression de compte (Apple 5.1.1). Additive : ne modifie aucune ligne tant qu'elle n'est pas appelée.
+-- Une famille ne reste jamais sans administrateur : transfert exigé, sinon suppression de la famille
+-- s'il ne reste aucun autre compte (les profils d'enfants sans compte partent avec elle).
+create or replace function public.delete_my_account(p_transfer_to uuid default null)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  uid uuid := auth.uid();
+  rec record;
+  other_accounts int;
+  other_admins int;
+  successor uuid;
+begin
+  if uid is null then
+    raise exception 'Non authentifié';
+  end if;
+
+  for rec in
+    select id as member_id, family_id, role
+    from public.family_members
+    where user_id = uid
+  loop
+    select count(*) into other_accounts
+    from public.family_members
+    where family_id = rec.family_id and user_id is not null and user_id <> uid;
+
+    select count(*) into other_admins
+    from public.family_members
+    where family_id = rec.family_id and role = 'admin' and user_id is not null and user_id <> uid;
+
+    if other_accounts = 0 then
+      delete from public.families where id = rec.family_id;
+      continue;
+    end if;
+
+    if rec.role = 'admin' and other_admins = 0 then
+      if p_transfer_to is null then
+        raise exception 'Transfert admin requis';
+      end if;
+      select user_id into successor
+      from public.family_members
+      where id = p_transfer_to
+        and family_id = rec.family_id
+        and user_id is not null
+        and user_id <> uid
+        and is_minor = false;
+      if successor is null then
+        raise exception 'Successeur invalide';
+      end if;
+      update public.family_members set role = 'admin' where id = p_transfer_to;
+      update public.families set created_by = successor where id = rec.family_id and created_by = uid;
+    elsif rec.role = 'admin' then
+      update public.families set created_by = (
+        select user_id from public.family_members
+        where family_id = rec.family_id and role = 'admin' and user_id is not null and user_id <> uid
+        limit 1
+      )
+      where id = rec.family_id and created_by = uid;
+    end if;
+
+    delete from public.family_members where id = rec.member_id;
+  end loop;
+
+  update public.invitations i
+  set created_by = src.user_id
+  from (
+    select distinct on (family_id) family_id, user_id
+    from public.family_members
+    where user_id is not null
+    order by family_id, case when role = 'admin' then 0 else 1 end
+  ) src
+  where i.created_by = uid and i.family_id = src.family_id;
+
+  delete from public.invitations where created_by = uid;
+  update public.invitations set accepted_by = null where accepted_by = uid;
+
+  update public.families f
+  set created_by = src.user_id
+  from (
+    select distinct on (family_id) family_id, user_id
+    from public.family_members
+    where user_id is not null and user_id <> uid
+    order by family_id, case when role = 'admin' then 0 else 1 end
+  ) src
+  where f.id = src.family_id and f.created_by = uid;
+
+  delete from public.families f
+  where f.created_by = uid
+    and not exists (
+      select 1 from public.family_members fm
+      where fm.family_id = f.id and fm.user_id is not null and fm.user_id <> uid
+    );
+
+  delete from public.profiles where id = uid;
+  delete from auth.users where id = uid;
+end $$;
+
+revoke all on function public.delete_my_account(uuid) from public, anon;
+grant execute on function public.delete_my_account(uuid) to authenticated;

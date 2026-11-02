@@ -1,7 +1,8 @@
 import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { Text, TextInput } from 'react-native';
+import { Pressable, Text, TextInput } from 'react-native';
 import { useData } from '@/lib/data';
+import { markDiagnosticUnlocked, useSecretTap, diagnosticUnlocked } from '@/lib/diagnosticAccess';
 import { checkDemoOtp, isEmail, isPhone, makeDemoOtp, normContact, OtpError, sendOtp, supabaseConfigured, verifyOtp, type Channel, type DemoOtp } from '@/lib/supabase';
 import { uid } from '@/lib/storage';
 import { Button, Card, DemoBanner, Eyebrow, Field, H1, Muted, Notice, Row, Screen, Segmented, Spacer, styles } from '@/ui/kit';
@@ -10,8 +11,13 @@ import { theme as t } from '@/ui/theme';
 const COOLDOWN = 30;
 
 export default function Auth() {
-  const { setSession } = useData();
+  const { setSession, setPrefs, prefs } = useData();
   const router = useRouter();
+  const unlock = useSecretTap(() => {
+    markDiagnosticUnlocked();
+    setPrefs((p) => ({ ...p, devConfigUnlocked: true }));
+    router.push('/config');
+  });
   const [ch, setCh] = useState<Channel>('email');
   const [contact, setContact] = useState('');
   const [step, setStep] = useState<'ask' | 'verify'>('ask');
@@ -73,7 +79,9 @@ export default function Auth() {
   return (
     <Screen>
       <Eyebrow>FamilyFit</Eyebrow>
-      <H1>Connexion sans mot de passe</H1>
+      <Pressable onPress={unlock} accessibilityLabel="Connexion sans mot de passe">
+        <H1>Connexion sans mot de passe</H1>
+      </Pressable>
       <Muted>Recevez un code à 6 chiffres. Aucune donnée n’est partagée hors de votre famille.</Muted>
       <Spacer />
       {!supabaseConfigured ? <DemoBanner text="Mode démo : aucun e-mail ni SMS n’est envoyé. Le code est simulé et affiché ci-dessous." /> : null}
@@ -127,8 +135,14 @@ export default function Auth() {
           </Row>
         </>
       )}
-      <Spacer h={20} />
-      <Button small variant="ghost" icon="settings-outline" title="Configuration" onPress={() => router.push('/config')} />
+      <Spacer h={12} />
+      <Button small variant="ghost" title="Retour" onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))} />
+      {diagnosticUnlocked(prefs.devConfigUnlocked) ? (
+        <>
+          <Spacer h={20} />
+          <Button small variant="ghost" icon="settings-outline" title="Diagnostic" onPress={() => router.push('/config')} />
+        </>
+      ) : null}
     </Screen>
   );
 }

@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { canPersist, noteLoadFinished, noteLoadStarted, shouldApplyLoad } from './persistGuard';
 
 /**
  * Stockage local (AsyncStorage sur mobile, localStorage sur le web).
@@ -9,16 +10,25 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 // Préfixe propre à l'app : plusieurs PWA partagent la même origine sur GitHub Pages.
 const PREFIX = '@familyfit/';
 
-export async function loadJSON<T>(key: string, fallback: T): Promise<T> {
+export type LoadOutcome<T> = { ok: true; value: T } | { ok: false };
+
+/** `ok: false` = lecture ratée. Ce n'est pas une absence de données. */
+export async function loadJSON<T>(key: string, fallback: T): Promise<LoadOutcome<T>> {
   try {
     const raw = await AsyncStorage.getItem(PREFIX + key);
-    return raw == null ? fallback : (JSON.parse(raw) as T);
+    if (raw == null) return { ok: true, value: fallback };
+    try {
+      return { ok: true, value: JSON.parse(raw) as T };
+    } catch {
+      return { ok: false };
+    }
   } catch {
-    return fallback;
+    return { ok: false };
   }
 }
 
 export async function saveJSON<T>(key: string, value: T): Promise<void> {
+  if (!canPersist(key)) return;
   try {
     await AsyncStorage.setItem(PREFIX + key, JSON.stringify(value));
   } catch {
@@ -45,38 +55,60 @@ export async function exportAll(): Promise<Record<string, unknown>> {
   return out;
 }
 
-/** État React persistant (écriture immédiate à chaque changement). */
-export function usePersistentState<T>(key: string, initial: T | (() => T)) {
+/**
+ * État React persistant.
+ * Rien n'est écrit tant que la lecture de cette clé n'a pas réussi.
+ * `boot` relance la lecture (« Réessayer ») et rebloque les écritures
+ * pendant ce temps. `slow` signale un délai, sans substituer l'état vide.
+ */
+export function usePersistentState<T>(key: string, initial: T | (() => T), boot = 0) {
   const [value, setValue] = useState<T>(initial);
   const [ready, setReady] = useState(false);
+  const [slow, setSlow] = useState(false);
   const initialRef = useRef(initial);
+  const request = useRef(0);
 
   useEffect(() => {
+    const id = ++request.current;
     let alive = true;
+    setReady(false);
+    setSlow(false);
+    noteLoadStarted(key);
+    const slowTimer = setTimeout(() => {
+      if (alive && shouldApplyLoad(id, request.current)) setSlow(true);
+    }, 4000);
     const fb = typeof initialRef.current === 'function' ? (initialRef.current as () => T)() : initialRef.current;
-    loadJSON<T>(key, fb).then((v) => {
-      if (alive) {
-        setValue(v);
-        setReady(true);
+    loadJSON<T>(key, fb).then((result) => {
+      if (!alive || !shouldApplyLoad(id, request.current)) return;
+      clearTimeout(slowTimer);
+      if (!result.ok) {
+        noteLoadFinished(key, false);
+        setSlow(true);
+        return;
       }
+      noteLoadFinished(key, true);
+      setValue(result.value);
+      setReady(true);
+      setSlow(false);
     });
     return () => {
       alive = false;
+      clearTimeout(slowTimer);
     };
-  }, [key]);
+  }, [key, boot]);
 
   const set = useCallback(
     (next: T | ((prev: T) => T)) => {
       setValue((prev) => {
         const v = typeof next === 'function' ? (next as (p: T) => T)(prev) : next;
-        void saveJSON(key, v);
+        if (canPersist(key)) void saveJSON(key, v);
         return v;
       });
     },
     [key],
   );
 
-  return [value, set, ready] as const;
+  return [value, set, ready, slow] as const;
 }
 
 export function uid(prefix = ''): string {

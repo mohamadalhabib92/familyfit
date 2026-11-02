@@ -1,6 +1,7 @@
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Text, View } from 'react-native';
+import { confirmAsk } from '@/lib/confirm';
 import { useData } from '@/lib/data';
 import { todayISO } from '@/lib/dates';
 import { isTime } from '@/lib/dates';
@@ -13,10 +14,12 @@ import { theme as t } from '@/ui/theme';
 export default function Onboarding() {
   const { family, createFamily, createInvitation, setEvents, setRituals, setPrefs, session, me } = useData();
   const router = useRouter();
-  const [step, setStep] = useState(family ? 1 : 0);
+  const { replace } = useLocalSearchParams<{ replace?: string }>();
+  const replacing = replace === '1';
+  const [step, setStep] = useState(replacing || !family ? 0 : 1);
   const [fname, setFname] = useState('');
   const [myName, setMyName] = useState('');
-  const [withDemo, setWithDemo] = useState(session?.mode === 'demo');
+  const [withDemo, setWithDemo] = useState(session?.mode === 'demo' && !replacing);
   const [role, setRole] = useState<Role>('parent');
   const [inv, setInv] = useState<Invitation | null>(null);
   const [title, setTitle] = useState('Dîner en famille');
@@ -27,7 +30,7 @@ export default function Onboarding() {
   const [sec, setSec] = useState(0);
   useEffect(() => { const id = setInterval(() => setSec(Math.round((Date.now() - t0) / 1000)), 1000); return () => clearInterval(id); }, [t0]);
 
-  const finish = () => { setPrefs((p) => ({ ...p, onboarded: true })); router.replace('/'); };
+  const finish = () => { setPrefs((p) => ({ ...p, onboarded: true, trialMode: false, trialDeclined: true })); router.replace('/'); };
 
   const steps = ['Famille', 'Inviter', 'Premier événement'];
   return (
@@ -45,11 +48,15 @@ export default function Onboarding() {
           <Field label="Votre prénom" value={myName} onChangeText={setMyName} placeholder="Mohamed" />
           <Toggle label="Ajouter des données d’exemple" value={withDemo} onChange={setWithDemo} hint="Membres et événements fictifs marqués « démo », supprimables à tout moment." />
           {err ? <Notice tone="danger" title={err} /> : null}
-          <Button title="Créer la famille" icon="home-outline" onPress={async () => {
+          <Button title="Créer la famille" icon="home-outline" onPress={() => {
             if (!fname.trim() || !myName.trim()) return setErr('Indiquez le nom de la famille et votre prénom.');
             setErr('');
-            await createFamily(fname.trim(), myName.trim(), withDemo);
-            setStep(1);
+            const run = async () => {
+              await createFamily(fname.trim(), myName.trim(), withDemo);
+              setStep(1);
+            };
+            if (replacing && family) confirmAsk('La famille d’exemple sera remplacée sur cet appareil. Continuer ?', () => void run());
+            else void run();
           }} />
         </>
       ) : step === 1 ? (

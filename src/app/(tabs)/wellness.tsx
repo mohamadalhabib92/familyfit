@@ -4,6 +4,7 @@ import { Text, View } from 'react-native';
 import { useData } from '@/lib/data';
 import { todayISO } from '@/lib/dates';
 import { encouragement, weekProgress } from '@/lib/goals';
+import { HEALTH_DISCLAIMER } from '@/lib/health';
 import { displayName } from '@/lib/model';
 import { uid } from '@/lib/storage';
 import { Button, Card, Chip, Empty, Ionicons, Muted, Notice, Row, Screen, Spacer, type IconName } from '@/ui/kit';
@@ -16,7 +17,7 @@ export default function Wellness() {
   const log = (goalId: string, amount: number) => who && setActivities((l) => [...l, { id: uid('act_'), goalId, memberId: who, date: todayISO(), amount }]);
   return (
     <Screen>
-      <Notice tone="info" title="Des repères légers, pas un programme médical" text="Fixez-vous des objectifs simples à partager. FamilyFit ne donne aucun conseil de santé." />
+      <Notice tone="info" title="Repères légers, pas un programme médical" text={HEALTH_DISCLAIMER} />
       <Muted>Qui enregistre ?</Muted>
       <Row wrap style={{ marginVertical: 6 }}>
         {members.map((m) => <Chip key={m.id} label={displayName(m, me)} color={m.color} active={who === m.id} onPress={() => setWho(m.id)} />)}

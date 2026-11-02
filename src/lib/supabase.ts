@@ -1,11 +1,11 @@
 import { env } from './config';
 
-/** Clés publiques uniquement (anon). Absentes / YOUR_* => mode démo local, écran « Configuration requise ». */
+/** Clés publiques uniquement (anon). Absentes ou YOUR_* : mode essai local, sans écran technique. */
 export const SUPABASE_URL = env('EXPO_PUBLIC_SUPABASE_URL', process.env.EXPO_PUBLIC_SUPABASE_URL);
 export const SUPABASE_ANON_KEY = env('EXPO_PUBLIC_SUPABASE_ANON_KEY', process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY);
 export const supabaseConfigured = SUPABASE_URL.configured && SUPABASE_ANON_KEY.configured;
 
-export type AuthSession = { mode: 'supabase' | 'demo'; contact: string; userId: string; accessToken?: string; refreshToken?: string; expiresAt?: number };
+export type AuthSession = { mode: 'supabase' | 'demo'; contact: string; userId: string; accessToken?: string; refreshToken?: string; expiresAt?: number; trial?: boolean };
 export type Channel = 'email' | 'sms';
 
 export class OtpError extends Error {
@@ -37,6 +37,8 @@ async function call(path: string, body: unknown, token?: string) {
     if (r.status === 429 || /rate/i.test(code + msg)) throw new OtpError('rate_limit', 'Trop de demandes. Patientez une minute avant de redemander un code.');
     if (/expired/i.test(code + msg)) throw new OtpError('expired', 'Ce code a expiré. Demandez-en un nouveau.');
     if (r.status === 403 || r.status === 401 || /invalid/i.test(code + msg)) throw new OtpError('invalid', 'Code invalide. Vérifiez les 6 chiffres.');
+    if (r.status === 404) throw new OtpError('unknown', 'Fonction introuvable sur le serveur.');
+    if (msg && r.status === 400) throw new OtpError('unknown', msg.slice(0, 180));
     throw new OtpError('unknown', `Erreur du serveur (${r.status}). Réessayez plus tard.`);
   }
   return j;

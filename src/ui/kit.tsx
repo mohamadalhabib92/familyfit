@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
-import type { ComponentProps, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, type ComponentProps, type ReactNode } from 'react';
 import {
+  AccessibilityInfo,
   ActivityIndicator,
   Platform,
   Pressable,
@@ -15,7 +16,42 @@ import {
   type ViewStyle,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { inkOn } from './contrast';
 import { theme as t } from './theme';
+
+const FontScaleContext = createContext(1);
+export function FontScaleProvider({ scale, children }: { scale: number; children: ReactNode }) {
+  return <FontScaleContext.Provider value={scale}>{children}</FontScaleContext.Provider>;
+}
+export function useFontScale() {
+  return useContext(FontScaleContext);
+}
+
+let reduceMotion = false;
+const motionListeners = new Set<(v: boolean) => void>();
+let motionSubscribed = false;
+function ensureReduceMotion() {
+  if (motionSubscribed) return;
+  motionSubscribed = true;
+  const apply = (v: boolean) => {
+    reduceMotion = v;
+    motionListeners.forEach((fn) => fn(v));
+  };
+  AccessibilityInfo.isReduceMotionEnabled?.().then(apply).catch(() => undefined);
+  AccessibilityInfo.addEventListener?.('reduceMotionChanged', apply);
+}
+function useReduceMotion() {
+  const [v, setV] = useState(reduceMotion);
+  useEffect(() => {
+    ensureReduceMotion();
+    motionListeners.add(setV);
+    setV(reduceMotion);
+    return () => {
+      motionListeners.delete(setV);
+    };
+  }, []);
+  return v;
+}
 
 export type IconName = ComponentProps<typeof Ionicons>['name'];
 export { Ionicons };
@@ -40,41 +76,47 @@ export function Screen({ children, scroll = true, padded = true }: { children: R
 }
 
 export function H1({ children, style }: { children: ReactNode; style?: StyleProp<TextStyle> }) {
+  const s = useFontScale();
   return (
-    <Text accessibilityRole="header" style={[styles.h1, style]}>
+    <Text accessibilityRole="header" style={[styles.h1, { fontSize: 28 * s, lineHeight: 34 * s }, style]}>
       {children}
     </Text>
   );
 }
 export function H2({ children, style }: { children: ReactNode; style?: StyleProp<TextStyle> }) {
+  const s = useFontScale();
   return (
-    <Text accessibilityRole="header" style={[styles.h2, style]}>
+    <Text accessibilityRole="header" style={[styles.h2, { fontSize: 18 * s, lineHeight: 24 * s }, style]}>
       {children}
     </Text>
   );
 }
 export function Body({ children, style, numberOfLines }: { children: ReactNode; style?: StyleProp<TextStyle>; numberOfLines?: number }) {
+  const s = useFontScale();
   return (
-    <Text style={[styles.body, style]} numberOfLines={numberOfLines}>
+    <Text style={[styles.body, { fontSize: 16 * s, lineHeight: 23 * s }, style]} numberOfLines={numberOfLines}>
       {children}
     </Text>
   );
 }
 export function Muted({ children, style }: { children: ReactNode; style?: StyleProp<TextStyle> }) {
-  return <Text style={[styles.muted, style]}>{children}</Text>;
+  const s = useFontScale();
+  return <Text style={[styles.muted, { fontSize: 15 * s, lineHeight: 21 * s }, style]}>{children}</Text>;
 }
 export function Eyebrow({ children, style }: { children: ReactNode; style?: StyleProp<TextStyle> }) {
-  return <Text style={[styles.eyebrow, style]}>{children}</Text>;
+  const s = useFontScale();
+  return <Text style={[styles.eyebrow, { fontSize: 12 * s }, style]}>{children}</Text>;
 }
 
 export function Card({ children, style, onPress, accessibilityLabel }: { children: ReactNode; style?: StyleProp<ViewStyle>; onPress?: () => void; accessibilityLabel?: string }) {
+  const reduce = useReduceMotion();
   if (onPress) {
     return (
       <Pressable
         onPress={onPress}
         accessibilityRole="button"
         accessibilityLabel={accessibilityLabel}
-        style={({ pressed }) => [styles.card, pressed && { opacity: 0.85, transform: [{ scale: 0.995 }] }, style]}
+        style={({ pressed }) => [styles.card, pressed && { opacity: 0.85 }, pressed && !reduce && { transform: [{ scale: 0.995 }] }, style]}
       >
         {children}
       </Pressable>
@@ -114,8 +156,9 @@ export function Button({
   small?: boolean;
   accessibilityLabel?: string;
 }) {
+  const s = useFontScale();
   const bg = { primary: t.primary, secondary: t.surfaceAlt, ghost: 'transparent', danger: t.danger }[variant];
-  const fg = { primary: t.onPrimary, secondary: t.text, ghost: t.primary, danger: '#fff' }[variant];
+  const fg = { primary: t.onPrimary, secondary: t.text, ghost: t.primary, danger: t.onDanger }[variant];
   const off = disabled || loading;
   return (
     <Pressable
@@ -127,7 +170,7 @@ export function Button({
       style={({ pressed }) => [
         styles.btn,
         small && styles.btnSmall,
-        { backgroundColor: bg },
+        { backgroundColor: bg, minHeight: Math.max(small ? 44 : 48, 44 * s) },
         variant === 'ghost' && { borderWidth: 1, borderColor: t.border },
         pressed && !off && { opacity: 0.8 },
         off && { opacity: 0.45 },
@@ -139,7 +182,7 @@ export function Button({
       ) : (
         <>
           {icon ? <Ionicons name={icon} size={small ? 16 : 18} color={fg} /> : null}
-          <Text style={[styles.btnText, small && { fontSize: 14 }, { color: fg }]}>{title}</Text>
+          <Text style={[styles.btnText, { fontSize: (small ? 14 : 16) * s, color: fg }]}>{title}</Text>
         </>
       )}
     </Pressable>
@@ -161,6 +204,7 @@ export function IconButton({ icon, onPress, label, color = t.text, size = 22 }: 
 
 export function Chip({ label, active, onPress, color }: { label: string; active?: boolean; onPress?: () => void; color?: string }) {
   const c = color ?? t.primary;
+  const s = useFontScale();
   return (
     <Pressable
       onPress={onPress}
@@ -168,12 +212,21 @@ export function Chip({ label, active, onPress, color }: { label: string; active?
       accessibilityState={{ selected: !!active }}
       style={({ pressed }) => [
         styles.chip,
-        { borderColor: active ? c : t.border, backgroundColor: active ? c : 'transparent' },
+        { borderColor: active ? c : t.border, backgroundColor: active ? c : 'transparent', minHeight: Math.max(44, 44 * s) },
         pressed && { opacity: 0.8 },
       ]}
     >
-      <Text style={{ color: active ? (color ? '#fff' : t.onPrimary) : t.text, fontWeight: '600', fontSize: 14 }}>{label}</Text>
+      <Text style={{ color: active ? inkOn(c) : t.text, fontWeight: '600', fontSize: 14 * s }}>{label}</Text>
     </Pressable>
+  );
+}
+
+/** Pastille membre : couleur ET motif, pour ne pas coder l'information par la couleur seule. */
+export function MemberMark({ color, glyph, label }: { color: string; glyph: IconName; label: string }) {
+  return (
+    <View accessibilityLabel={`Motif ${label}`} style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: color, alignItems: 'center', justifyContent: 'center' }}>
+      <Ionicons name={glyph} size={14} color={inkOn(color)} />
+    </View>
   );
 }
 
@@ -337,11 +390,28 @@ export function DemoBanner({ text }: { text: string }) {
 export function shadow(level = 1): ViewStyle {
   if (Platform.OS === 'android') return { elevation: level * 2 };
   return {
-    shadowColor: '#000',
+    shadowColor: t.shadow,
     shadowOpacity: 0.06 * level,
     shadowRadius: 8 * level,
     shadowOffset: { width: 0, height: 2 * level },
   };
+}
+
+export function LoadingState({ slow, onRetry }: { slow?: boolean; onRetry?: () => void }) {
+  return (
+    <View style={{ flex: 1, backgroundColor: t.bg, alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+      <ActivityIndicator color={t.primary} accessibilityLabel="Chargement" />
+      <Text style={{ color: t.text, fontSize: 16, fontWeight: '600', marginTop: 16, textAlign: 'center' }}>Chargement de FamilyFit</Text>
+      {slow ? (
+        <>
+          <Text style={{ color: t.muted, fontSize: 15, lineHeight: 21, textAlign: 'center', marginTop: 8 }}>
+            Cela prend plus de temps que prévu. Vos données ne sont pas effacées, et rien n’est enregistré tant que la lecture n’a pas réussi.
+          </Text>
+          {onRetry ? <Button title="Réessayer" onPress={onRetry} style={{ marginTop: 16 }} /> : null}
+        </>
+      ) : null}
+    </View>
+  );
 }
 
 export const styles = StyleSheet.create({
@@ -351,7 +421,7 @@ export const styles = StyleSheet.create({
   h2: { color: t.text, fontSize: 18, fontWeight: '700', letterSpacing: -0.2, marginBottom: 8 },
   body: { color: t.text, fontSize: 16, lineHeight: 23 },
   muted: { color: t.muted, fontSize: 15, lineHeight: 21 },
-  eyebrow: { color: t.accent, fontSize: 12, fontWeight: '700', letterSpacing: 1.6, textTransform: 'uppercase', marginBottom: 6 },
+  eyebrow: { color: t.accentText, fontSize: 12, fontWeight: '700', letterSpacing: 1.6, textTransform: 'uppercase', marginBottom: 6 },
   card: {
     backgroundColor: t.surface,
     borderRadius: t.radius,
@@ -390,7 +460,7 @@ export const styles = StyleSheet.create({
   segment: { flexDirection: 'row', backgroundColor: t.surfaceAlt, borderRadius: t.radius - 2, padding: 4, gap: 4 },
   segItem: { flex: 1, minHeight: 44, borderRadius: t.radius - 4, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 8 },
   track: { width: 50, height: 30, borderRadius: 15, padding: 3, justifyContent: 'center' },
-  thumb: { width: 24, height: 24, borderRadius: 12, backgroundColor: '#fff', ...shadow(1) },
+  thumb: { width: 24, height: 24, borderRadius: 12, backgroundColor: t.surface, ...shadow(1) },
   empty: { alignItems: 'center', padding: 28, borderRadius: t.radius, borderWidth: 1, borderStyle: 'dashed', borderColor: t.border, marginBottom: 12 },
   emptyIcon: { width: 56, height: 56, borderRadius: 28, backgroundColor: t.surfaceAlt, alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
   notice: { flexDirection: 'row', gap: 10, padding: 12, borderRadius: t.radius - 4, marginBottom: 12 },

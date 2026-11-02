@@ -1,38 +1,54 @@
 import { useRouter } from 'expo-router';
 import { Fragment, useEffect, useState } from 'react';
-import { Platform, Text, View } from 'react-native';
+import { Linking, Pressable, Text, View } from 'react-native';
 import { confirmAsk } from '@/lib/confirm';
 import { useData } from '@/lib/data';
+import { diagnosticUnlocked, markDiagnosticUnlocked, useSecretTap } from '@/lib/diagnosticAccess';
+import { env } from '@/lib/config';
 import { downloadText } from '@/lib/download';
 import { dayCH, todayISO } from '@/lib/dates';
-import { canManage, displayName, ROLE_LABEL, type Role } from '@/lib/model';
+import { canManage, displayName, memberMark, ROLE_LABEL, type Role } from '@/lib/model';
 import { askPermission, getPermission, type PermState } from '@/lib/reminders';
 import { shareInvitation } from '@/lib/share';
 import { exportAll } from '@/lib/storage';
 import { supabaseConfigured } from '@/lib/supabase';
-import { Badge, Button, Card, Divider, H2, ListItem, Muted, Row, Screen, Segmented, Spacer, Toggle } from '@/ui/kit';
+import { Badge, Button, Card, Divider, H2, ListItem, MemberMark, Muted, Row, Screen, Segmented, Spacer, Toggle, type IconName } from '@/ui/kit';
 import { theme as t } from '@/ui/theme';
 
 
+const SUPPORT_PAGE = 'https://mohamadalhabib92.github.io/familyfit/support/';
+
 export default function FamilyTab() {
-  const { family, members, me, invitations, createInvitation, revokeInvitation, prefs, setPrefs, hasDemo, removeDemo, session, signOut, wipe } = useData();
+  const { family, members, me, invitations, createInvitation, revokeInvitation, prefs, setPrefs, hasDemo, removeDemo, session, signOut, wipe, deleteAccount } = useData();
   const router = useRouter();
   const [role, setRole] = useState<Role>('parent');
   const [perm, setPerm] = useState<PermState>('undetermined');
+  const [successor, setSuccessor] = useState<string | null>(null);
+  const [accountMsg, setAccountMsg] = useState<string | null>(null);
+  const unlock = useSecretTap(() => {
+    markDiagnosticUnlocked();
+    setPrefs((p) => ({ ...p, devConfigUnlocked: true }));
+    router.push('/config');
+  });
+  const otherAdults = members.filter((m) => !m.isMe && !m.isMinor);
+  const soleAdmin = me?.role === 'admin' && members.filter((m) => m.role === 'admin').length <= 1;
+  const needsTransfer = session?.mode === 'supabase' && soleAdmin && otherAdults.length > 0;
   useEffect(() => { void getPermission().then(setPerm); }, []);
   const manage = canManage(me?.role);
   const pending = invitations.filter((i) => i.status === 'pending' && i.expiresAt >= todayISO());
   return (
     <Screen>
-      <H2>{family?.name}</H2>
+      <Pressable onPress={unlock} accessibilityLabel={family?.name ?? 'Famille'}>
+        <H2>{family?.name}</H2>
+      </Pressable>
       <Card>
         {members.map((m, i) => (
           <Fragment key={m.id}>
             {i ? <Divider /> : null}
             <ListItem
               title={`${displayName(m, me)}${m.isMe ? ' (moi)' : ''}`}
-              subtitle={`${ROLE_LABEL[m.role]}${m.isMinor ? ' · mineur protégé' : ''}${m.demo ? ' · démo' : ''}`}
-              right={<View style={{ width: 16, height: 16, borderRadius: 8, backgroundColor: m.color }} />}
+              subtitle={`${ROLE_LABEL[m.role]}${m.isMinor ? ' · mineur protégé' : ''}${m.demo ? ' · démo' : ''} · motif ${memberMark(m).label}`}
+              right={<MemberMark color={m.color} glyph={memberMark(m).glyph as IconName} label={memberMark(m).label} />}
               onPress={manage || m.isMe ? () => router.push({ pathname: '/member/[id]', params: { id: m.id } }) : undefined}
             />
           </Fragment>
@@ -79,6 +95,7 @@ export default function FamilyTab() {
       {prefs.showHijri ? (
         <Segmented label="Ajustement hégirien (jours, observation locale)" options={[-2, -1, 0, 1, 2].map((n) => ({ label: n > 0 ? `+${n}` : String(n), value: n }))} value={prefs.hijriOffset} onChange={(v) => setPrefs((p) => ({ ...p, hijriOffset: v }))} />
       ) : null}
+      <Toggle label="Texte large" value={prefs.largeText} onChange={(v) => setPrefs((p) => ({ ...p, largeText: v }))} hint="Agrandit le texte. Le réglage du téléphone peut encore aller jusqu’à 200 %." />
       <Spacer h={8} />
       <Card>
         <Row style={{ justifyContent: 'space-between' }}>
@@ -92,11 +109,62 @@ export default function FamilyTab() {
       </Card>
       <Card>
         <ListItem icon="shield-checkmark-outline" title="Vie privée & mineurs" onPress={() => router.push('/privacy')} />
-        <ListItem icon="settings-outline" title="Configuration Supabase" subtitle={supabaseConfigured ? 'Configuré' : 'Mode démo local'} onPress={() => router.push('/config')} />
+        <ListItem
+          icon="mail-outline"
+          title="Assistance"
+          subtitle={env('EXPO_PUBLIC_SUPPORT_EMAIL', process.env.EXPO_PUBLIC_SUPPORT_EMAIL).configured ? 'Écrire à l’assistance' : 'Page d’assistance'}
+          onPress={() => {
+            const mail = env('EXPO_PUBLIC_SUPPORT_EMAIL', process.env.EXPO_PUBLIC_SUPPORT_EMAIL);
+            void Linking.openURL(mail.configured && mail.value?.includes('@') ? `mailto:${mail.value}` : SUPPORT_PAGE);
+          }}
+        />
+        {diagnosticUnlocked(prefs.devConfigUnlocked) ? (
+          <ListItem icon="settings-outline" title="Diagnostic" subtitle={supabaseConfigured ? 'Clés présentes' : 'Mode essai local'} onPress={() => router.push('/config')} />
+        ) : null}
         <ListItem icon="download-outline" title="Exporter mes données (JSON)" onPress={async () => downloadText(`familyfit-${todayISO()}.json`, JSON.stringify(await exportAll(), null, 2), 'application/json')} />
         {hasDemo ? <ListItem icon="flask-outline" title="Supprimer les données démo" onPress={() => confirmAsk('Supprimer les données d’exemple ?', removeDemo)} /> : null}
-        <ListItem icon="log-out-outline" title="Se déconnecter" subtitle={session?.contact} onPress={signOut} />
-        <ListItem icon="trash-outline" title="Supprimer toutes les données" subtitle="Irréversible" onPress={() => confirmAsk('Supprimer définitivement toutes les données de cet appareil ?', () => void wipe())} />
+        <ListItem icon="log-out-outline" title="Se déconnecter" subtitle={session?.contact || (session?.trial ? 'Mode essai' : undefined)} onPress={signOut} />
+        <ListItem icon="trash-outline" title="Supprimer toutes les données" subtitle="Cet appareil seulement" onPress={() => confirmAsk('Supprimer définitivement toutes les données de cet appareil ?', () => void wipe())} />
+      </Card>
+      <H2>Compte</H2>
+      <Card>
+        <Muted>
+          {session?.mode === 'supabase'
+            ? 'Supprime le compte en ligne et les données de cet appareil. S’il reste d’autres adultes, un administrateur doit être désigné avant.'
+            : 'Il n’y a pas de compte en ligne. Cette action efface les données de cet appareil.'}
+        </Muted>
+        {needsTransfer ? (
+          <>
+            <Spacer h={8} />
+            <Segmented
+              label="Nouvel administrateur"
+              options={otherAdults.map((m) => ({ label: displayName(m, me), value: m.id }))}
+              value={successor ?? otherAdults[0]?.id ?? ''}
+              onChange={setSuccessor}
+            />
+          </>
+        ) : null}
+        {accountMsg ? <Muted style={{ marginTop: 8 }}>{accountMsg}</Muted> : null}
+        <Button
+          variant="danger"
+          title="Supprimer mon compte"
+          onPress={() => {
+            const target = needsTransfer ? (successor ?? otherAdults[0]?.id) : undefined;
+            confirmAsk(
+              session?.mode === 'supabase'
+                ? 'Supprimer le compte en ligne et les données de cet appareil ? Cette action est irréversible.'
+                : 'Supprimer les données de cet appareil ? Il n’y a pas de compte en ligne. Cette action est irréversible.',
+              () => {
+                void deleteAccount(target).then((r) => {
+                  setAccountMsg(r.message);
+                  if (r.ok) router.replace('/');
+                });
+              },
+              'Supprimer le compte',
+            );
+          }}
+          style={{ marginTop: 12 }}
+        />
       </Card>
     </Screen>
   );

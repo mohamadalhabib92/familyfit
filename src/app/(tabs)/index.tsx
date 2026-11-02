@@ -1,19 +1,26 @@
 import { useRouter } from 'expo-router';
 import { Fragment } from 'react';
-import { Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import { EventRow } from '@/components/EventRow';
+import { ExampleLists } from '@/components/ExampleLists';
 import { useData } from '@/lib/data';
+import { markDiagnosticUnlocked, useSecretTap } from '@/lib/diagnosticAccess';
 import { dayLabel, todayISO } from '@/lib/dates';
 import { conflictsFor, occurrences } from '@/lib/events';
 import { encouragement, weekProgress } from '@/lib/goals';
 import { formatHijri } from '@/lib/hijri';
 import { SLOT_LABEL, type Slot } from '@/lib/model';
-import { Button, Card, DemoBanner, Divider, Empty, Eyebrow, H1, H2, Muted, Notice, Row, Screen, Spacer } from '@/ui/kit';
+import { Button, Card, Divider, Empty, Eyebrow, H1, H2, Muted, Notice, Row, Screen, Spacer } from '@/ui/kit';
 import { theme as t } from '@/ui/theme';
 
 export default function Today() {
-  const { family, me, events, rituals, sessions, goals, activities, prefs, hasDemo, session, remoteError } = useData();
+  const { family, me, events, rituals, sessions, goals, activities, prefs, remoteError, setPrefs } = useData();
   const router = useRouter();
+  const unlock = useSecretTap(() => {
+    markDiagnosticUnlocked();
+    setPrefs((p) => ({ ...p, devConfigUnlocked: true }));
+    router.push('/config');
+  });
   const today = todayISO();
   const occ = occurrences(events, today, 1);
   const conf = conflictsFor(occ);
@@ -23,9 +30,10 @@ export default function Today() {
   const doneToday = (rid: string) => sessions.some((s) => s.ritualId === rid && s.date === today && s.completedAt);
   return (
     <Screen>
-      {session?.mode === 'demo' ? <DemoBanner text={`Mode démo local${hasDemo ? ' · données d’exemple affichées' : ''}`} /> : null}
       {remoteError ? <Notice tone="warning" title={remoteError} /> : null}
-      <Eyebrow>{family?.name}</Eyebrow>
+      <Pressable onPress={unlock} accessibilityLabel={family?.name ?? 'Famille'}>
+        <Eyebrow>{family?.name}</Eyebrow>
+      </Pressable>
       <H1>{hour < 12 ? 'Bonjour' : hour < 18 ? 'Bel après-midi' : 'Bonsoir'}{me ? `, ${me.name}` : ''}</H1>
       <Muted>{dayLabel(today)}{prefs.showHijri ? ` · ${formatHijri(new Date(), 'fr', prefs.hijriOffset)}` : ''}</Muted>
       <Spacer />
@@ -58,6 +66,7 @@ export default function Today() {
       ) : (
         <Empty icon="repeat-outline" title={`Aucun rituel du ${SLOT_LABEL[slot].toLowerCase()}`} action={<Button small variant="secondary" title="Choisir un modèle" onPress={() => router.push('/rituals')} />} />
       )}
+      <ExampleLists />
       {goals.length ? (
         <>
           <H2>Bien-être cette semaine</H2>

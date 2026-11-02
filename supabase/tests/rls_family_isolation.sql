@@ -1,0 +1,185 @@
+-- FamilyFit — preuve d'isolation entre deux familles.
+-- Prérequis : supabase/schema.sql déjà appliqué (rôles anon et authenticated présents).
+-- Tout tient dans une transaction annulée à la fin. Ne pas viser la production :
+-- un ROLLBACK évite de laisser les utilisateurs de test, mais le script ne doit
+-- pas être lancé sur le projet réel de Mohamed.
+-- L'agent ne l'a pas exécuté contre un projet Supabase.
+
+begin;
+
+create or replace function public.rls_as(uid text) returns void
+language plpgsql as $$
+begin
+  perform set_config('request.jwt.claim.sub', uid, true);
+  perform set_config('request.jwt.claims', json_build_object('sub', nullif(uid, ''))::text, true);
+end;
+$$;
+grant execute on function public.rls_as(text) to authenticated, anon;
+
+create table public.rls_probe (k text primary key, v uuid);
+grant all on public.rls_probe to authenticated, anon;
+alter table public.rls_probe disable row level security;
+
+insert into auth.users (id, email) values
+  ('11111111-1111-4111-8111-111111111111', 'alice@example.test'),
+  ('22222222-2222-4222-8222-222222222222', 'bruno@example.test'),
+  ('33333333-3333-4333-8333-333333333333', 'eden@example.test'),
+  ('44444444-4444-4444-8444-444444444444', 'dina@example.test');
+
+select public.rls_as('11111111-1111-4111-8111-111111111111');
+set role authenticated;
+insert into public.rls_probe (k, v)
+values ('fam_a', public.create_family('Famille A', 'Alice'));
+
+select public.rls_as('22222222-2222-4222-8222-222222222222');
+insert into public.rls_probe (k, v)
+values ('fam_b', public.create_family('Famille B', 'Bruno'));
+
+select public.rls_as('44444444-4444-4444-8444-444444444444');
+insert into public.rls_probe (k, v)
+values ('fam_d', public.create_family('Famille D', 'Dina'));
+
+-- Alice écrit un événement dans SA famille.
+select public.rls_as('11111111-1111-4111-8111-111111111111');
+insert into public.events (family_id, title, category, date)
+select v, 'Piscine', 'leisure', current_date from public.rls_probe where k = 'fam_a';
+
+-- Bruno ne voit pas l'événement d'Alice.
+do $$
+declare n int;
+begin
+  perform public.rls_as('22222222-2222-4222-8222-222222222222');
+  select count(*) into n from public.events e
+  where e.family_id = (select v from public.rls_probe where k = 'fam_a');
+  if n <> 0 then
+    raise exception 'ASSERT Bruno voit % événement(s) de la famille A', n;
+  end if;
+end $$;
+
+-- Bruno ne voit pas les membres d'Alice.
+do $$
+declare n int;
+begin
+  perform public.rls_as('22222222-2222-4222-8222-222222222222');
+  select count(*) into n from public.family_members
+  where family_id = (select v from public.rls_probe where k = 'fam_a');
+  if n <> 0 then
+    raise exception 'ASSERT Bruno voit % membre(s) de la famille A', n;
+  end if;
+end $$;
+
+-- Bruno ne lit pas le profil d'Alice.
+do $$
+declare n int;
+begin
+  perform public.rls_as('22222222-2222-4222-8222-222222222222');
+  select count(*) into n from public.profiles where id = '11111111-1111-4111-8111-111111111111';
+  if n <> 0 then
+    raise exception 'ASSERT Bruno lit le profil d''Alice';
+  end if;
+end $$;
+
+-- Bruno ne peut pas écrire dans la famille A.
+do $$
+begin
+  perform public.rls_as('22222222-2222-4222-8222-222222222222');
+  insert into public.events (family_id, title, category, date)
+  select v, 'Piraté', 'family', current_date from public.rls_probe where k = 'fam_a';
+  raise exception 'ASSERT insertion croisée autorisée';
+exception
+  when insufficient_privilege then
+    null;
+  when others then
+    if SQLERRM like 'ASSERT%' then raise; end if;
+    if SQLSTATE <> '42501' then
+      raise exception 'ASSERT état inattendu sur insertion croisée: % %', SQLSTATE, SQLERRM;
+    end if;
+end $$;
+
+-- Alice voit son propre événement.
+do $$
+declare n int;
+begin
+  perform public.rls_as('11111111-1111-4111-8111-111111111111');
+  select count(*) into n from public.events e
+  where e.family_id = (select v from public.rls_probe where k = 'fam_a');
+  if n < 1 then
+    raise exception 'ASSERT Alice ne voit pas son événement';
+  end if;
+end $$;
+
+reset role;
+select public.rls_as('');
+set role anon;
+do $$
+declare n int;
+begin
+  select count(*) into n from public.events;
+  if n <> 0 then
+    raise exception 'ASSERT le rôle anon voit % événement(s)', n;
+  end if;
+end $$;
+
+reset role;
+
+-- Alice invite Eden (autre adulte) puis ne peut pas supprimer son compte sans transfert.
+select public.rls_as('11111111-1111-4111-8111-111111111111');
+set role authenticated;
+insert into public.family_members (family_id, user_id, display_name, role, is_minor)
+select v, '33333333-3333-4333-8333-333333333333', 'Eden', 'parent', false
+from public.rls_probe where k = 'fam_a';
+insert into public.rls_probe (k, v)
+select 'eden', id from public.family_members where user_id = '33333333-3333-4333-8333-333333333333';
+
+do $$
+begin
+  perform public.rls_as('11111111-1111-4111-8111-111111111111');
+  perform public.delete_my_account(null);
+  raise exception 'ASSERT suppression sans transfert autorisée';
+exception
+  when others then
+    if SQLERRM like 'ASSERT%' then raise; end if;
+    if SQLERRM not like '%Transfert admin requis%' then
+      raise exception 'ASSERT message transfert inattendu: %', SQLERRM;
+    end if;
+end $$;
+
+-- Avec transfert, la famille A reste, Eden devient admin, la famille B est intacte.
+select public.delete_my_account((select v from public.rls_probe where k = 'eden'));
+
+reset role;
+
+do $$
+declare
+  n_b int;
+  n_a int;
+  eden_admin int;
+  alice_gone int;
+begin
+  select count(*) into n_b from public.families where name = 'Famille B';
+  select count(*) into n_a from public.families where name = 'Famille A';
+  select count(*) into eden_admin from public.family_members
+  where user_id = '33333333-3333-4333-8333-333333333333' and role = 'admin';
+  select count(*) into alice_gone from auth.users where id = '11111111-1111-4111-8111-111111111111';
+  if n_b <> 1 then raise exception 'ASSERT famille B touchée (% )', n_b; end if;
+  if n_a <> 1 then raise exception 'ASSERT famille A disparue'; end if;
+  if eden_admin <> 1 then raise exception 'ASSERT Eden n''est pas admin'; end if;
+  if alice_gone <> 0 then raise exception 'ASSERT Alice existe encore'; end if;
+end $$;
+
+-- Dina est seule : son compte supprime sa famille et pas les autres.
+select public.rls_as('44444444-4444-4444-8444-444444444444');
+set role authenticated;
+select public.delete_my_account(null);
+reset role;
+
+do $$
+declare n_d int; n_b int;
+begin
+  select count(*) into n_d from public.families where name = 'Famille D';
+  select count(*) into n_b from public.families where name = 'Famille B';
+  if n_d <> 0 then raise exception 'ASSERT famille D encore là'; end if;
+  if n_b <> 1 then raise exception 'ASSERT famille B disparue avec Dina'; end if;
+end $$;
+
+rollback;

@@ -1,12 +1,12 @@
 import { addDays, startOfWeek, todayISO } from './dates';
-import type { Activity, FamilyEvent, Goal, Member, Ritual, Session } from './model';
+import { MEMBER_PALETTE, type Activity, type FamilyEvent, type FamilyList, type Goal, type Member, type Ritual, type Session } from './model';
 
 /** Données de DÉMONSTRATION (toutes marquées demo: true, supprimables en un geste). */
 export function demoData(familyId: string, me: Member) {
   const t = todayISO();
   const members: Member[] = [
-    { id: 'demo-m2', familyId, name: 'Awa (démo)', role: 'parent', color: '#D08C60', isMinor: false, demo: true },
-    { id: 'demo-m3', familyId, name: 'Yanis (démo)', role: 'member', color: '#2F5F8A', isMinor: true, parentConsentShare: false, demo: true },
+    { id: 'demo-m2', familyId, name: 'Awa (démo)', role: 'parent', color: MEMBER_PALETTE[1].color, glyph: MEMBER_PALETTE[1].glyph, isMinor: false, demo: true },
+    { id: 'demo-m3', familyId, name: 'Yanis (démo)', role: 'member', color: MEMBER_PALETTE[2].color, glyph: MEMBER_PALETTE[2].glyph, isMinor: true, parentConsentShare: false, demo: true },
   ];
   const events: FamilyEvent[] = [
     { id: 'demo-e1', familyId, title: 'Petit-déjeuner du dimanche', category: 'family', date: addDays(startOfWeek(t), 6), start: '09:00', end: '10:00', allDay: false, memberIds: [], recurrence: 'weekly', notes: '', demo: true },
@@ -32,5 +32,23 @@ export function demoData(familyId: string, me: Member) {
     { id: 'demo-a2', goalId: 'demo-g1', memberId: 'demo-m3', date: addDays(t, -1), amount: 45 },
     { id: 'demo-a3', goalId: 'demo-g2', memberId: me.id, date: addDays(t, -1), amount: 1 },
   ];
-  return { members, events, rituals, sessions, goals, activities };
+  const lists: FamilyList[] = [
+    {
+      id: 'demo-l1', familyId, title: 'Courses (exemple)', demo: true,
+      items: [
+        { id: 'demo-li1', label: 'Pain', qty: '1', done: false },
+        { id: 'demo-li2', label: 'Lait', qty: '2', done: false },
+        { id: 'demo-li3', label: 'Pommes', qty: '6', done: true },
+        { id: 'demo-li4', label: 'Œufs', qty: '10', done: false },
+      ],
+    },
+    {
+      id: 'demo-l2', familyId, title: 'À faire (exemple)', demo: true,
+      items: [
+        { id: 'demo-li5', label: 'Préparer les sacs', qty: '', done: false },
+        { id: 'demo-li6', label: 'Sortir les vélos', qty: '', done: false },
+      ],
+    },
+  ];
+  return { members, events, rituals, sessions, goals, activities, lists };
 }
