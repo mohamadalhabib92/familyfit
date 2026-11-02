@@ -2,15 +2,16 @@ import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { Text, TextInput } from 'react-native';
 import { useData } from '@/lib/data';
+import { registerSecretTap } from '@/lib/devGate';
 import { checkDemoOtp, isEmail, isPhone, makeDemoOtp, normContact, OtpError, sendOtp, supabaseConfigured, verifyOtp, type Channel, type DemoOtp } from '@/lib/supabase';
 import { uid } from '@/lib/storage';
-import { Button, Card, DemoBanner, Eyebrow, Field, H1, Muted, Notice, Row, Screen, Segmented, Spacer, styles } from '@/ui/kit';
+import { Button, Card, DemoBanner, Eyebrow, Field, Muted, Notice, Row, Screen, Segmented, Spacer, styles } from '@/ui/kit';
 import { theme as t } from '@/ui/theme';
 
 const COOLDOWN = 30;
 
 export default function Auth() {
-  const { setSession } = useData();
+  const { setSession, family, members } = useData();
   const router = useRouter();
   const [ch, setCh] = useState<Channel>('email');
   const [contact, setContact] = useState('');
@@ -73,10 +74,12 @@ export default function Auth() {
   return (
     <Screen>
       <Eyebrow>FamilyFit</Eyebrow>
-      <H1>Connexion sans mot de passe</H1>
+      <Text accessibilityRole="header" onPress={() => { if (registerSecretTap()) router.push('/config'); }} style={{ color: t.text, fontSize: 28, fontWeight: '700', letterSpacing: -0.5, marginBottom: 4 }}>
+        Connexion sans mot de passe
+      </Text>
       <Muted>Recevez un code à 6 chiffres. Aucune donnée n’est partagée hors de votre famille.</Muted>
       <Spacer />
-      {!supabaseConfigured ? <DemoBanner text="Mode démo : aucun e-mail ni SMS n’est envoyé. Le code est simulé et affiché ci-dessous." /> : null}
+      {!supabaseConfigured ? <DemoBanner text="Mode essai — vos données restent sur cet appareil. Aucun e-mail ni SMS n’est envoyé : le code est simulé." /> : null}
       {step === 'ask' ? (
         <>
           <Segmented options={[{ label: 'E-mail', value: 'email' as const }, { label: 'SMS', value: 'sms' as const }]} value={ch} onChange={(v) => { setCh(v); setErr(null); }} />
@@ -128,7 +131,16 @@ export default function Auth() {
         </>
       )}
       <Spacer h={20} />
-      <Button small variant="ghost" icon="settings-outline" title="Configuration" onPress={() => router.push('/config')} />
+      {!supabaseConfigured ? (
+        <Button variant="ghost" title="Revenir au mode essai" onPress={() => {
+          if (family) {
+            const me = members.find((m) => m.isMe);
+            setSession({ mode: 'demo', contact: 'mode-essai', userId: me?.id ?? uid('usr_') });
+          }
+          router.replace('/');
+        }} />
+      ) : null}
+      {__DEV__ ? <Button small variant="ghost" icon="settings-outline" title="Diagnostic" onPress={() => router.push('/config')} /> : null}
     </Screen>
   );
 }

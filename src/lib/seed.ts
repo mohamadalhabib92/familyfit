@@ -1,12 +1,12 @@
 import { addDays, startOfWeek, todayISO } from './dates';
-import type { Activity, FamilyEvent, Goal, Member, Ritual, Session } from './model';
+import { MEMBER_COLORS, type Activity, type FamilyEvent, type FamilyList, type Goal, type Member, type Ritual, type Session } from './model';
 
 /** Données de DÉMONSTRATION (toutes marquées demo: true, supprimables en un geste). */
 export function demoData(familyId: string, me: Member) {
   const t = todayISO();
   const members: Member[] = [
-    { id: 'demo-m2', familyId, name: 'Awa (démo)', role: 'parent', color: '#D08C60', isMinor: false, demo: true },
-    { id: 'demo-m3', familyId, name: 'Yanis (démo)', role: 'member', color: '#2F5F8A', isMinor: true, parentConsentShare: false, demo: true },
+    { id: 'demo-m2', familyId, name: 'Awa (démo)', role: 'parent', color: MEMBER_COLORS[1], isMinor: false, demo: true },
+    { id: 'demo-m3', familyId, name: 'Yanis (démo)', role: 'member', color: MEMBER_COLORS[2], isMinor: true, parentConsentShare: false, demo: true },
   ];
   const events: FamilyEvent[] = [
     { id: 'demo-e1', familyId, title: 'Petit-déjeuner du dimanche', category: 'family', date: addDays(startOfWeek(t), 6), start: '09:00', end: '10:00', allDay: false, memberIds: [], recurrence: 'weekly', notes: '', demo: true },
@@ -32,5 +32,18 @@ export function demoData(familyId: string, me: Member) {
     { id: 'demo-a2', goalId: 'demo-g1', memberId: 'demo-m3', date: addDays(t, -1), amount: 45 },
     { id: 'demo-a3', goalId: 'demo-g2', memberId: me.id, date: addDays(t, -1), amount: 1 },
   ];
-  return { members, events, rituals, sessions, goals, activities };
+  const lists: FamilyList[] = [
+    {
+      id: 'demo-l1',
+      familyId,
+      title: 'Courses (exemple)',
+      demo: true,
+      items: [
+        { id: 'demo-li1', label: 'Pain', done: false, qty: '1' },
+        { id: 'demo-li2', label: 'Lait', done: false, qty: '2' },
+        { id: 'demo-li3', label: 'Pommes', done: true, qty: '6' },
+      ],
+    },
+  ];
+  return { members, events, rituals, sessions, goals, activities, lists };
 }

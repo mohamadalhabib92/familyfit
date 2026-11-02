@@ -2,8 +2,7 @@ import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Text, View } from 'react-native';
 import { useData } from '@/lib/data';
-import { todayISO } from '@/lib/dates';
-import { isTime } from '@/lib/dates';
+import { isTime, todayISO } from '@/lib/dates';
 import { CATEGORIES, RITUAL_TEMPLATES, ROLE_LABEL, type Category, type Invitation, type Role } from '@/lib/model';
 import { shareInvitation } from '@/lib/share';
 import { uid } from '@/lib/storage';
@@ -23,7 +22,7 @@ export default function Onboarding() {
   const [category, setCategory] = useState<Category>('family');
   const [start, setStart] = useState('19:00');
   const [err, setErr] = useState('');
-  const [t0] = useState(Date.now());
+  const [t0] = useState(() => Date.now());
   const [sec, setSec] = useState(0);
   useEffect(() => { const id = setInterval(() => setSec(Math.round((Date.now() - t0) / 1000)), 1000); return () => clearInterval(id); }, [t0]);
 

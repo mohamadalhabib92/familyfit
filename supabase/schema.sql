@@ -193,3 +193,116 @@ revoke all on function public.accept_invitation(text, text) from public, anon;
 grant execute on function public.create_family(text, text) to authenticated;
 grant execute on function public.create_invitation(uuid, text) to authenticated;
 grant execute on function public.accept_invitation(text, text) to authenticated;
+
+-- Journal minimal (suppression de compte, transfert d'admin). Pas de donnée de santé.
+create table if not exists public.audit_log (
+  id uuid primary key default gen_random_uuid(),
+  family_id uuid references public.families(id) on delete cascade,
+  actor_id uuid,
+  action text not null,
+  detail jsonb not null default '{}',
+  created_at timestamptz not null default now()
+);
+
+alter table public.audit_log enable row level security;
+drop policy if exists "audit famille" on public.audit_log;
+create policy "audit famille" on public.audit_log
+  for select using (family_id is not null and public.is_family_member(family_id));
+revoke all on public.audit_log from public, anon, authenticated;
+grant select on public.audit_log to authenticated;
+
+-- Le propriétaire (et les superusers) contournent la RLS sans FORCE.
+-- service_role Supabase a BYPASSRLS : FORCE ne le bloque pas.
+do $$
+declare t text;
+begin
+  foreach t in array array['profiles','families','family_members','invitations','events','rituals','sessions','goals','activities','audit_log']
+  loop
+    execute format('alter table public.%I force row level security', t);
+  end loop;
+end $$;
+
+-- Suppression du compte (Apple 5.1.1).
+-- Transfère l'admin à un autre adulte, sinon supprime la famille (jamais sans admin).
+-- Tente ensuite d'effacer auth.users. Si le rôle SQL ne le peut pas, les données
+-- familiales sont déjà retirées et auth_user_deleted vaut false.
+create or replace function public.delete_my_account() returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare
+  uid uuid := auth.uid();
+  r record;
+  successor uuid;
+  auth_deleted boolean := false;
+begin
+  if uid is null then raise exception 'Non authentifié'; end if;
+
+  for r in select id, family_id, role from family_members where user_id = uid loop
+    if r.role = 'admin' and not exists (
+      select 1 from family_members
+      where family_id = r.family_id and role = 'admin' and user_id is distinct from uid
+    ) then
+      select fm.id into successor
+      from family_members fm
+      where fm.family_id = r.family_id
+        and fm.id <> r.id
+        and fm.user_id is not null
+        and coalesce(fm.is_minor, false) = false
+      order by case fm.role when 'parent' then 0 when 'member' then 1 else 2 end, fm.created_at
+      limit 1;
+
+      if successor is null then
+        insert into audit_log(family_id, actor_id, action, detail)
+        values (null, null, 'family_removed', jsonb_build_object('family_id', r.family_id));
+        delete from families where id = r.family_id;
+        continue;
+      end if;
+
+      update family_members set role = 'admin' where id = successor;
+      insert into audit_log(family_id, actor_id, action, detail)
+      values (r.family_id, null, 'admin_transferred', jsonb_build_object('to_member', successor));
+    end if;
+
+    delete from family_members where id = r.id;
+  end loop;
+
+  update families f
+  set created_by = sub.user_id
+  from (
+    select distinct on (family_id) family_id, user_id
+    from family_members
+    where role = 'admin' and user_id is not null
+    order by family_id, created_at
+  ) sub
+  where f.id = sub.family_id and f.created_by = uid;
+
+  delete from families where created_by = uid;
+
+  update invitations set accepted_by = null where accepted_by = uid;
+  update invitations i
+  set created_by = sub.user_id
+  from (
+    select distinct on (family_id) family_id, user_id
+    from family_members
+    where role = 'admin' and user_id is not null
+    order by family_id, created_at
+  ) sub
+  where i.family_id = sub.family_id and i.created_by = uid;
+  delete from invitations where created_by = uid;
+
+  delete from profiles where id = uid;
+
+  insert into audit_log(family_id, actor_id, action, detail)
+  values (null, null, 'account_deleted', jsonb_build_object('at', now()));
+
+  begin
+    delete from auth.users where id = uid;
+    auth_deleted := true;
+  exception when others then
+    auth_deleted := false;
+  end;
+
+  return jsonb_build_object('ok', true, 'auth_user_deleted', auth_deleted);
+end $$;
+
+revoke all on function public.delete_my_account() from public, anon;
+grant execute on function public.delete_my_account() to authenticated;

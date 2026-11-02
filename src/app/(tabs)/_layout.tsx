@@ -1,21 +1,22 @@
 import { Redirect, Tabs } from 'expo-router';
-import { ActivityIndicator, View } from 'react-native';
 import { useData } from '@/lib/data';
 import { supabaseConfigured } from '@/lib/supabase';
+import { BootSpinner } from '@/ui/boot';
 import { Ionicons, type IconName } from '@/ui/kit';
 import { theme as t } from '@/ui/theme';
 
 export default function TabsLayout() {
-  const { ready, prefs, session, family } = useData();
-  if (!ready)
-    return (
-      <View style={{ flex: 1, backgroundColor: t.bg, alignItems: 'center', justifyContent: 'center' }}>
-        <ActivityIndicator color={t.primary} accessibilityLabel="Chargement" />
-      </View>
-    );
-  if (!supabaseConfigured && !prefs.configAck) return <Redirect href="/config" />;
-  if (!session) return <Redirect href="/auth" />;
-  if (!family || !prefs.onboarded) return <Redirect href="/onboarding" />;
+  const { appReady, prefs, session, family } = useData();
+  if (!appReady) return <BootSpinner />;
+  // Clés absentes ou placeholders : mode essai local, jamais l'écran technique.
+  if (!supabaseConfigured) {
+    if (!family && prefs.trialSeed !== 'opt-out') return <BootSpinner label="Préparation du mode essai" />;
+    if (!family || !prefs.onboarded) return <Redirect href="/onboarding" />;
+    if (!session) return <Redirect href="/auth" />;
+  } else {
+    if (session?.mode !== 'supabase') return <Redirect href="/auth" />;
+    if (!family || !prefs.onboarded) return <Redirect href="/onboarding" />;
+  }
   const icon = (name: IconName) =>
     function TabIcon({ color, size }: { color: unknown; size: number }) {
       return <Ionicons name={name} color={typeof color === 'string' ? color : undefined} size={size} />;

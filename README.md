@@ -7,8 +7,8 @@ Application Expo (iOS / Android) **et** PWA installable (GitHub Pages, `/familyf
 
 ## Fonctionnalités
 
-- **Configuration requise** : écran qui liste `EXPO_PUBLIC_SUPABASE_URL` et `EXPO_PUBLIC_SUPABASE_ANON_KEY`. Sans ces valeurs → bouton « Continuer en mode démo (local) ».
-- **Connexion sans mot de passe** : code OTP à 6 chiffres par e-mail ou SMS (Supabase Auth). Erreurs claires en français : code expiré, code invalide, trop de tentatives, numéro au mauvais format. Renvoi possible après 30 s. En mode démo, le code est simulé et affiché à l’écran.
+- **Mode essai** : si `EXPO_PUBLIC_SUPABASE_URL` ou `EXPO_PUBLIC_SUPABASE_ANON_KEY` manquent ou valent encore `YOUR_*`, l’app ouvre une famille d’exemple sur l’appareil (agenda, rituels, objectifs, liste). Bannière « Mode essai — vos données restent sur cet appareil » et bouton « Créer ma vraie famille ». Aucun écran « Configuration requise ».
+- **Connexion sans mot de passe** : code OTP à 6 chiffres par e-mail ou SMS (Supabase Auth) lorsque les clés sont présentes. Erreurs claires en français : code expiré, code invalide, trop de tentatives, numéro au mauvais format. Renvoi possible après 30 s. Sans clés, le code simulé reste accessible via Famille → Connexion simulée.
 - **Onboarding en moins de 2 min** (chronomètre visible) : famille → invitation → premier événement ou rituel.
 - **Famille** : modèle `family_id`, rôles Administrateur / Parent / Membre, invitations par code ou lien (`/join/CODE`), valables 7 jours et révocables.
 - **Enfants** : profils sans compte ni contact. Un enfant apparaît comme « Enfant » pour les membres non-parents, sauf consentement parental.
@@ -35,7 +35,7 @@ npm install
 cp .env.example .env    # optionnel : renseigner les valeurs YOUR_* pour activer Supabase
 npx expo start          # mobile (Expo Go / dev build)
 npm run build:web       # PWA dans dist/
-npm test                # tests du calendrier hégirien
+npm test                # hijri, contrastes AA, secrets, isolation RLS
 npx tsc --noEmit
 ```
 
@@ -48,7 +48,9 @@ npx tsc --noEmit
    - les RPC `create_family`, `create_invitation` et `accept_invitation`.
 3. Facultatif : `supabase/seed-demo.sql` (lignes marquées `is_demo`).
 4. Ajouter l’URL de l’app (et `familyfit://`) aux Redirect URLs de Supabase pour les liens profonds.
-5. Pour GitHub Pages : ajouter les **variables** de dépôt `EXPO_PUBLIC_SUPABASE_URL` et `EXPO_PUBLIC_SUPABASE_ANON_KEY`. La clé anon est publique par nature. N’y mettez **jamais** la clé `service_role`.
+5. Pour GitHub Pages : ajouter les **variables** de dépôt `EXPO_PUBLIC_SUPABASE_URL` et `EXPO_PUBLIC_SUPABASE_ANON_KEY`. La clé anon est publique par nature. N’y mettez **jamais** la clé service_role.
+6. Diagnostic (clés présentes ou non, sans afficher leur valeur) : en développement, ou après **7 appuis en moins de 4 secondes** sur le nom de la famille (onglet Famille) ou sur le titre « Connexion sans mot de passe ». Ce n’est pas un écran du parcours utilisateur.
+7. Suppression du compte : onglet Famille. Côté serveur, appliquer `supabase/schema.sql` (fonction `delete_my_account`) : l’admin est transmis à un autre adulte, sinon la famille est supprimée.
 
 ## Déploiement PWA
 
@@ -66,7 +68,9 @@ Pour tout retirer : Famille → « Supprimer les données démo ».
 
 ## Limites connues
 
-- Les données restent **locales à l’appareil**. Supabase sert à la connexion OTP et aux RPC famille et invitations ; la synchronisation complète des événements, rituels et sessions n’est pas encore branchée (le schéma est prêt).
+- Les données restent **locales à l’appareil**. Supabase sert à la connexion OTP, aux RPC famille et invitations et à la suppression de compte ; la synchronisation complète des événements, rituels et sessions n’est pas encore branchée (le schéma est prêt).
+- Sentry (`EXPO_PUBLIC_SENTRY_DSN`) est désactivé tant que la valeur est absente ou `YOUR_*`. Aucun envoi au démarrage.
+- Santé (Health) et synchro Google/Apple restent désactivées (`FEATURE_HEALTH`, `FEATURE_EXTERNAL_CAL_SYNC`).
 - En mode démo, un code d’invitation ne peut être accepté que **sur le même appareil**.
 - Les rappels (notifications locales) ne fonctionnent que dans l’app iOS / Android, pas dans la PWA.
 - Le calendrier hégirien est **tabulaire** (arithmétique) : il peut différer de ±1–2 jours de l’observation du croissant ou d’Umm al-Qura. Un ajustement manuel de ±2 jours est disponible dans Famille → Réglages.

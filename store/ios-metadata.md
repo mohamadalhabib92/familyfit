@@ -57,7 +57,7 @@ Autorisations :
 - Notifications : facultatives, pour le rappel quotidien de vos rituels. Ce sont des notifications locales, programmées sur l'appareil.
 
 ## Notes pour l'équipe de révision (App Review)
-Au premier lancement, choisissez « Continuer en mode démo (local) ». La connexion par code (OTP) est alors SIMULÉE : le code s'affiche à l'écran, aucun e-mail ni SMS n'est envoyé. Toutes les données restent sur l'appareil. Les notifications ne servent qu'au rappel quotidien des rituels.
+Au premier lancement, l'app s'ouvre en mode essai (famille d'exemple, bannière « Mode essai — vos données restent sur cet appareil »). Aucun compte n'est requis. La connexion par code (OTP) est SIMULÉE depuis Famille → Connexion simulée : le code s'affiche à l'écran, aucun e-mail ni SMS n'est envoyé. Compte de revue : YOUR_REVIEW_ACCOUNT (à créer par l'éditeur). Les notifications ne servent qu'au rappel quotidien des rituels. Rien n'est soumis.
 
 Contact révision : à compléter (prénom, nom, téléphone, e-mail de Mohamed). Compte de démonstration : non requis.
 
@@ -70,5 +70,5 @@ Contact révision : à compléter (prénom, nom, téléphone, e-mail de Mohamed)
 |---|---|---|
 | Élevé | Nom et marque : « FamilyFit » est déjà utilisé sur l'App Store par Family Fit GmbH (risque 5.2 et nom refusé dans App Store Connect). | Utiliser « FamilyFit – Rituels en famille » au minimum ; idéalement un nom distinct. |
 | Élevé | 4.3 Spam avec FamCal (deux agendas familiaux). | Publier une seule des deux apps, ou mettre en avant ce qui est propre à FamilyFit (rituels, hégirien, bien-être). |
-| Moyen | 2.1 L'écran « Configuration requise » (Supabase) et la connexion démo peuvent sembler inachevés. | Masquer l'écran de configuration dans la version App Store et démarrer directement en mode local, ou activer Supabase. |
+| Faible | 2.1 Ancien écran « Configuration requise ». | Traité en Passe 1 : démarrage direct en mode essai. L'écran diagnostic n'est plus sur le chemin utilisateur. Ne pas soumettre tant que Mohamed ne le demande pas. |
 | Faible | Bien-être : pas de conseil médical (déjà le cas). | Garder la mention « aucun conseil médical ». |

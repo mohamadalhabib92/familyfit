@@ -1,4 +1,6 @@
 /** Modèle FamilyFit — family_id central (miroir du schéma Supabase). */
+import { categoryPalette, memberPalette } from '@/ui/theme';
+
 export type Role = 'admin' | 'parent' | 'member';
 export const ROLE_LABEL: Record<Role, string> = { admin: 'Administrateur·rice', parent: 'Parent', member: 'Membre' };
 export const canManage = (r?: Role) => r === 'admin' || r === 'parent';
@@ -19,11 +21,11 @@ export type Invitation = {
 };
 
 export const CATEGORIES = [
-  { key: 'family', label: 'Famille', en: 'Family', color: '#2F4B43', icon: 'home-outline' },
-  { key: 'work', label: 'Travail', en: 'Work', color: '#2F5F8A', icon: 'briefcase-outline' },
-  { key: 'school', label: 'École', en: 'School', color: '#8A5A00', icon: 'school-outline' },
-  { key: 'leisure', label: 'Loisirs', en: 'Leisure', color: '#B0476B', icon: 'game-controller-outline' },
-  { key: 'wellness', label: 'Bien-être', en: 'Wellness', color: '#2E7D4F', icon: 'leaf-outline' },
+  { key: 'family', label: 'Famille', en: 'Family', ...categoryPalette.family },
+  { key: 'work', label: 'Travail', en: 'Work', ...categoryPalette.work },
+  { key: 'school', label: 'École', en: 'School', ...categoryPalette.school },
+  { key: 'leisure', label: 'Loisirs', en: 'Leisure', ...categoryPalette.leisure },
+  { key: 'wellness', label: 'Bien-être', en: 'Wellness', ...categoryPalette.wellness },
 ] as const;
 export type Category = (typeof CATEGORIES)[number]['key'];
 export const cat = (k: Category) => CATEGORIES.find((c) => c.key === k) ?? CATEGORIES[0];
@@ -53,6 +55,10 @@ export const MOODS = ['😞', '😕', '🙂', '😊', '🤩'] as const;
 export type Goal = { id: string; familyId: string; title: string; unit: string; weeklyTarget: number; memberIds: string[]; icon: string; demo?: boolean };
 export type Activity = { id: string; goalId: string; memberId: string; date: string; amount: number };
 
+/** Liste locale (mode essai). La synchro des listes partagées est une passe ultérieure. */
+export type ListItem = { id: string; label: string; done: boolean; qty?: string };
+export type FamilyList = { id: string; familyId: string; title: string; items: ListItem[]; demo?: boolean };
+
 export const RITUAL_TEMPLATES: Omit<Ritual, 'id' | 'familyId'>[] = [
   { title: 'Réveil en douceur', slot: 'morning', items: ['Verre d’eau', 'Petit-déjeuner ensemble', 'Cartables / sacs prêts', 'Un mot gentil'], template: true },
   { title: 'Bouger 10 minutes', slot: 'morning', items: ['Étirements', 'Marche ou danse', 'Respiration'], template: true },
@@ -60,7 +66,7 @@ export const RITUAL_TEMPLATES: Omit<Ritual, 'id' | 'familyId'>[] = [
   { title: 'Gratitude', slot: 'evening', items: ['Chacun partage une gratitude', 'Câlin / bonne nuit'], template: true },
 ];
 
-export const MEMBER_COLORS = ['#2F4B43', '#D08C60', '#2F5F8A', '#B0476B', '#6B5BA8', '#2E7D4F', '#8A5A00'];
+export const MEMBER_COLORS = memberPalette.map((m) => m.color);
 
 /** Nom affiché d’un membre selon le lecteur (vie privée des mineurs). */
 export function displayName(m: Member | undefined, viewer: Member | null): string {

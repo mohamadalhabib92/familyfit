@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Text } from 'react-native';
 import { confirmAsk } from '@/lib/confirm';
 import { useData } from '@/lib/data';
+import { HEALTH_DISCLAIMER, sensitiveHealthIssue } from '@/lib/health';
 import { displayName, type Goal } from '@/lib/model';
 import { uid } from '@/lib/storage';
 import { Button, Chip, Field, Muted, Row, Screen, Spacer, styles } from '@/ui/kit';
@@ -27,6 +28,8 @@ export default function GoalEditor() {
     const n = Number(target.replace(',', '.'));
     if (!g.title.trim()) return setErr('Donnez un nom à l’objectif.');
     if (!Number.isFinite(n) || n <= 0) return setErr('Cible hebdomadaire invalide.');
+    const health = sensitiveHealthIssue(g.title, g.unit);
+    if (health) return setErr(health);
     const fin = { ...g, title: g.title.trim(), weeklyTarget: n };
     setGoals((l) => (existing ? l.map((x) => (x.id === fin.id ? fin : x)) : [...l, fin]));
     router.back();
@@ -36,7 +39,7 @@ export default function GoalEditor() {
       <Stack.Screen options={{ title: existing ? 'Objectif' : 'Nouvel objectif' }} />
       {!existing ? (
         <>
-          <Text style={styles.label}>Idées</Text>
+          <Text style={styles.label}>Idées libres, pas des recommandations de santé. À valider.</Text>
           <Row wrap style={{ marginBottom: 14 }}>
             {PRESETS.map((p) => <Chip key={p.title} label={p.title} active={g.title === p.title} onPress={() => { setG({ ...g, ...p }); setTarget(String(p.weeklyTarget)); }} />)}
           </Row>
@@ -55,7 +58,7 @@ export default function GoalEditor() {
       <Button title="Enregistrer" icon="checkmark" onPress={save} />
       <Spacer h={8} />
       {existing ? <Button variant="danger" title="Supprimer" onPress={() => confirmAsk(`Supprimer « ${existing.title} » et son suivi ?`, () => { setGoals((l) => l.filter((x) => x.id !== existing.id)); setActivities((l) => l.filter((a) => a.goalId !== existing.id)); router.back(); }, 'Supprimer')} /> : null}
-      <Muted style={{ fontSize: 12, marginTop: 10 }}>Objectifs de bien-être légers et partagés. Aucun conseil médical ; en cas de question de santé, consultez un professionnel.</Muted>
+      <Muted style={{ fontSize: 12, marginTop: 10 }}>{HEALTH_DISCLAIMER}</Muted>
     </Screen>
   );
 }
