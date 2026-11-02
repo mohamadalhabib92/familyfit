@@ -30,7 +30,7 @@ export default function Onboarding() {
   const [sec, setSec] = useState(0);
   useEffect(() => { const id = setInterval(() => setSec(Math.round((Date.now() - t0) / 1000)), 1000); return () => clearInterval(id); }, [t0]);
 
-  const finish = () => { setPrefs((p) => ({ ...p, onboarded: true, trialMode: false, trialDeclined: true })); router.replace('/'); };
+  const finish = () => { setPrefs((p) => ({ ...p, onboarded: true, trialMode: false, trialDeclined: true })); router.replace(session ? '/' : '/auth'); };
 
   const steps = ['Famille', 'Inviter', 'Premier événement'];
   return (

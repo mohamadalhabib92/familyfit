@@ -131,6 +131,45 @@ from public.rls_probe where k = 'fam_a';
 insert into public.rls_probe (k, v)
 select 'eden', id from public.family_members where user_id = '33333333-3333-4333-8333-333333333333';
 
+-- Eden est parent : il ne peut pas passer sa ligne à admin.
+select public.rls_as('33333333-3333-4333-8333-333333333333');
+do $$
+declare n int;
+begin
+  update public.family_members
+  set role = 'admin'
+  where user_id = '33333333-3333-4333-8333-333333333333';
+  get diagnostics n = row_count;
+  if n > 0 then
+    raise exception 'ASSERT un parent a pu se promouvoir admin';
+  end if;
+exception
+  when insufficient_privilege then
+    null;
+  when others then
+    if SQLERRM like 'ASSERT%' then raise; end if;
+    if SQLSTATE <> '42501' then
+      raise exception 'ASSERT promotion parent : % %', SQLSTATE, SQLERRM;
+    end if;
+end $$;
+
+reset role;
+do $$
+declare r text;
+begin
+  select role into r from public.family_members
+  where user_id = '33333333-3333-4333-8333-333333333333';
+  if r = 'admin' then
+    raise exception 'ASSERT le rôle d''Eden a été élevé';
+  end if;
+  if r <> 'parent' then
+    raise exception 'ASSERT rôle Eden inattendu: %', r;
+  end if;
+end $$;
+
+select public.rls_as('11111111-1111-4111-8111-111111111111');
+set role authenticated;
+
 do $$
 begin
   perform public.rls_as('11111111-1111-4111-8111-111111111111');

@@ -2,6 +2,7 @@ import { Redirect, Tabs } from 'expo-router';
 import { View } from 'react-native';
 import { TrialBanner } from '@/components/TrialBanner';
 import { useData } from '@/lib/data';
+import { routeAfterReady } from '@/lib/gate';
 import { supabaseConfigured } from '@/lib/supabase';
 import { Ionicons, LoadingState, type IconName } from '@/ui/kit';
 import { theme as t } from '@/ui/theme';
@@ -9,10 +10,16 @@ import { theme as t } from '@/ui/theme';
 export default function TabsLayout() {
   const { ready, storageSlow, reloadStorage, prefs, session, family } = useData();
   if (!ready) return <LoadingState slow={storageSlow} onRetry={reloadStorage} />;
-  const awaitingTrial = !supabaseConfigured && !session && !family && !prefs.trialDeclined;
-  if (awaitingTrial) return <LoadingState slow onRetry={reloadStorage} />;
-  if (!session) return <Redirect href={supabaseConfigured ? '/auth' : '/onboarding'} />;
-  if (!family || !prefs.onboarded) return <Redirect href="/onboarding" />;
+  const dest = routeAfterReady({
+    supabaseConfigured,
+    hasSession: !!session,
+    hasFamily: !!family,
+    onboarded: prefs.onboarded,
+    trialDeclined: prefs.trialDeclined,
+  });
+  if (dest === 'trial') return <LoadingState slow onRetry={reloadStorage} />;
+  if (dest === 'auth') return <Redirect href="/auth" />;
+  if (dest === 'onboarding') return <Redirect href="/onboarding" />;
   const icon = (name: IconName) =>
     function TabIcon({ color, size }: { color: unknown; size: number }) {
       return <Ionicons name={name} color={typeof color === 'string' ? color : undefined} size={size} />;

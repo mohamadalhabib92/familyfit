@@ -11,7 +11,7 @@ import { theme as t } from '@/ui/theme';
 const COOLDOWN = 30;
 
 export default function Auth() {
-  const { setSession, setPrefs, prefs } = useData();
+  const { setSession, setPrefs, prefs, session: current } = useData();
   const router = useRouter();
   const unlock = useSecretTap(() => {
     markDiagnosticUnlocked();
@@ -135,8 +135,12 @@ export default function Auth() {
           </Row>
         </>
       )}
-      <Spacer h={12} />
-      <Button small variant="ghost" title="Retour" onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))} />
+      {current ? (
+        <>
+          <Spacer h={12} />
+          <Button small variant="ghost" title="Retour" onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))} />
+        </>
+      ) : null}
       {diagnosticUnlocked(prefs.devConfigUnlocked) ? (
         <>
           <Spacer h={20} />

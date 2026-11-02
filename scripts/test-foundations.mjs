@@ -2,7 +2,6 @@
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { spawnSync } from 'node:child_process';
 import ts from 'typescript';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -152,13 +151,6 @@ if (/allowFontScaling=\{false\}/.test(srcJoined)) bad('allowFontScaling désacti
 else ok('texte dynamique non plafonné');
 if (srcJoined.includes('Configuration requise')) bad('écran Configuration requise encore référencé');
 else ok('plus d’écran « Configuration requise »');
-
-const psql = spawnSync('psql', ['--version'], { encoding: 'utf8' });
-if (psql.status !== 0) {
-  console.log('○ psql absent : le SQL d’isolation n’est pas exécuté ici (fichier prêt, non appliqué à un projet)');
-} else {
-  console.log('psql détecté, lancement du test d’isolation local…');
-}
 
 if (failed) {
   console.log(failed, 'échec(s)');

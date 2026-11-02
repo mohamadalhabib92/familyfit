@@ -10,9 +10,12 @@ import { canPersist, noteLoadFinished, noteLoadStarted, shouldApplyLoad } from '
 // Préfixe propre à l'app : plusieurs PWA partagent la même origine sur GitHub Pages.
 const PREFIX = '@familyfit/';
 
-export type LoadOutcome<T> = { ok: true; value: T } | { ok: false };
+export type LoadOutcome<T> =
+  | { ok: true; value: T }
+  | { ok: false; reason: 'unavailable' }
+  | { ok: false; reason: 'corrupt'; raw: string };
 
-/** `ok: false` = lecture ratée. Ce n'est pas une absence de données. */
+/** `corrupt` = le texte est là mais illisible. Ce n'est pas une clé vide. */
 export async function loadJSON<T>(key: string, fallback: T): Promise<LoadOutcome<T>> {
   try {
     const raw = await AsyncStorage.getItem(PREFIX + key);
@@ -20,11 +23,16 @@ export async function loadJSON<T>(key: string, fallback: T): Promise<LoadOutcome
     try {
       return { ok: true, value: JSON.parse(raw) as T };
     } catch {
-      return { ok: false };
+      return { ok: false, reason: 'corrupt', raw };
     }
   } catch {
-    return { ok: false };
+    return { ok: false, reason: 'unavailable' };
   }
+}
+
+/** Remplace une clé illisible. Uniquement après confirmation explicite. */
+export async function replaceUnreadableKey<T>(key: string, value: T): Promise<void> {
+  await AsyncStorage.setItem(PREFIX + key, JSON.stringify(value));
 }
 
 export async function saveJSON<T>(key: string, value: T): Promise<void> {
@@ -65,6 +73,7 @@ export function usePersistentState<T>(key: string, initial: T | (() => T), boot 
   const [value, setValue] = useState<T>(initial);
   const [ready, setReady] = useState(false);
   const [slow, setSlow] = useState(false);
+  const [corruptRaw, setCorruptRaw] = useState<string | null>(null);
   const initialRef = useRef(initial);
   const request = useRef(0);
 
@@ -83,10 +92,12 @@ export function usePersistentState<T>(key: string, initial: T | (() => T), boot 
       clearTimeout(slowTimer);
       if (!result.ok) {
         noteLoadFinished(key, false);
+        setCorruptRaw(result.reason === 'corrupt' ? result.raw : null);
         setSlow(true);
         return;
       }
       noteLoadFinished(key, true);
+      setCorruptRaw(null);
       setValue(result.value);
       setReady(true);
       setSlow(false);
@@ -108,7 +119,7 @@ export function usePersistentState<T>(key: string, initial: T | (() => T), boot 
     [key],
   );
 
-  return [value, set, ready, slow] as const;
+  return [value, set, ready, slow, corruptRaw] as const;
 }
 
 export function uid(prefix = ''): string {

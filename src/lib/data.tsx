@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
 import { addDays, todayISO } from './dates';
 import { MEMBER_PALETTE, type Activity, type Family, type FamilyEvent, type FamilyList, type Goal, type Invitation, type Member, type Ritual, type Role, type Session } from './model';
 import { demoData } from './seed';
-import { clearAll, saveJSON, uid, usePersistentState } from './storage';
+import { clearAll, replaceUnreadableKey, saveJSON, uid, usePersistentState } from './storage';
 import { rpc, supabaseConfigured, type AuthSession } from './supabase';
 
 type Setter<T> = (v: T | ((p: T) => T)) => void;
@@ -48,6 +48,8 @@ type Ctx = {
   acceptInvitation: (code: string, name: string, isMinor: boolean) => Promise<{ ok: boolean; message: string }>;
   hasDemo: boolean; removeDemo: () => void;
   signOut: () => void; wipe: () => Promise<void>;
+  corrupt: { key: string; raw: string }[];
+  resetCorrupt: (keys: string[]) => Promise<void>;
   keepTrialData: () => void;
   restartKeepingSession: () => Promise<void>;
   deleteAccount: (transferTo?: string) => Promise<{ ok: boolean; message: string }>;
@@ -60,19 +62,30 @@ const paletteAt = (i: number) => MEMBER_PALETTE[i % MEMBER_PALETTE.length] ?? ME
 
 export function DataProvider({ children }: { children: ReactNode }) {
   const [boot, setBoot] = useState(0);
-  const [session, setSession, r1, s1] = usePersistentState<AuthSession | null>('session', null, boot);
-  const [prefs, setPrefs, r2, s2] = usePersistentState<Prefs>('prefs', DEFAULT_PREFS, boot);
-  const [family, setFamily, r3, s3] = usePersistentState<Family | null>('family', null, boot);
-  const [members, setMembers, r4, s4] = usePersistentState<Member[]>('members', [], boot);
-  const [invitations, setInvitations, r5, s5] = usePersistentState<Invitation[]>('invitations', [], boot);
-  const [events, setEvents, r6, s6] = usePersistentState<FamilyEvent[]>('events', [], boot);
-  const [rituals, setRituals, r7, s7] = usePersistentState<Ritual[]>('rituals', [], boot);
-  const [sessions, setSessions, r8, s8] = usePersistentState<Session[]>('sessions', [], boot);
-  const [goals, setGoals, r9, s9] = usePersistentState<Goal[]>('goals', [], boot);
-  const [activities, setActivities, r10, s10] = usePersistentState<Activity[]>('activities', [], boot);
-  const [lists, setLists, r11, s11] = usePersistentState<FamilyList[]>('lists', [], boot);
-  const [remoteError, setRemoteError] = usePersistentState<string | null>('remoteError', null, boot);
-  const ready = r1 && r2 && r3 && r4 && r5 && r6 && r7 && r8 && r9 && r10 && r11;
+  const [session, setSession, r1, s1, c1] = usePersistentState<AuthSession | null>('session', null, boot);
+  const [prefs, setPrefs, r2, s2, c2] = usePersistentState<Prefs>('prefs', DEFAULT_PREFS, boot);
+  const [family, setFamily, r3, s3, c3] = usePersistentState<Family | null>('family', null, boot);
+  const [members, setMembers, r4, s4, c4] = usePersistentState<Member[]>('members', [], boot);
+  const [invitations, setInvitations, r5, s5, c5] = usePersistentState<Invitation[]>('invitations', [], boot);
+  const [events, setEvents, r6, s6, c6] = usePersistentState<FamilyEvent[]>('events', [], boot);
+  const [rituals, setRituals, r7, s7, c7] = usePersistentState<Ritual[]>('rituals', [], boot);
+  const [sessions, setSessions, r8, s8, c8] = usePersistentState<Session[]>('sessions', [], boot);
+  const [goals, setGoals, r9, s9, c9] = usePersistentState<Goal[]>('goals', [], boot);
+  const [activities, setActivities, r10, s10, c10] = usePersistentState<Activity[]>('activities', [], boot);
+  const [lists, setLists, r11, s11, c11] = usePersistentState<FamilyList[]>('lists', [], boot);
+  const [remoteError, setRemoteError, r12, , c12] = usePersistentState<string | null>('remoteError', null, boot);
+  const ready = r1 && r2 && r3 && r4 && r5 && r6 && r7 && r8 && r9 && r10 && r11 && r12;
+  const corrupt = (
+    [
+      ['session', c1], ['prefs', c2], ['family', c3], ['members', c4], ['invitations', c5], ['events', c6],
+      ['rituals', c7], ['sessions', c8], ['goals', c9], ['activities', c10], ['lists', c11], ['remoteError', c12],
+    ] as const
+  ).flatMap(([key, raw]) => (raw == null ? [] : [{ key, raw }]));
+  const emptyFor = (key: string): unknown => {
+    if (key === 'prefs') return DEFAULT_PREFS;
+    if (key === 'session' || key === 'family' || key === 'remoteError') return null;
+    return [];
+  };
   const storageSlow = !ready && (s1 || s2 || s3 || s4 || s5 || s6 || s7 || s8 || s9 || s10 || s11);
   const mergedPrefs: Prefs = { ...DEFAULT_PREFS, ...prefs };
 
@@ -111,6 +124,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   }, [ready, session, family, mergedPrefs.trialDeclined]);
 
   const createFamily: Ctx['createFamily'] = async (name, myName, withDemo) => {
+    if (!ready) return;
     const remoteId = await remote<string>('create_family', { p_name: name, p_display_name: myName });
     const mark = paletteAt(0);
     const fam: Family = { id: typeof remoteId === 'string' && remoteId ? remoteId : uid('fam_'), name, createdAt: new Date().toISOString() };
@@ -166,6 +180,14 @@ export function DataProvider({ children }: { children: ReactNode }) {
   };
 
   const signOut = () => setSession(null);
+  const resetCorrupt = async (keys: string[]) => {
+    const allowed = new Set<string>(corrupt.map((c) => c.key));
+    for (const key of keys) {
+      if (!allowed.has(key)) continue;
+      await replaceUnreadableKey(key, emptyFor(key));
+    }
+    setBoot((n) => n + 1);
+  };
   const wipe = async () => {
     await clearAll();
     setSession(null);
@@ -229,7 +251,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         ready, storageSlow, reloadStorage: () => setBoot((n) => n + 1),
         session, setSession, prefs: mergedPrefs, setPrefs, family, members, setMembers, me, invitations, events, setEvents,
         rituals, setRituals, sessions, setSessions, goals, setGoals, activities, setActivities, lists, setLists,
-        createFamily, createInvitation, revokeInvitation, acceptInvitation, hasDemo, removeDemo, signOut, wipe,
+        createFamily, createInvitation, revokeInvitation, acceptInvitation, hasDemo, removeDemo, signOut, wipe, corrupt, resetCorrupt,
         keepTrialData, restartKeepingSession, deleteAccount, remoteError,
       }}
     >

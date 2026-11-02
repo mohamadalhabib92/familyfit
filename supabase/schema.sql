@@ -106,6 +106,30 @@ create or replace function public.is_family_manager(fid uuid) returns boolean
 language sql stable security definer set search_path = public as $$
   select exists (select 1 from family_members where family_id = fid and user_id = auth.uid() and role in ('admin','parent'));
 $$;
+create or replace function public.is_family_admin(fid uuid) returns boolean
+language sql stable security definer set search_path = public as $$
+  select exists (
+    select 1 from public.family_members
+    where family_id = fid and user_id = auth.uid() and role = 'admin'
+  );
+$$;
+-- Un parent ne peut pas écrire role = admin ni modifier un administrateur.
+create or replace function public.can_write_member_role(fid uuid, new_role text, target_id uuid)
+returns boolean
+language plpgsql stable security definer set search_path = public as $$
+declare
+  old_role text;
+begin
+  if auth.uid() is null then return false; end if;
+  if not public.is_family_manager(fid) then return false; end if;
+  if public.is_family_admin(fid) then return true; end if;
+  if new_role = 'admin' then return false; end if;
+  if target_id is not null then
+    select role into old_role from public.family_members where id = target_id and family_id = fid;
+    if old_role = 'admin' then return false; end if;
+  end if;
+  return true;
+end $$;
 
 alter table public.profiles enable row level security;
 alter table public.families enable row level security;
@@ -128,7 +152,16 @@ create policy "famille modifiable par admin/parent" on public.families for updat
 drop policy if exists "membres visibles en famille" on public.family_members;
 create policy "membres visibles en famille" on public.family_members for select using (is_family_member(family_id));
 drop policy if exists "membres gérés par admin/parent" on public.family_members;
-create policy "membres gérés par admin/parent" on public.family_members for all using (is_family_manager(family_id)) with check (is_family_manager(family_id));
+drop policy if exists "membres insérés par gestionnaire" on public.family_members;
+drop policy if exists "membres modifiés sans promotion" on public.family_members;
+drop policy if exists "membres retirés par gestionnaire" on public.family_members;
+create policy "membres insérés par gestionnaire" on public.family_members
+  for insert with check (public.can_write_member_role(family_id, role, id));
+create policy "membres modifiés sans promotion" on public.family_members
+  for update using (public.is_family_manager(family_id))
+  with check (public.can_write_member_role(family_id, role, id));
+create policy "membres retirés par gestionnaire" on public.family_members
+  for delete using (public.is_family_manager(family_id));
 
 drop policy if exists "invitations gérées par admin/parent" on public.invitations;
 create policy "invitations gérées par admin/parent" on public.invitations for all using (is_family_manager(family_id)) with check (is_family_manager(family_id));
@@ -187,6 +220,17 @@ begin
   return inv.family_id;
 end $$;
 
+-- Rôles présents sur Supabase ; créés seulement pour un Postgres local de test.
+do $$
+begin
+  if not exists (select 1 from pg_roles where rolname = 'anon') then
+    create role anon nologin;
+  end if;
+  if not exists (select 1 from pg_roles where rolname = 'authenticated') then
+    create role authenticated nologin;
+  end if;
+end $$;
+
 revoke all on function public.create_family(text, text) from public, anon;
 revoke all on function public.create_invitation(uuid, text) from public, anon;
 revoke all on function public.accept_invitation(text, text) from public, anon;
@@ -204,21 +248,14 @@ begin
   end loop;
 end $$;
 
--- Rôles présents sur Supabase ; créés seulement pour un Postgres local de test.
-do $$
-begin
-  if not exists (select 1 from pg_roles where rolname = 'anon') then
-    create role anon nologin;
-  end if;
-  if not exists (select 1 from pg_roles where rolname = 'authenticated') then
-    create role authenticated nologin;
-  end if;
-end $$;
-
 grant usage on schema public to anon, authenticated;
 grant select, insert, update, delete on all tables in schema public to authenticated;
 grant select on all tables in schema public to anon;
 grant execute on function public.is_family_member(uuid), public.is_family_manager(uuid) to anon, authenticated;
+revoke all on function public.is_family_admin(uuid) from public, anon;
+revoke all on function public.can_write_member_role(uuid, text, uuid) from public, anon;
+grant execute on function public.is_family_admin(uuid) to authenticated;
+grant execute on function public.can_write_member_role(uuid, text, uuid) to authenticated;
 
 -- Suppression de compte (Apple 5.1.1). Additive : ne modifie aucune ligne tant qu'elle n'est pas appelée.
 -- Une famille ne reste jamais sans administrateur : transfert exigé, sinon suppression de la famille
