@@ -136,6 +136,7 @@ export default function FamilyTab() {
         {needsTransfer ? (
           <>
             <Spacer h={8} />
+            <Muted style={{ marginTop: 8 }}>Le successeur est la fiche du membre dans la famille, pas l’identifiant de son compte.</Muted>
             <Segmented
               label="Nouvel administrateur"
               options={otherAdults.map((m) => ({ label: displayName(m, me), value: m.id }))}

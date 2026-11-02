@@ -382,6 +382,27 @@ reset role;
 alter table public.family_members enable row level security;
 alter table public.family_members force row level security;
 
+-- service_role supprime directement la ligne admin (pas via auth.users).
+reset role;
+insert into auth.users (id, email) values ('12121212-1212-4121-8121-121212121212', 'leo@example.test');
+select public.rls_as('66666666-6666-4666-8666-666666666666');
+set role authenticated;
+insert into public.family_members (family_id, user_id, display_name, role, is_minor)
+select v, '12121212-1212-4121-8121-121212121212', 'Léo', 'admin', false from public.rls_probe where k = 'fam_e';
+reset role;
+select public.rls_as('');
+set role service_role;
+delete from public.family_members where user_id = '12121212-1212-4121-8121-121212121212';
+reset role;
+do $$
+declare n_user int; n_row int;
+begin
+  select count(*) into n_user from auth.users where id = '12121212-1212-4121-8121-121212121212';
+  select count(*) into n_row from public.family_members where user_id = '12121212-1212-4121-8121-121212121212';
+  if n_user <> 1 then raise exception 'ASSERT le compte de Léo a disparu'; end if;
+  if n_row <> 0 then raise exception 'ASSERT la ligne admin de Léo est encore là'; end if;
+end $$;
+
 -- service_role supprime l'admin qui n'est pas le créateur.
 select public.rls_as('');
 set role service_role;
@@ -412,6 +433,32 @@ begin
     where user_id in ('66666666-6666-4666-8666-666666666666', '88888888-8888-4888-8888-888888888888');
   if n_fam <> 0 then raise exception 'ASSERT famille E encore là'; end if;
   if n_mem <> 0 then raise exception 'ASSERT des membres de E restent'; end if;
+end $$;
+
+-- accepted_by : supprimer le compte met la colonne à null, l'invitation reste.
+reset role;
+insert into auth.users (id, email) values ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'lea@example.test');
+select public.rls_as('22222222-2222-4222-8222-222222222222');
+set role authenticated;
+create temp table ff_code (code text);
+insert into ff_code
+select public.create_invitation((select id from public.families where name = 'Famille B'), 'member');
+reset role;
+select public.rls_as('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa');
+set role authenticated;
+select public.accept_invitation((select code from ff_code), 'Léa');
+reset role;
+delete from auth.users where id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+do $$
+declare n_inv int; n_by int;
+begin
+  select count(*) into n_inv from public.invitations i
+  join ff_code c on c.code = i.code;
+  select count(*) into n_by from public.invitations i
+  join ff_code c on c.code = i.code
+  where i.accepted_by is null and i.status = 'accepted';
+  if n_inv <> 1 then raise exception 'ASSERT invitation de Léa disparue'; end if;
+  if n_by <> 1 then raise exception 'ASSERT accepted_by n''est pas null'; end if;
 end $$;
 
 rollback;

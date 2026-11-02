@@ -59,9 +59,37 @@ try {
     $$;
   `);
   run(psql, [...base, '-d', 'postgres', '-f', preamble]);
-  run(psql, [...base, '-d', 'postgres', '-f', join(root, 'supabase/schema.sql')]);
-  run(psql, [...base, '-d', 'postgres', '-f', join(root, 'supabase/tests/rls_family_isolation.sql')]);
-  console.log('✓ isolation RLS locale (familles A/B, anon, promotion parent, rollback)');
+  const schema = join(root, 'supabase/schema.sql');
+  const fk = join(root, 'supabase/migrations/20261102100200_invitations_accepted_by_set_null.sql');
+  const suite = join(root, 'supabase/tests/rls_family_isolation.sql');
+  const authStub = `
+    drop schema if exists public cascade;
+    create schema public;
+    drop schema if exists auth cascade;
+    create schema auth;
+    create table auth.users (id uuid primary key, email text);
+    create or replace function auth.uid() returns uuid language sql stable as $$
+      select coalesce(
+        nullif(current_setting('request.jwt.claim.sub', true), ''),
+        nullif(current_setting('request.jwt.claims', true), '')::json->>'sub'
+      )::uuid;
+    $$;
+  `;
+  const runSuite = (label, asPostgres) => {
+    if (asPostgres) {
+      run(psql, [...base, '-d', 'postgres', '-c', authStub]);
+      const wrapper = join(dir, 'apply-as-postgres.sql');
+      writeFileSync(wrapper, `set role postgres;\n\\i '${schema}'\nreset role;\n`);
+      run(psql, [...base, '-d', 'postgres', '-f', wrapper]);
+    } else {
+      run(psql, [...base, '-d', 'postgres', '-f', schema]);
+    }
+    run(psql, [...base, '-d', 'postgres', '-f', fk]);
+    run(psql, [...base, '-d', 'postgres', '-f', suite]);
+    console.log(`✓ isolation RLS (${label})`);
+  };
+  runSuite('schéma créé par le superutilisateur du cluster', false);
+  runSuite('schéma créé par postgres, comme sur Supabase', true);
 } finally {
   spawnSync(pgCtl, ['-D', data, '-m', 'immediate', 'stop'], { encoding: 'utf8' });
   rmSync(dir, { recursive: true, force: true });

@@ -235,7 +235,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
       const adults = members.filter((m) => !m.isMe && !m.isMinor);
       const soleAdmin = (members.find((m) => m.isMe)?.role === 'admin') && members.filter((m) => m.role === 'admin').length <= 1;
       if (soleAdmin && adults.length > 0) {
-        if (!transferTo) return { ok: false, message: 'Choisissez le nouvel administrateur. Rien n’a été effacé.' };
+        // transferTo est l'id de la fiche family_members, pas le user_id du compte.
+        if (!transferTo) return { ok: false, message: 'Choisissez le nouvel administrateur (sa fiche de membre, pas son compte). Rien n’a été effacé.' };
         if (!UUID.test(transferTo)) {
           return { ok: false, message: 'Ce membre n’est pas encore lié à un compte en ligne. Suppression interrompue pour ne pas laisser la famille sans administrateur. Rien n’a été effacé.' };
         }

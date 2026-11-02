@@ -59,7 +59,9 @@ security definer
 set search_path = public
 as $$
 declare
-  privileged boolean := current_user in ('service_role', 'postgres', 'supabase_admin')
+  -- SECURITY DEFINER : current_user est le propriétaire, pas l'appelant.
+  privileged boolean := coalesce(nullif(current_setting('role', true), 'none'), session_user::text)
+      in ('service_role', 'postgres', 'supabase_admin')
     or pg_trigger_depth() > 1;
   family_gone boolean := not exists (select 1 from public.families f where f.id = old.family_id);
   other_admins int;

@@ -5,6 +5,7 @@
 -- Cette migration n'a pas été appliquée par l'agent.
 -- Le corps de la fonction est le même que dans supabase/schema.sql.
 
+-- p_transfer_to : id de la ligne public.family_members du successeur, pas son user_id.
 create or replace function public.delete_my_account(p_transfer_to uuid default null)
 returns void
 language plpgsql
