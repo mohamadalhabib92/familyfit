@@ -6,7 +6,14 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
-const bins = ['/usr/lib/postgresql/17/bin', '/usr/lib/postgresql/16/bin', '/usr/lib/postgresql/15/bin', '/usr/lib/postgresql/14/bin', '/usr/bin'];
+const bins = [
+  ...(process.env.PG_BIN ? [process.env.PG_BIN] : []),
+  '/usr/lib/postgresql/17/bin',
+  '/usr/lib/postgresql/16/bin',
+  '/usr/lib/postgresql/15/bin',
+  '/usr/lib/postgresql/14/bin',
+  '/usr/bin',
+];
 const findBin = (name) => bins.map((d) => join(d, name)).find((p) => existsSync(p));
 
 const initdb = findBin('initdb');
@@ -41,6 +48,9 @@ try {
     create table if not exists auth.users (id uuid primary key, email text);
     create role anon nologin;
     create role authenticated nologin;
+    create role service_role superuser nologin;
+    create role supabase_admin superuser nologin;
+    create role postgres superuser nologin;
     create or replace function auth.uid() returns uuid language sql stable as $$
       select coalesce(
         nullif(current_setting('request.jwt.claim.sub', true), ''),

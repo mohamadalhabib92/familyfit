@@ -6,7 +6,7 @@ import { useData } from '@/lib/data';
 import { todayISO } from '@/lib/dates';
 import { isTime } from '@/lib/dates';
 import { CATEGORIES, RITUAL_TEMPLATES, ROLE_LABEL, type Category, type Invitation, type Role } from '@/lib/model';
-import { onboardingReplaceTarget } from '@/lib/gate';
+import { finishOnboarding, onboardingReplaceTarget } from '@/lib/gate';
 import { shareInvitation } from '@/lib/share';
 import { supabaseConfigured } from '@/lib/supabase';
 import { uid } from '@/lib/storage';
@@ -14,7 +14,7 @@ import { Button, Card, Chip, Eyebrow, Field, H1, Muted, Notice, Row, Screen, Seg
 import { theme as t } from '@/ui/theme';
 
 export default function Onboarding() {
-  const { family, createFamily, createInvitation, setEvents, setRituals, setPrefs, session, me } = useData();
+  const { family, createFamily, createInvitation, setEvents, setRituals, setPrefs, session, me, prefs } = useData();
   const router = useRouter();
   const { replace } = useLocalSearchParams<{ replace?: string }>();
   const replacing = replace === '1';
@@ -32,7 +32,17 @@ export default function Onboarding() {
   const [sec, setSec] = useState(0);
   useEffect(() => { const id = setInterval(() => setSec(Math.round((Date.now() - t0) / 1000)), 1000); return () => clearInterval(id); }, [t0]);
 
-  const finish = () => { setPrefs((p) => ({ ...p, onboarded: true, trialMode: false, trialDeclined: true })); router.replace(session ? '/' : '/auth'); };
+  const finish = () => {
+    const done = finishOnboarding({
+      supabaseConfigured,
+      session: session ? { userId: session.userId } : null,
+      family: family ? { id: family.id } : null,
+      onboarded: prefs.onboarded,
+      trialDeclined: prefs.trialDeclined,
+    });
+    setPrefs((p) => ({ ...p, onboarded: done.state.onboarded, trialDeclined: done.state.trialDeclined, trialMode: done.state.trialMode ?? false }));
+    router.replace(done.href);
+  };
   const leave = onboardingReplaceTarget({ supabaseConfigured, session }, replacing);
   if (leave) return <Redirect href={leave} />;
 

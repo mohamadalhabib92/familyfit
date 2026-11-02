@@ -3,6 +3,7 @@ import { addDays, todayISO } from './dates';
 import { MEMBER_PALETTE, type Activity, type Family, type FamilyEvent, type FamilyList, type Goal, type Invitation, type Member, type Ritual, type Role, type Session } from './model';
 import { demoData } from './seed';
 import { clearAll, replaceUnreadableKey, saveJSON, uid, usePersistentState } from './storage';
+import { signOut as signedOutState } from './gate';
 import { rpc, supabaseConfigured, type AuthSession } from './supabase';
 
 type Setter<T> = (v: T | ((p: T) => T)) => void;
@@ -179,7 +180,17 @@ export function DataProvider({ children }: { children: ReactNode }) {
     setLists((l) => l.filter((x) => !isDemo(x)));
   };
 
-  const signOut = () => setSession(null);
+  const signOut = () => {
+    const next = signedOutState({
+      supabaseConfigured,
+      session: session ? { userId: session.userId } : null,
+      family: family ? { id: family.id } : null,
+      onboarded: mergedPrefs.onboarded,
+      trialDeclined: mergedPrefs.trialDeclined,
+    });
+    setSession(next.session ? session : null);
+    if (!next.family) setFamily(null);
+  };
   const resetCorrupt = async (keys: string[]) => {
     const allowed = new Set<string>(corrupt.map((c) => c.key));
     for (const key of keys) {

@@ -28,6 +28,7 @@ export type LocalState = {
   family: { id: string } | null;
   onboarded: boolean;
   trialDeclined: boolean;
+  trialMode?: boolean;
 };
 
 function toGate(state: LocalState): GateInput {
@@ -47,7 +48,7 @@ export function signOut(state: LocalState): LocalState {
 
 /** Bouton Terminer de l'onboarding : prefs mises à jour, puis la route. */
 export function finishOnboarding(state: LocalState): { state: LocalState; href: '/' | '/auth' } {
-  const next: LocalState = { ...state, onboarded: true, trialDeclined: true };
+  const next: LocalState = { ...state, onboarded: true, trialDeclined: true, trialMode: false };
   return { state: next, href: next.session ? '/' : '/auth' };
 }
 

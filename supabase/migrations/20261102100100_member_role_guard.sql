@@ -50,12 +50,20 @@ create policy "membres retirés par gestionnaire" on public.family_members
     and (role <> 'admin' or public.is_family_admin(family_id))
   );
 
+-- Le service et les cascades passent sans session.
+-- auth.uid() null ne suffit pas pour anon ou authenticated.
 create or replace function public.family_members_guard()
 returns trigger
 language plpgsql
 security definer
 set search_path = public
 as $$
+declare
+  privileged boolean := current_user in ('service_role', 'postgres', 'supabase_admin')
+    or pg_trigger_depth() > 1;
+  family_gone boolean := not exists (select 1 from public.families f where f.id = old.family_id);
+  other_admins int;
+  other_members int;
 begin
   if tg_op = 'UPDATE' then
     if new.id is distinct from old.id
@@ -63,6 +71,25 @@ begin
        or new.user_id is distinct from old.user_id then
       raise exception 'Identité du membre immuable';
     end if;
+  end if;
+
+  if privileged or (tg_op = 'DELETE' and family_gone) then
+    if tg_op = 'DELETE' then return old; end if;
+    return new;
+  end if;
+
+  if old.role = 'admin'
+     and (tg_op = 'DELETE' or new.role is distinct from 'admin') then
+    select count(*) into other_admins from public.family_members
+      where family_id = old.family_id and role = 'admin' and id <> old.id;
+    select count(*) into other_members from public.family_members
+      where family_id = old.family_id and id <> old.id;
+    if other_admins = 0 and other_members > 0 then
+      raise exception 'Transfert admin requis';
+    end if;
+  end if;
+
+  if tg_op = 'UPDATE' then
     if old.role = 'admin' and not public.is_family_admin(old.family_id) then
       raise exception 'Réservé aux administrateurs';
     end if;

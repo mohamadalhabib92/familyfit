@@ -89,11 +89,8 @@ begin
   raise exception 'ASSERT insertion croisée autorisée';
 exception
   when insufficient_privilege then
-    null;
-  when others then
-    if SQLERRM like 'ASSERT%' then raise; end if;
-    if SQLSTATE <> '42501' then
-      raise exception 'ASSERT état inattendu sur insertion croisée: % %', SQLSTATE, SQLERRM;
+    if SQLERRM not like '%row-level security%' and SQLERRM not like '%politique%' then
+      raise exception 'ASSERT message RLS inattendu: %', SQLERRM;
     end if;
 end $$;
 
@@ -146,7 +143,9 @@ begin
   end if;
 exception
   when others then
-    if SQLERRM like 'ASSERT%' then raise; end if;
+    if SQLERRM like 'ASSERT%' or SQLERRM not like '%Réservé aux administrateurs%' then
+      raise exception 'ASSERT promotion parent, message: %', SQLERRM;
+    end if;
 end $$;
 
 reset role;
@@ -172,7 +171,9 @@ begin
   raise exception 'ASSERT parent a créé une invitation admin';
 exception
   when others then
-    if SQLERRM like 'ASSERT%' then raise; end if;
+    if SQLERRM like 'ASSERT%' or SQLERRM not like '%Réservé aux administrateurs%' then
+      raise exception 'ASSERT invitation admin RPC, message: %', SQLERRM;
+    end if;
 end $$;
 do $$
 declare n int;
@@ -184,7 +185,9 @@ begin
   if n > 0 then raise exception 'ASSERT parent a inséré une invitation admin'; end if;
 exception
   when others then
-    if SQLERRM like 'ASSERT%' then raise; end if;
+    if SQLERRM like 'ASSERT%' or (SQLERRM not like '%Réservé aux administrateurs%' and SQLERRM not like '%row-level security%' and SQLERRM not like '%politique%') then
+      raise exception 'ASSERT invitation admin directe, message: %', SQLERRM;
+    end if;
 end $$;
 
 -- Invitation admin forgée (créée par un parent) : l'acceptation ne donne pas le rôle.
@@ -201,7 +204,9 @@ begin
   raise exception 'ASSERT une invitation admin de parent a été acceptée';
 exception
   when others then
-    if SQLERRM like 'ASSERT%' then raise; end if;
+    if SQLERRM like 'ASSERT%' or SQLERRM not like '%Invitation admin refusée%' then
+      raise exception 'ASSERT acceptation admin, message: %', SQLERRM;
+    end if;
 end $$;
 reset role;
 do $$
@@ -225,7 +230,9 @@ begin
   if n > 0 then raise exception 'ASSERT parent a rétrogradé un admin en changeant l''id'; end if;
 exception
   when others then
-    if SQLERRM like 'ASSERT%' then raise; end if;
+    if SQLERRM like 'ASSERT%' or SQLERRM not like '%Identité du membre immuable%' then
+      raise exception 'ASSERT changement d''id, message: %', SQLERRM;
+    end if;
 end $$;
 do $$
 declare n int;
@@ -236,7 +243,9 @@ begin
   if n > 0 then raise exception 'ASSERT parent a supprimé un admin'; end if;
 exception
   when others then
-    if SQLERRM like 'ASSERT%' then raise; end if;
+    if SQLERRM like 'ASSERT%' or SQLERRM not like '%Transfert admin requis%' then
+      raise exception 'ASSERT suppression admin par parent, message: %', SQLERRM;
+    end if;
 end $$;
 reset role;
 do $$
@@ -253,13 +262,35 @@ set role authenticated;
 
 do $$
 begin
+  update public.family_members set role = 'parent'
+  where user_id = '11111111-1111-4111-8111-111111111111';
+  raise exception 'ASSERT le dernier admin s''est rétrogradé';
+exception
+  when others then
+    if SQLERRM like 'ASSERT%' or SQLERRM not like '%Transfert admin requis%' then
+      raise exception 'ASSERT rétrogradation dernier admin: %', SQLERRM;
+    end if;
+end $$;
+do $$
+begin
+  delete from public.family_members
+  where user_id = '11111111-1111-4111-8111-111111111111';
+  raise exception 'ASSERT le dernier admin a supprimé sa ligne';
+exception
+  when others then
+    if SQLERRM like 'ASSERT%' or SQLERRM not like '%Transfert admin requis%' then
+      raise exception 'ASSERT suppression dernier admin: %', SQLERRM;
+    end if;
+end $$;
+
+do $$
+begin
   perform public.rls_as('11111111-1111-4111-8111-111111111111');
   perform public.delete_my_account(null);
   raise exception 'ASSERT suppression sans transfert autorisée';
 exception
   when others then
-    if SQLERRM like 'ASSERT%' then raise; end if;
-    if SQLERRM not like '%Transfert admin requis%' then
+    if SQLERRM like 'ASSERT%' or SQLERRM not like '%Transfert admin requis%' then
       raise exception 'ASSERT message transfert inattendu: %', SQLERRM;
     end if;
 end $$;
@@ -300,6 +331,87 @@ begin
   select count(*) into n_b from public.families where name = 'Famille B';
   if n_d <> 0 then raise exception 'ASSERT famille D encore là'; end if;
   if n_b <> 1 then raise exception 'ASSERT famille B disparue avec Dina'; end if;
+end $$;
+
+-- Famille de service : Eli créateur admin, Sam admin non créateur, Kim membre.
+reset role;
+insert into auth.users (id, email) values
+  ('66666666-6666-4666-8666-666666666666', 'eli@example.test'),
+  ('77777777-7777-4777-8777-777777777777', 'sam@example.test'),
+  ('88888888-8888-4888-8888-888888888888', 'kim@example.test');
+select public.rls_as('66666666-6666-4666-8666-666666666666');
+set role authenticated;
+insert into public.rls_probe (k, v)
+values ('fam_e', public.create_family('Famille E', 'Eli'));
+insert into public.family_members (family_id, user_id, display_name, role, is_minor)
+select v, '77777777-7777-4777-8777-777777777777', 'Sam', 'admin', false from public.rls_probe where k = 'fam_e';
+insert into public.family_members (family_id, user_id, display_name, role, is_minor)
+select v, '88888888-8888-4888-8888-888888888888', 'Kim', 'member', false from public.rls_probe where k = 'fam_e';
+
+-- anon et authenticated sans session : auth.uid() null ne suffit pas.
+reset role;
+alter table public.family_members disable row level security;
+alter table public.family_members no force row level security;
+select public.rls_as('');
+set role authenticated;
+do $$
+begin
+  delete from public.family_members where user_id = '77777777-7777-4777-8777-777777777777';
+  raise exception 'ASSERT authenticated sans session a supprimé un admin';
+exception
+  when others then
+    if SQLERRM like 'ASSERT%' or SQLERRM not like '%Réservé aux administrateurs%' then
+      raise exception 'ASSERT refus authenticated: %', SQLERRM;
+    end if;
+end $$;
+reset role;
+grant delete on public.family_members to anon;
+select public.rls_as('');
+set role anon;
+do $$
+begin
+  delete from public.family_members where user_id = '77777777-7777-4777-8777-777777777777';
+  raise exception 'ASSERT anon a supprimé un admin';
+exception
+  when others then
+    if SQLERRM like 'ASSERT%' or SQLERRM not like '%Réservé aux administrateurs%' then
+      raise exception 'ASSERT refus anon: %', SQLERRM;
+    end if;
+end $$;
+reset role;
+alter table public.family_members enable row level security;
+alter table public.family_members force row level security;
+
+-- service_role supprime l'admin qui n'est pas le créateur.
+select public.rls_as('');
+set role service_role;
+delete from auth.users where id = '77777777-7777-4777-8777-777777777777';
+reset role;
+do $$
+declare n_sam int; n_eli int; n_fam int;
+begin
+  select count(*) into n_sam from auth.users where id = '77777777-7777-4777-8777-777777777777';
+  select count(*) into n_eli from public.family_members
+    where user_id = '66666666-6666-4666-8666-666666666666' and role = 'admin';
+  select count(*) into n_fam from public.families where name = 'Famille E';
+  if n_sam <> 0 then raise exception 'ASSERT Sam existe encore'; end if;
+  if n_eli <> 1 then raise exception 'ASSERT Eli n''est plus admin'; end if;
+  if n_fam <> 1 then raise exception 'ASSERT famille E a disparu avec Sam'; end if;
+end $$;
+
+-- postgres supprime la famille : la cascade des membres admin passe.
+select public.rls_as('');
+set role postgres;
+delete from public.families where name = 'Famille E';
+reset role;
+do $$
+declare n_fam int; n_mem int;
+begin
+  select count(*) into n_fam from public.families where name = 'Famille E';
+  select count(*) into n_mem from public.family_members
+    where user_id in ('66666666-6666-4666-8666-666666666666', '88888888-8888-4888-8888-888888888888');
+  if n_fam <> 0 then raise exception 'ASSERT famille E encore là'; end if;
+  if n_mem <> 0 then raise exception 'ASSERT des membres de E restent'; end if;
 end $$;
 
 rollback;
