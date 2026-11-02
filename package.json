@@ -22,7 +22,10 @@
     "react-native-web": "^0.21.4"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.14",
     "@types/react": "~19.3.0",
+    "eslint": "^9.0.0",
+    "eslint-config-expo": "~58.0.4",
     "typescript": "~6.0.3"
   },
   "scripts": {
@@ -33,7 +36,8 @@
     "typecheck": "tsc --noEmit",
     "build:web": "expo export -p web && node scripts/pwa-postbuild.mjs",
     "icons": "python3 scripts/make-icons.py",
-    "test": "node scripts/test-hijri.mjs"
+    "test": "node scripts/test-hijri.mjs && node scripts/test-contrast.mjs && node scripts/test-secrets.mjs && node scripts/test-rls.mjs",
+    "lint": "expo lint"
   },
   "private": true
 }

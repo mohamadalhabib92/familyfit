@@ -1,6 +1,6 @@
 import { env } from './config';
 
-/** Clés publiques uniquement (anon). Absentes / YOUR_* => mode démo local, écran « Configuration requise ». */
+/** Clés publiques uniquement (anon). Absentes / YOUR_* => mode essai local, sans appel réseau. */
 export const SUPABASE_URL = env('EXPO_PUBLIC_SUPABASE_URL', process.env.EXPO_PUBLIC_SUPABASE_URL);
 export const SUPABASE_ANON_KEY = env('EXPO_PUBLIC_SUPABASE_ANON_KEY', process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY);
 export const supabaseConfigured = SUPABASE_URL.configured && SUPABASE_ANON_KEY.configured;

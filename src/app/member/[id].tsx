@@ -5,8 +5,8 @@ import { confirmAsk } from '@/lib/confirm';
 import { useData } from '@/lib/data';
 import { canManage, MEMBER_COLORS, ROLE_LABEL, type Member, type Role } from '@/lib/model';
 import { uid } from '@/lib/storage';
-import { Button, Empty, Field, Notice, Row, Screen, Segmented, Spacer, Toggle, styles } from '@/ui/kit';
-import { theme as t } from '@/ui/theme';
+import { Button, Empty, Field, MemberMark, Notice, Row, Screen, Segmented, Spacer, Toggle, styles } from '@/ui/kit';
+import { memberVisual, theme as t } from '@/ui/theme';
 
 export default function MemberEditor() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -43,9 +43,14 @@ export default function MemberEditor() {
       )}
       <Text style={styles.label}>Couleur</Text>
       <Row wrap style={{ marginBottom: 14 }}>
-        {MEMBER_COLORS.map((c) => (
-          <Pressable key={c} onPress={() => setM({ ...m, color: c })} accessibilityLabel={`Couleur ${c}`} style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: c, borderWidth: m.color === c ? 3 : 0, borderColor: t.text }} />
-        ))}
+        {MEMBER_COLORS.map((c) => {
+          const v = memberVisual(c);
+          return (
+            <Pressable key={c} onPress={() => setM({ ...m, color: c })} accessibilityLabel={`${v.label}, icône ${v.icon}, motif ${v.pattern}`} accessibilityState={{ selected: m.color === c }} style={{ borderWidth: m.color === c ? 3 : 0, borderColor: t.text, borderRadius: 24 }}>
+              <MemberMark color={c} size={44} />
+            </Pressable>
+          );
+        })}
       </Row>
       {err ? <Text style={{ color: t.danger, marginBottom: 8 }}>{err}</Text> : null}
       <Button title="Enregistrer" icon="checkmark" onPress={save} />

@@ -3,9 +3,10 @@ import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { useData } from '@/lib/data';
 import { todayISO } from '@/lib/dates';
+import { movementNote } from '@/lib/health';
 import { displayName, MOODS, type Session } from '@/lib/model';
 import { uid } from '@/lib/storage';
-import { Button, Card, Chip, Empty, Field, H1, Ionicons, Muted, Row, Screen, Spacer, styles } from '@/ui/kit';
+import { Button, Card, Chip, Empty, Field, H1, Ionicons, Muted, Notice, Row, Screen, Spacer, styles } from '@/ui/kit';
 import { theme as t } from '@/ui/theme';
 
 export default function SessionScreen() {
@@ -28,6 +29,7 @@ export default function SessionScreen() {
     <Screen>
       <Stack.Screen options={{ title: r.title }} />
       <H1>{r.title}</H1>
+      {movementNote(r.title, r.items) ? <Notice tone="info" title="Prudence" text={movementNote(r.title, r.items) ?? ''} /> : null}
       <Muted>{s.done.length} / {r.items.length} étapes{prev?.completedAt ? ' · déjà terminée aujourd’hui' : ''}</Muted>
       <View style={{ height: 8, backgroundColor: t.surfaceAlt, borderRadius: 4, marginVertical: 10 }}>
         <View style={{ width: `${Math.round(pct * 100)}%`, height: 8, backgroundColor: t.success, borderRadius: 4 }} />
