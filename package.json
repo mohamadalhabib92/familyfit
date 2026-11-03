@@ -33,7 +33,7 @@
     "typecheck": "tsc --noEmit",
     "build:web": "expo export -p web && node scripts/pwa-postbuild.mjs",
     "icons": "python3 scripts/make-icons.py",
-    "test": "node scripts/test-hijri.mjs"
+    "test": "node scripts/test-hijri.mjs && node scripts/test-persist.mjs && node scripts/test-gate.mjs && node scripts/test-foundations.mjs && node scripts/test-rls-local.mjs"
   },
   "private": true
 }

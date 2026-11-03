@@ -37,7 +37,7 @@ create table if not exists public.invitations (
   role text not null default 'member' check (role in ('admin','parent','member')),
   status text not null default 'pending' check (status in ('pending','accepted','revoked')),
   created_by uuid not null references auth.users(id),
-  accepted_by uuid references auth.users(id),
+  accepted_by uuid references auth.users(id) on delete set null,
   expires_at timestamptz not null default now() + interval '7 days',
   created_at timestamptz not null default now()
 );
@@ -106,6 +106,30 @@ create or replace function public.is_family_manager(fid uuid) returns boolean
 language sql stable security definer set search_path = public as $$
   select exists (select 1 from family_members where family_id = fid and user_id = auth.uid() and role in ('admin','parent'));
 $$;
+create or replace function public.is_family_admin(fid uuid) returns boolean
+language sql stable security definer set search_path = public as $$
+  select exists (
+    select 1 from public.family_members
+    where family_id = fid and user_id = auth.uid() and role = 'admin'
+  );
+$$;
+-- Un parent ne peut pas écrire role = admin ni modifier un administrateur.
+create or replace function public.can_write_member_role(fid uuid, new_role text, target_id uuid)
+returns boolean
+language plpgsql stable security definer set search_path = public as $$
+declare
+  old_role text;
+begin
+  if auth.uid() is null then return false; end if;
+  if not public.is_family_manager(fid) then return false; end if;
+  if public.is_family_admin(fid) then return true; end if;
+  if new_role = 'admin' then return false; end if;
+  if target_id is not null then
+    select role into old_role from public.family_members where id = target_id and family_id = fid;
+    if old_role = 'admin' then return false; end if;
+  end if;
+  return true;
+end $$;
 
 alter table public.profiles enable row level security;
 alter table public.families enable row level security;
@@ -128,10 +152,40 @@ create policy "famille modifiable par admin/parent" on public.families for updat
 drop policy if exists "membres visibles en famille" on public.family_members;
 create policy "membres visibles en famille" on public.family_members for select using (is_family_member(family_id));
 drop policy if exists "membres gérés par admin/parent" on public.family_members;
-create policy "membres gérés par admin/parent" on public.family_members for all using (is_family_manager(family_id)) with check (is_family_manager(family_id));
+drop policy if exists "membres insérés par gestionnaire" on public.family_members;
+drop policy if exists "membres modifiés sans promotion" on public.family_members;
+drop policy if exists "membres retirés par gestionnaire" on public.family_members;
+create policy "membres insérés par gestionnaire" on public.family_members
+  for insert with check (public.can_write_member_role(family_id, role, id));
+create policy "membres modifiés sans promotion" on public.family_members
+  for update using (public.is_family_manager(family_id))
+  with check (public.can_write_member_role(family_id, role, id));
+create policy "membres retirés par gestionnaire" on public.family_members
+  for delete using (
+    public.is_family_manager(family_id)
+    and (role <> 'admin' or public.is_family_admin(family_id))
+  );
 
 drop policy if exists "invitations gérées par admin/parent" on public.invitations;
-create policy "invitations gérées par admin/parent" on public.invitations for all using (is_family_manager(family_id)) with check (is_family_manager(family_id));
+drop policy if exists "invitations lisibles par gestionnaire" on public.invitations;
+drop policy if exists "invitations créées sans admin usurpé" on public.invitations;
+drop policy if exists "invitations modifiées sans admin usurpé" on public.invitations;
+drop policy if exists "invitations révoquées par gestionnaire" on public.invitations;
+create policy "invitations lisibles par gestionnaire" on public.invitations
+  for select using (public.is_family_manager(family_id));
+create policy "invitations créées sans admin usurpé" on public.invitations
+  for insert with check (
+    public.is_family_manager(family_id)
+    and (role <> 'admin' or public.is_family_admin(family_id))
+  );
+create policy "invitations modifiées sans admin usurpé" on public.invitations
+  for update using (public.is_family_manager(family_id))
+  with check (
+    public.is_family_manager(family_id)
+    and (role <> 'admin' or public.is_family_admin(family_id))
+  );
+create policy "invitations révoquées par gestionnaire" on public.invitations
+  for delete using (public.is_family_manager(family_id));
 
 do $$
 declare t text;
@@ -161,6 +215,7 @@ declare c text;
 begin
   if not is_family_manager(p_family_id) then raise exception 'Réservé aux parents/admin'; end if;
   if p_role not in ('admin','parent','member') then raise exception 'Rôle invalide'; end if;
+  if p_role = 'admin' and not public.is_family_admin(p_family_id) then raise exception 'Réservé aux administrateurs'; end if;
   loop
     c := upper(substr(translate(encode(gen_random_bytes(8), 'base64'), '+/=0O1IL', ''), 1, 6));
     exit when length(c) = 6 and not exists (select 1 from invitations where code = c);
@@ -178,6 +233,12 @@ begin
   if inv.id is null then raise exception 'Code inconnu'; end if;
   if inv.status <> 'pending' then raise exception 'Invitation déjà utilisée ou révoquée'; end if;
   if inv.expires_at < now() then raise exception 'Invitation expirée'; end if;
+  if inv.role = 'admin' and not exists (
+    select 1 from public.family_members
+    where family_id = inv.family_id and user_id = inv.created_by and role = 'admin'
+  ) then
+    raise exception 'Invitation admin refusée';
+  end if;
   insert into profiles(id, display_name) values (auth.uid(), p_display_name)
     on conflict (id) do update set display_name = excluded.display_name;
   insert into family_members(family_id, user_id, display_name, role)
@@ -187,9 +248,232 @@ begin
   return inv.family_id;
 end $$;
 
+-- Rôles présents sur Supabase ; créés seulement pour un Postgres local de test.
+do $$
+begin
+  if not exists (select 1 from pg_roles where rolname = 'anon') then
+    create role anon nologin;
+  end if;
+  if not exists (select 1 from pg_roles where rolname = 'authenticated') then
+    create role authenticated nologin;
+  end if;
+end $$;
+
 revoke all on function public.create_family(text, text) from public, anon;
 revoke all on function public.create_invitation(uuid, text) from public, anon;
 revoke all on function public.accept_invitation(text, text) from public, anon;
 grant execute on function public.create_family(text, text) to authenticated;
 grant execute on function public.create_invitation(uuid, text) to authenticated;
 grant execute on function public.accept_invitation(text, text) to authenticated;
+
+-- Le propriétaire d'une table contourne la RLS, sauf FORCE.
+-- Un superutilisateur (rôle postgres de Supabase) la contourne encore : l'API anon/authenticated, non.
+do $$
+declare t text;
+begin
+  foreach t in array array['profiles','families','family_members','invitations','events','rituals','sessions','goals','activities'] loop
+    execute format('alter table public.%I force row level security', t);
+  end loop;
+end $$;
+
+grant usage on schema public to anon, authenticated;
+grant select, insert, update, delete on all tables in schema public to authenticated;
+grant select on all tables in schema public to anon;
+grant execute on function public.is_family_member(uuid), public.is_family_manager(uuid) to anon, authenticated;
+revoke all on function public.is_family_admin(uuid) from public, anon;
+revoke all on function public.can_write_member_role(uuid, text, uuid) from public, anon;
+grant execute on function public.is_family_admin(uuid) to authenticated;
+grant execute on function public.can_write_member_role(uuid, text, uuid) to authenticated;
+
+-- OLD.role : un changement d'id ne doit pas faire oublier qu'une ligne est admin.
+-- id, family_id et user_id sont immuables.
+-- Le service (service_role, postgres, supabase_admin) et les cascades passent
+-- sans session. auth.uid() null ne suffit pas pour anon ou authenticated.
+create or replace function public.family_members_guard()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  -- SECURITY DEFINER : current_user est le propriétaire, pas l'appelant.
+  -- « role » reflète SET ROLE (service_role, authenticated…). Sinon, session_user.
+  privileged boolean := coalesce(nullif(current_setting('role', true), 'none'), session_user::text)
+      in ('service_role', 'postgres', 'supabase_admin')
+    or pg_trigger_depth() > 1;
+  family_gone boolean := not exists (select 1 from public.families f where f.id = old.family_id);
+  other_admins int;
+  other_members int;
+begin
+  if tg_op = 'UPDATE' then
+    if new.id is distinct from old.id
+       or new.family_id is distinct from old.family_id
+       or new.user_id is distinct from old.user_id then
+      raise exception 'Identité du membre immuable';
+    end if;
+  end if;
+
+  if privileged or (tg_op = 'DELETE' and family_gone) then
+    if tg_op = 'DELETE' then return old; end if;
+    return new;
+  end if;
+
+  if old.role = 'admin'
+     and (tg_op = 'DELETE' or new.role is distinct from 'admin') then
+    select count(*) into other_admins from public.family_members
+      where family_id = old.family_id and role = 'admin' and id <> old.id;
+    select count(*) into other_members from public.family_members
+      where family_id = old.family_id and id <> old.id;
+    if other_admins = 0 and other_members > 0 then
+      raise exception 'Transfert admin requis';
+    end if;
+  end if;
+
+  if tg_op = 'UPDATE' then
+    if old.role = 'admin' and not public.is_family_admin(old.family_id) then
+      raise exception 'Réservé aux administrateurs';
+    end if;
+    if new.role = 'admin' and old.role is distinct from 'admin' and not public.is_family_admin(old.family_id) then
+      raise exception 'Réservé aux administrateurs';
+    end if;
+    return new;
+  end if;
+  if tg_op = 'DELETE' then
+    if old.role = 'admin' and not public.is_family_admin(old.family_id) then
+      raise exception 'Réservé aux administrateurs';
+    end if;
+    return old;
+  end if;
+  return new;
+end $$;
+
+drop trigger if exists family_members_guard on public.family_members;
+create trigger family_members_guard
+  before update or delete on public.family_members
+  for each row execute function public.family_members_guard();
+
+-- Utilise auth.uid() via is_family_admin, pas current_user : le propriétaire
+-- SECURITY DEFINER ne doit pas être pris pour l'appelant.
+create or replace function public.invitations_guard_admin_role()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if new.role = 'admin' and not (tg_op = 'UPDATE' and old.role = 'admin') then
+    if not public.is_family_admin(new.family_id) then
+      raise exception 'Réservé aux administrateurs';
+    end if;
+  end if;
+  return new;
+end $$;
+
+drop trigger if exists invitations_guard_admin_role on public.invitations;
+create trigger invitations_guard_admin_role
+  before insert or update on public.invitations
+  for each row execute function public.invitations_guard_admin_role();
+
+-- Suppression de compte (Apple 5.1.1). Additive : ne modifie aucune ligne tant qu'elle n'est pas appelée.
+-- Une famille ne reste jamais sans administrateur : transfert exigé, sinon suppression de la famille
+-- s'il ne reste aucun autre compte (les profils d'enfants sans compte partent avec elle).
+-- p_transfer_to : id de la ligne public.family_members du successeur, pas son user_id.
+create or replace function public.delete_my_account(p_transfer_to uuid default null)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  uid uuid := auth.uid();
+  rec record;
+  other_accounts int;
+  other_admins int;
+  successor uuid;
+begin
+  if uid is null then
+    raise exception 'Non authentifié';
+  end if;
+
+  for rec in
+    select id as member_id, family_id, role
+    from public.family_members
+    where user_id = uid
+  loop
+    select count(*) into other_accounts
+    from public.family_members
+    where family_id = rec.family_id and user_id is not null and user_id <> uid;
+
+    select count(*) into other_admins
+    from public.family_members
+    where family_id = rec.family_id and role = 'admin' and user_id is not null and user_id <> uid;
+
+    if other_accounts = 0 then
+      delete from public.families where id = rec.family_id;
+      continue;
+    end if;
+
+    if rec.role = 'admin' and other_admins = 0 then
+      if p_transfer_to is null then
+        raise exception 'Transfert admin requis';
+      end if;
+      select user_id into successor
+      from public.family_members
+      where id = p_transfer_to
+        and family_id = rec.family_id
+        and user_id is not null
+        and user_id <> uid
+        and is_minor = false;
+      if successor is null then
+        raise exception 'Successeur invalide';
+      end if;
+      update public.family_members set role = 'admin' where id = p_transfer_to;
+      update public.families set created_by = successor where id = rec.family_id and created_by = uid;
+    elsif rec.role = 'admin' then
+      update public.families set created_by = (
+        select user_id from public.family_members
+        where family_id = rec.family_id and role = 'admin' and user_id is not null and user_id <> uid
+        limit 1
+      )
+      where id = rec.family_id and created_by = uid;
+    end if;
+
+    delete from public.family_members where id = rec.member_id;
+  end loop;
+
+  update public.invitations i
+  set created_by = src.user_id
+  from (
+    select distinct on (family_id) family_id, user_id
+    from public.family_members
+    where user_id is not null
+    order by family_id, case when role = 'admin' then 0 else 1 end
+  ) src
+  where i.created_by = uid and i.family_id = src.family_id;
+
+  delete from public.invitations where created_by = uid;
+  update public.invitations set accepted_by = null where accepted_by = uid;
+
+  update public.families f
+  set created_by = src.user_id
+  from (
+    select distinct on (family_id) family_id, user_id
+    from public.family_members
+    where user_id is not null and user_id <> uid
+    order by family_id, case when role = 'admin' then 0 else 1 end
+  ) src
+  where f.id = src.family_id and f.created_by = uid;
+
+  delete from public.families f
+  where f.created_by = uid
+    and not exists (
+      select 1 from public.family_members fm
+      where fm.family_id = f.id and fm.user_id is not null and fm.user_id <> uid
+    );
+
+  delete from public.profiles where id = uid;
+  delete from auth.users where id = uid;
+end $$;
+
+revoke all on function public.delete_my_account(uuid) from public, anon;
+grant execute on function public.delete_my_account(uuid) to authenticated;

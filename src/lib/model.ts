@@ -1,13 +1,16 @@
+import { theme } from '@/ui/theme';
+
 /** Modèle FamilyFit — family_id central (miroir du schéma Supabase). */
 export type Role = 'admin' | 'parent' | 'member';
 export const ROLE_LABEL: Record<Role, string> = { admin: 'Administrateur·rice', parent: 'Parent', member: 'Membre' };
 export const canManage = (r?: Role) => r === 'admin' || r === 'parent';
 
-export type Family = { id: string; name: string; createdAt: string };
+export type Family = { id: string; name: string; createdAt: string; trial?: boolean };
 
 /** Mineur : prénom + couleur uniquement (minimisation). Pas d’e-mail, pas de téléphone, pas de localisation. */
 export type Member = {
   id: string; familyId: string; name: string; role: Role; color: string; isMinor: boolean;
+  glyph?: string; // motif en plus de la couleur (daltonisme)
   contact?: string; // adultes uniquement
   parentConsentShare?: boolean; // mineurs : consentement parent pour partager prénom/événements avec des invités
   isMe?: boolean; demo?: boolean;
@@ -19,11 +22,11 @@ export type Invitation = {
 };
 
 export const CATEGORIES = [
-  { key: 'family', label: 'Famille', en: 'Family', color: '#2F4B43', icon: 'home-outline' },
-  { key: 'work', label: 'Travail', en: 'Work', color: '#2F5F8A', icon: 'briefcase-outline' },
-  { key: 'school', label: 'École', en: 'School', color: '#8A5A00', icon: 'school-outline' },
-  { key: 'leisure', label: 'Loisirs', en: 'Leisure', color: '#B0476B', icon: 'game-controller-outline' },
-  { key: 'wellness', label: 'Bien-être', en: 'Wellness', color: '#2E7D4F', icon: 'leaf-outline' },
+  { key: 'family', label: 'Famille', en: 'Family', color: theme.category.family, icon: 'home-outline' },
+  { key: 'work', label: 'Travail', en: 'Work', color: theme.category.work, icon: 'briefcase-outline' },
+  { key: 'school', label: 'École', en: 'School', color: theme.category.school, icon: 'school-outline' },
+  { key: 'leisure', label: 'Loisirs', en: 'Leisure', color: theme.category.leisure, icon: 'game-controller-outline' },
+  { key: 'wellness', label: 'Bien-être', en: 'Wellness', color: theme.category.wellness, icon: 'leaf-outline' },
 ] as const;
 export type Category = (typeof CATEGORIES)[number]['key'];
 export const cat = (k: Category) => CATEGORIES.find((c) => c.key === k) ?? CATEGORIES[0];
@@ -53,6 +56,10 @@ export const MOODS = ['😞', '😕', '🙂', '😊', '🤩'] as const;
 export type Goal = { id: string; familyId: string; title: string; unit: string; weeklyTarget: number; memberIds: string[]; icon: string; demo?: boolean };
 export type Activity = { id: string; goalId: string; memberId: string; date: string; amount: number };
 
+/** Liste locale (courses, à faire). La synchro partagée est une passe ultérieure. */
+export type ListItem = { id: string; label: string; qty: string; done: boolean };
+export type FamilyList = { id: string; familyId: string; title: string; items: ListItem[]; demo?: boolean };
+
 export const RITUAL_TEMPLATES: Omit<Ritual, 'id' | 'familyId'>[] = [
   { title: 'Réveil en douceur', slot: 'morning', items: ['Verre d’eau', 'Petit-déjeuner ensemble', 'Cartables / sacs prêts', 'Un mot gentil'], template: true },
   { title: 'Bouger 10 minutes', slot: 'morning', items: ['Étirements', 'Marche ou danse', 'Respiration'], template: true },
@@ -60,7 +67,19 @@ export const RITUAL_TEMPLATES: Omit<Ritual, 'id' | 'familyId'>[] = [
   { title: 'Gratitude', slot: 'evening', items: ['Chacun partage une gratitude', 'Câlin / bonne nuit'], template: true },
 ];
 
-export const MEMBER_COLORS = ['#2F4B43', '#D08C60', '#2F5F8A', '#B0476B', '#6B5BA8', '#2E7D4F', '#8A5A00'];
+export const MEMBER_PALETTE = theme.memberPalette;
+export const MEMBER_COLORS = MEMBER_PALETTE.map((p) => p.color);
+
+/** Couleur + motif. Les fiches déjà enregistrées sans glyph retrouvent le motif de leur couleur. */
+export function memberMark(m: { id: string; color: string; glyph?: string }) {
+  const found = MEMBER_PALETTE.find((p) => p.color.toLowerCase() === m.color.toLowerCase());
+  if (found) return found;
+  if (m.glyph) return { color: m.color, glyph: m.glyph, label: 'Motif personnel' };
+  let h = 0;
+  for (const ch of m.id) h = (h + ch.charCodeAt(0)) % MEMBER_PALETTE.length;
+  const fallback = MEMBER_PALETTE[h] ?? MEMBER_PALETTE[0];
+  return { color: m.color, glyph: fallback.glyph, label: fallback.label };
+}
 
 /** Nom affiché d’un membre selon le lecteur (vie privée des mineurs). */
 export function displayName(m: Member | undefined, viewer: Member | null): string {

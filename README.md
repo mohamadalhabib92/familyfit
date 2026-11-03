@@ -7,7 +7,8 @@ Application Expo (iOS / Android) **et** PWA installable (GitHub Pages, `/familyf
 
 ## Fonctionnalités
 
-- **Configuration requise** : écran qui liste `EXPO_PUBLIC_SUPABASE_URL` et `EXPO_PUBLIC_SUPABASE_ANON_KEY`. Sans ces valeurs → bouton « Continuer en mode démo (local) ».
+- **Mode essai** : sans clés Supabase (absentes ou `YOUR_*`), l'app ouvre une famille d'exemple sur l'appareil, avec le bandeau « Mode essai — vos données restent sur cet appareil » et le bouton « Créer ma vraie famille ». Pas d'écran « Configuration requise ».
+- **Diagnostic** (développement, ou sept appuis en moins de 4 secondes sur le nom de la famille, le titre Famille ou le titre Connexion) : état des clés, sans afficher leur valeur.
 - **Connexion sans mot de passe** : code OTP à 6 chiffres par e-mail ou SMS (Supabase Auth). Erreurs claires en français : code expiré, code invalide, trop de tentatives, numéro au mauvais format. Renvoi possible après 30 s. En mode démo, le code est simulé et affiché à l’écran.
 - **Onboarding en moins de 2 min** (chronomètre visible) : famille → invitation → premier événement ou rituel.
 - **Famille** : modèle `family_id`, rôles Administrateur / Parent / Membre, invitations par code ou lien (`/join/CODE`), valables 7 jours et révocables.
@@ -24,7 +25,7 @@ Application Expo (iOS / Android) **et** PWA installable (GitHub Pages, `/familyf
   - historique ;
   - rappel quotidien en notification locale.
 - **Bien-être** : objectifs hebdomadaires partagés (minutes, repas sans écran…), saisie rapide, encouragements. **Aucun conseil médical.**
-- **Vie privée** : écran dédié, aucune géolocalisation, données minimales, export JSON, suppression totale.
+- **Vie privée** : écran dédié, aucune géolocalisation, données minimales, export JSON, suppression des données de l'appareil et suppression du compte (en ligne seulement si la fonction `delete_my_account` a été installée sur le projet Supabase).
 - **Hors ligne** : tout est stocké sur l’appareil (AsyncStorage / localStorage). Si une synchronisation Supabase échoue, un message s’affiche et rien n’est perdu.
 - **Accessibilité** : cibles tactiles ≥ 44 pt, libellés d’accessibilité, aucun écran blanc (indicateur de chargement, puis redirections).
 

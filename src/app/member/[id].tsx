@@ -3,9 +3,9 @@ import { useState } from 'react';
 import { Pressable, Text } from 'react-native';
 import { confirmAsk } from '@/lib/confirm';
 import { useData } from '@/lib/data';
-import { canManage, MEMBER_COLORS, ROLE_LABEL, type Member, type Role } from '@/lib/model';
+import { canManage, MEMBER_PALETTE, memberMark, ROLE_LABEL, type Member, type Role } from '@/lib/model';
 import { uid } from '@/lib/storage';
-import { Button, Empty, Field, Notice, Row, Screen, Segmented, Spacer, Toggle, styles } from '@/ui/kit';
+import { Button, Empty, Field, Ionicons, MemberMark, Notice, Row, Screen, Segmented, Spacer, Toggle, styles, type IconName } from '@/ui/kit';
 import { theme as t } from '@/ui/theme';
 
 export default function MemberEditor() {
@@ -14,7 +14,8 @@ export default function MemberEditor() {
   const router = useRouter();
   const existing = members.find((m) => m.id === id);
   const manage = canManage(me?.role);
-  const [m, setM] = useState<Member>(() => existing ?? { id: uid('mem_'), familyId: family?.id ?? '', name: '', role: 'member', color: MEMBER_COLORS[members.length % MEMBER_COLORS.length], isMinor: true, parentConsentShare: false });
+  const initialMark = MEMBER_PALETTE[members.length % MEMBER_PALETTE.length] ?? MEMBER_PALETTE[0];
+  const [m, setM] = useState<Member>(() => existing ?? { id: uid('mem_'), familyId: family?.id ?? '', name: '', role: 'member', color: initialMark.color, glyph: initialMark.glyph, isMinor: true, parentConsentShare: false });
   const [err, setErr] = useState<string | null>(null);
   if (!manage && !existing?.isMe) return <Screen><Empty icon="lock-closed-outline" title="Réservé aux parents" text="Seuls les parents et administrateurs peuvent modifier les membres." /></Screen>;
   const admins = members.filter((x) => x.role === 'admin');
@@ -41,11 +42,20 @@ export default function MemberEditor() {
           <Field label="Contact (e-mail ou téléphone, optionnel)" value={m.contact ?? ''} onChangeText={(v) => setM({ ...m, contact: v || undefined })} autoCapitalize="none" />
         </>
       )}
-      <Text style={styles.label}>Couleur</Text>
+      <Text style={styles.label}>Couleur et motif</Text>
       <Row wrap style={{ marginBottom: 14 }}>
-        {MEMBER_COLORS.map((c) => (
-          <Pressable key={c} onPress={() => setM({ ...m, color: c })} accessibilityLabel={`Couleur ${c}`} style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: c, borderWidth: m.color === c ? 3 : 0, borderColor: t.text }} />
-        ))}
+        {MEMBER_PALETTE.map((p) => {
+          const on = m.color === p.color;
+          return (
+            <Pressable key={p.color} onPress={() => setM({ ...m, color: p.color, glyph: p.glyph })} accessibilityLabel={`Motif ${p.label}`} accessibilityState={{ selected: on }} style={{ width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', borderWidth: on ? 3 : 0, borderColor: t.text }}>
+              <MemberMark color={p.color} glyph={p.glyph as IconName} label={p.label} />
+            </Pressable>
+          );
+        })}
+      </Row>
+      <Row style={{ marginBottom: 14 }}>
+        <Ionicons name={memberMark(m).glyph as IconName} size={18} color={t.text} />
+        <Text style={{ color: t.text }}>Motif {memberMark(m).label}</Text>
       </Row>
       {err ? <Text style={{ color: t.danger, marginBottom: 8 }}>{err}</Text> : null}
       <Button title="Enregistrer" icon="checkmark" onPress={save} />

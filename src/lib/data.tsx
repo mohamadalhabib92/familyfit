@@ -1,16 +1,37 @@
-import { createContext, useContext, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import { addDays, todayISO } from './dates';
-import { MEMBER_COLORS, type Activity, type Family, type FamilyEvent, type Goal, type Invitation, type Member, type Ritual, type Role, type Session } from './model';
+import { MEMBER_PALETTE, type Activity, type Family, type FamilyEvent, type FamilyList, type Goal, type Invitation, type Member, type Ritual, type Role, type Session } from './model';
 import { demoData } from './seed';
-import { clearAll, uid, usePersistentState } from './storage';
-import { rpc, type AuthSession } from './supabase';
+import { clearAll, replaceUnreadableKey, saveJSON, uid, usePersistentState } from './storage';
+import { signOut as signedOutState } from './gate';
+import { rpc, supabaseConfigured, type AuthSession } from './supabase';
 
 type Setter<T> = (v: T | ((p: T) => T)) => void;
-export type Prefs = { configAck: boolean; onboarded: boolean; hijriOffset: number; showHijri: boolean; filterCats: string[]; filterMembers: string[] };
-const DEFAULT_PREFS: Prefs = { configAck: false, onboarded: false, hijriOffset: 0, showHijri: true, filterCats: [], filterMembers: [] };
+export type Prefs = {
+  configAck: boolean;
+  onboarded: boolean;
+  hijriOffset: number;
+  showHijri: boolean;
+  filterCats: string[];
+  filterMembers: string[];
+  /** Famille d'exemple affichée sans compte. */
+  trialMode: boolean;
+  /** L'utilisateur a quitté le mode essai : ne pas réensemencer par-dessus un choix explicite. */
+  trialDeclined: boolean;
+  devConfigUnlocked: boolean;
+  largeText: boolean;
+};
+const DEFAULT_PREFS: Prefs = {
+  configAck: false, onboarded: false, hijriOffset: 0, showHijri: true, filterCats: [], filterMembers: [],
+  trialMode: false, trialDeclined: false, devConfigUnlocked: false, largeText: false,
+};
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 type Ctx = {
   ready: boolean;
+  storageSlow: boolean;
+  reloadStorage: () => void;
   session: AuthSession | null; setSession: Setter<AuthSession | null>;
   prefs: Prefs; setPrefs: Setter<Prefs>;
   family: Family | null;
@@ -21,31 +42,53 @@ type Ctx = {
   sessions: Session[]; setSessions: Setter<Session[]>;
   goals: Goal[]; setGoals: Setter<Goal[]>;
   activities: Activity[]; setActivities: Setter<Activity[]>;
+  lists: FamilyList[]; setLists: Setter<FamilyList[]>;
   createFamily: (name: string, myName: string, withDemo: boolean) => Promise<void>;
   createInvitation: (role: Role) => Promise<Invitation>;
   revokeInvitation: (id: string) => void;
   acceptInvitation: (code: string, name: string, isMinor: boolean) => Promise<{ ok: boolean; message: string }>;
   hasDemo: boolean; removeDemo: () => void;
   signOut: () => void; wipe: () => Promise<void>;
+  corrupt: { key: string; raw: string }[];
+  resetCorrupt: (keys: string[]) => Promise<void>;
+  keepTrialData: () => void;
+  restartKeepingSession: () => Promise<void>;
+  deleteAccount: (transferTo?: string) => Promise<{ ok: boolean; message: string }>;
   remoteError: string | null;
 };
 const C = createContext<Ctx | null>(null);
 
 const code6 = () => Array.from({ length: 6 }, () => 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'[Math.floor(Math.random() * 32)]).join('');
+const paletteAt = (i: number) => MEMBER_PALETTE[i % MEMBER_PALETTE.length] ?? MEMBER_PALETTE[0];
 
 export function DataProvider({ children }: { children: ReactNode }) {
-  const [session, setSession, r1] = usePersistentState<AuthSession | null>('session', null);
-  const [prefs, setPrefs, r2] = usePersistentState<Prefs>('prefs', DEFAULT_PREFS);
-  const [family, setFamily, r3] = usePersistentState<Family | null>('family', null);
-  const [members, setMembers, r4] = usePersistentState<Member[]>('members', []);
-  const [invitations, setInvitations, r5] = usePersistentState<Invitation[]>('invitations', []);
-  const [events, setEvents, r6] = usePersistentState<FamilyEvent[]>('events', []);
-  const [rituals, setRituals, r7] = usePersistentState<Ritual[]>('rituals', []);
-  const [sessions, setSessions, r8] = usePersistentState<Session[]>('sessions', []);
-  const [goals, setGoals, r9] = usePersistentState<Goal[]>('goals', []);
-  const [activities, setActivities, r10] = usePersistentState<Activity[]>('activities', []);
-  const [remoteError, setRemoteError] = usePersistentState<string | null>('remoteError', null);
-  const ready = r1 && r2 && r3 && r4 && r5 && r6 && r7 && r8 && r9 && r10;
+  const [boot, setBoot] = useState(0);
+  const [session, setSession, r1, s1, c1] = usePersistentState<AuthSession | null>('session', null, boot);
+  const [prefs, setPrefs, r2, s2, c2] = usePersistentState<Prefs>('prefs', DEFAULT_PREFS, boot);
+  const [family, setFamily, r3, s3, c3] = usePersistentState<Family | null>('family', null, boot);
+  const [members, setMembers, r4, s4, c4] = usePersistentState<Member[]>('members', [], boot);
+  const [invitations, setInvitations, r5, s5, c5] = usePersistentState<Invitation[]>('invitations', [], boot);
+  const [events, setEvents, r6, s6, c6] = usePersistentState<FamilyEvent[]>('events', [], boot);
+  const [rituals, setRituals, r7, s7, c7] = usePersistentState<Ritual[]>('rituals', [], boot);
+  const [sessions, setSessions, r8, s8, c8] = usePersistentState<Session[]>('sessions', [], boot);
+  const [goals, setGoals, r9, s9, c9] = usePersistentState<Goal[]>('goals', [], boot);
+  const [activities, setActivities, r10, s10, c10] = usePersistentState<Activity[]>('activities', [], boot);
+  const [lists, setLists, r11, s11, c11] = usePersistentState<FamilyList[]>('lists', [], boot);
+  const [remoteError, setRemoteError, r12, , c12] = usePersistentState<string | null>('remoteError', null, boot);
+  const ready = r1 && r2 && r3 && r4 && r5 && r6 && r7 && r8 && r9 && r10 && r11 && r12;
+  const corrupt = (
+    [
+      ['session', c1], ['prefs', c2], ['family', c3], ['members', c4], ['invitations', c5], ['events', c6],
+      ['rituals', c7], ['sessions', c8], ['goals', c9], ['activities', c10], ['lists', c11], ['remoteError', c12],
+    ] as const
+  ).flatMap(([key, raw]) => (raw == null ? [] : [{ key, raw }]));
+  const emptyFor = (key: string): unknown => {
+    if (key === 'prefs') return DEFAULT_PREFS;
+    if (key === 'session' || key === 'family' || key === 'remoteError') return null;
+    return [];
+  };
+  const storageSlow = !ready && (s1 || s2 || s3 || s4 || s5 || s6 || s7 || s8 || s9 || s10 || s11);
+  const mergedPrefs: Prefs = { ...DEFAULT_PREFS, ...prefs };
 
   const remote = async <T,>(fn: string, args: Record<string, unknown>): Promise<T | null> => {
     try {
@@ -58,18 +101,44 @@ export function DataProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const emptyContent = () => {
+    setMembers([]); setInvitations([]); setEvents([]); setRituals([]); setSessions([]); setGoals([]); setActivities([]); setLists([]);
+  };
+
+  useEffect(() => {
+    if (!ready || supabaseConfigured || session || family || mergedPrefs.trialDeclined) return;
+    const fam: Family = { id: uid('fam_'), name: 'Famille Martin (essai)', createdAt: new Date().toISOString(), trial: true };
+    const mark = paletteAt(0);
+    const me: Member = { id: uid('mem_'), familyId: fam.id, name: 'Alex', role: 'admin', color: mark.color, glyph: mark.glyph, isMinor: false, isMe: true };
+    const d = demoData(fam.id, me);
+    setFamily(fam);
+    setMembers([me, ...d.members]);
+    setEvents(d.events);
+    setRituals(d.rituals);
+    setSessions(d.sessions);
+    setGoals(d.goals);
+    setActivities(d.activities);
+    setLists(d.lists);
+    setInvitations([]);
+    setSession({ mode: 'demo', contact: '', userId: me.id, trial: true });
+    setPrefs((p) => ({ ...DEFAULT_PREFS, ...p, onboarded: true, trialMode: true, configAck: true }));
+  }, [ready, session, family, mergedPrefs.trialDeclined]);
+
   const createFamily: Ctx['createFamily'] = async (name, myName, withDemo) => {
+    if (!ready) return;
     const remoteId = await remote<string>('create_family', { p_name: name, p_display_name: myName });
+    const mark = paletteAt(0);
     const fam: Family = { id: typeof remoteId === 'string' && remoteId ? remoteId : uid('fam_'), name, createdAt: new Date().toISOString() };
-    const me: Member = { id: session?.userId || uid('mem_'), familyId: fam.id, name: myName, role: 'admin', color: MEMBER_COLORS[0], isMinor: false, contact: session?.contact, isMe: true };
+    const me: Member = { id: session?.userId || uid('mem_'), familyId: fam.id, name: myName, role: 'admin', color: mark.color, glyph: mark.glyph, isMinor: false, contact: session?.contact, isMe: true };
     setFamily(fam);
     if (withDemo) {
       const d = demoData(fam.id, me);
-      setMembers([me, ...d.members]); setEvents(d.events); setRituals(d.rituals); setSessions(d.sessions); setGoals(d.goals); setActivities(d.activities);
+      setMembers([me, ...d.members]); setEvents(d.events); setRituals(d.rituals); setSessions(d.sessions); setGoals(d.goals); setActivities(d.activities); setLists(d.lists);
     } else {
-      setMembers([me]); setEvents([]); setRituals([]); setSessions([]); setGoals([]); setActivities([]);
+      setMembers([me]); setEvents([]); setRituals([]); setSessions([]); setGoals([]); setActivities([]); setLists([]);
     }
     setInvitations([]);
+    setPrefs((p) => ({ ...DEFAULT_PREFS, ...p, trialMode: false, trialDeclined: true }));
   };
 
   const createInvitation: Ctx['createInvitation'] = async (role) => {
@@ -91,7 +160,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
     }
     if (inv.status !== 'pending') return { ok: false, message: inv.status === 'revoked' ? 'Cette invitation a été révoquée.' : 'Cette invitation a déjà été utilisée.' };
     if (inv.expiresAt < todayISO()) return { ok: false, message: 'Cette invitation a expiré. Demandez un nouveau code.' };
-    const m: Member = { id: uid('mem_'), familyId: inv.familyId, name: name.trim(), role: isMinor ? 'member' : inv.role, color: MEMBER_COLORS[members.length % MEMBER_COLORS.length], isMinor, parentConsentShare: isMinor ? false : undefined };
+    const mark = paletteAt(members.length);
+    const m: Member = { id: uid('mem_'), familyId: inv.familyId, name: name.trim(), role: isMinor ? 'member' : inv.role, color: mark.color, glyph: mark.glyph, isMinor, parentConsentShare: isMinor ? false : undefined };
     setMembers((l) => [...l, m]);
     setInvitations((l) => l.map((i) => (i.id === inv.id ? { ...i, status: 'accepted', acceptedBy: m.id } : i)));
     void remote('accept_invitation', { p_code: code, p_display_name: name });
@@ -99,7 +169,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   };
 
   const isDemo = (x: { demo?: boolean; id: string }) => !!x.demo || x.id.startsWith('demo-');
-  const hasDemo = members.some(isDemo) || events.some(isDemo) || rituals.some(isDemo) || goals.some(isDemo);
+  const hasDemo = members.some(isDemo) || events.some(isDemo) || rituals.some(isDemo) || goals.some(isDemo) || lists.some(isDemo);
   const removeDemo = () => {
     setMembers((l) => l.filter((x) => !isDemo(x)));
     setEvents((l) => l.filter((x) => !isDemo(x)).map((e) => ({ ...e, memberIds: e.memberIds.filter((id) => !id.startsWith('demo-')) })));
@@ -107,21 +177,94 @@ export function DataProvider({ children }: { children: ReactNode }) {
     setSessions((l) => l.filter((x) => !x.ritualId.startsWith('demo-')));
     setGoals((l) => l.filter((x) => !isDemo(x)));
     setActivities((l) => l.filter((x) => !x.goalId.startsWith('demo-') && !x.memberId.startsWith('demo-')));
+    setLists((l) => l.filter((x) => !isDemo(x)));
   };
 
-  const signOut = () => setSession(null);
+  const signOut = () => {
+    const next = signedOutState({
+      supabaseConfigured,
+      session: session ? { userId: session.userId } : null,
+      family: family ? { id: family.id } : null,
+      onboarded: mergedPrefs.onboarded,
+      trialDeclined: mergedPrefs.trialDeclined,
+    });
+    setSession(next.session ? session : null);
+    if (!next.family) setFamily(null);
+  };
+  const resetCorrupt = async (keys: string[]) => {
+    const allowed = new Set<string>(corrupt.map((c) => c.key));
+    for (const key of keys) {
+      if (!allowed.has(key)) continue;
+      await replaceUnreadableKey(key, emptyFor(key));
+    }
+    setBoot((n) => n + 1);
+  };
   const wipe = async () => {
     await clearAll();
-    setSession(null); setPrefs(DEFAULT_PREFS); setFamily(null); setMembers([]); setInvitations([]); setEvents([]); setRituals([]); setSessions([]); setGoals([]); setActivities([]);
+    setSession(null);
+    setPrefs({ ...DEFAULT_PREFS, trialDeclined: true });
+    setFamily(null);
+    emptyContent();
+    setRemoteError(null);
+  };
+
+  const keepTrialData = () => {
+    setPrefs((p) => ({ ...DEFAULT_PREFS, ...p, trialMode: false, trialDeclined: true }));
+    setSession((s) => (s ? { ...s, trial: false } : s));
+    setFamily((f) => (f ? { ...f, trial: false } : f));
+  };
+
+  const restartKeepingSession = async () => {
+    const keep = session;
+    const largeText = mergedPrefs.largeText;
+    const devConfigUnlocked = mergedPrefs.devConfigUnlocked;
+    await clearAll();
+    setFamily(null);
+    emptyContent();
+    setRemoteError(null);
+    setPrefs({ ...DEFAULT_PREFS, trialDeclined: true, configAck: true, largeText, devConfigUnlocked });
+    setSession(keep);
+    if (keep) void saveJSON('session', keep);
+  };
+
+  const deleteAccount: Ctx['deleteAccount'] = async (transferTo) => {
+    if (session?.mode === 'supabase') {
+      if (!supabaseConfigured || !session.accessToken) {
+        return { ok: false, message: 'Session en ligne introuvable. Reconnectez-vous avant de supprimer le compte. Rien n’a été effacé.' };
+      }
+      const adults = members.filter((m) => !m.isMe && !m.isMinor);
+      const soleAdmin = (members.find((m) => m.isMe)?.role === 'admin') && members.filter((m) => m.role === 'admin').length <= 1;
+      if (soleAdmin && adults.length > 0) {
+        // transferTo est l'id de la fiche family_members, pas le user_id du compte.
+        if (!transferTo) return { ok: false, message: 'Choisissez le nouvel administrateur (sa fiche de membre, pas son compte). Rien n’a été effacé.' };
+        if (!UUID.test(transferTo)) {
+          return { ok: false, message: 'Ce membre n’est pas encore lié à un compte en ligne. Suppression interrompue pour ne pas laisser la famille sans administrateur. Rien n’a été effacé.' };
+        }
+      }
+      try {
+        await rpc(session, 'delete_my_account', { p_transfer_to: transferTo && UUID.test(transferTo) ? transferTo : null });
+      } catch (e) {
+        let msg = e instanceof Error ? e.message : 'Suppression impossible.';
+        if (/Transfert admin requis/i.test(msg)) msg = 'Désignez un autre administrateur avant de supprimer le compte.';
+        else if (/Successeur invalide/i.test(msg)) msg = 'Cet adulte ne peut pas recevoir l’administration.';
+        else if (/Fonction introuvable/i.test(msg)) msg = 'La suppression en ligne n’est pas encore installée. La migration n’a pas été appliquée.';
+        else if (/Non authentifié/i.test(msg)) msg = 'Session expirée. Reconnectez-vous, puis réessayez.';
+        return { ok: false, message: `${msg} Rien n’a été effacé sur cet appareil.` };
+      }
+    }
+    await wipe();
+    return { ok: true, message: session?.mode === 'supabase' ? 'Compte supprimé.' : 'Données de cet appareil supprimées. Il n’y avait pas de compte en ligne.' };
   };
 
   const me = members.find((m) => m.isMe) ?? null;
   return (
     <C.Provider
       value={{
-        ready, session, setSession, prefs: { ...DEFAULT_PREFS, ...prefs }, setPrefs, family, members, setMembers, me, invitations, events, setEvents,
-        rituals, setRituals, sessions, setSessions, goals, setGoals, activities, setActivities, createFamily, createInvitation, revokeInvitation,
-        acceptInvitation, hasDemo, removeDemo, signOut, wipe, remoteError,
+        ready, storageSlow, reloadStorage: () => setBoot((n) => n + 1),
+        session, setSession, prefs: mergedPrefs, setPrefs, family, members, setMembers, me, invitations, events, setEvents,
+        rituals, setRituals, sessions, setSessions, goals, setGoals, activities, setActivities, lists, setLists,
+        createFamily, createInvitation, revokeInvitation, acceptInvitation, hasDemo, removeDemo, signOut, wipe, corrupt, resetCorrupt,
+        keepTrialData, restartKeepingSession, deleteAccount, remoteError,
       }}
     >
       {children}
