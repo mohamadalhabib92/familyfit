@@ -1,14 +1,15 @@
 import { useEffect, type ReactNode } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { View } from 'react-native';
+import { useColorScheme, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StorageRecovery } from '@/components/StorageRecovery';
 import { DataProvider, useData } from '@/lib/data';
 import { installCrashHooks } from '@/lib/sentry';
 import { AppErrorBoundary } from '@/ui/ErrorBoundary';
 import { FontScaleProvider, LoadingState } from '@/ui/kit';
-import { theme as t } from '@/ui/theme';
+import { FeedbackProvider } from '@/ui/motion';
+import { applyScheme, theme as t, type Scheme } from '@/ui/theme';
 
 function Shell({ children }: { children: ReactNode }) {
   const { prefs } = useData();
@@ -16,6 +17,10 @@ function Shell({ children }: { children: ReactNode }) {
 }
 
 function RootNavigator() {
+  // Apparence système. Jetons réécrits avant le rendu ; seule la navigation est remontée (clé),
+  // DataProvider reste monté : aucune donnée relue ni perdue.
+  const scheme: Scheme = useColorScheme() === 'dark' ? 'dark' : 'light';
+  applyScheme(scheme);
   const { ready, storageSlow, reloadStorage, corrupt, resetCorrupt } = useData();
   if (!ready) {
     return (
@@ -29,9 +34,9 @@ function RootNavigator() {
     );
   }
   return (
-    <View style={{ flex: 1, backgroundColor: t.bg }}>
-      <StatusBar style="dark" />
-      <Stack screenOptions={{ headerStyle: { backgroundColor: t.bg }, headerTintColor: t.text, headerTitleStyle: { fontWeight: '700' }, headerShadowVisible: false, contentStyle: { backgroundColor: t.bg } }}>
+    <View key={scheme} style={{ flex: 1, backgroundColor: t.bg }}>
+      <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
+      <Stack screenOptions={{ headerStyle: { backgroundColor: t.bg }, headerTintColor: t.text, headerTitleStyle: { fontWeight: '700', color: t.text }, headerShadowVisible: false, contentStyle: { backgroundColor: t.bg } }}>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="config" options={{ title: 'Diagnostic' }} />
         <Stack.Screen name="auth" options={{ title: 'Connexion', headerBackVisible: false }} />
@@ -57,7 +62,9 @@ export default function Layout() {
       <AppErrorBoundary>
         <DataProvider>
           <Shell>
-            <RootNavigator />
+            <FeedbackProvider>
+              <RootNavigator />
+            </FeedbackProvider>
           </Shell>
         </DataProvider>
       </AppErrorBoundary>

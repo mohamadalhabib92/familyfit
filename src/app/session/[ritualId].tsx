@@ -6,12 +6,13 @@ import { todayISO } from '@/lib/dates';
 import { HEALTH_DISCLAIMER } from '@/lib/health';
 import { displayName, MOODS, type Session } from '@/lib/model';
 import { uid } from '@/lib/storage';
-import { Button, Card, Chip, Empty, Field, H1, Ionicons, Muted, Row, Screen, Spacer, styles } from '@/ui/kit';
+import { Button, Card, Chip, Empty, Field, H1, haptic, Ionicons, Muted, ProgressBar, Row, Screen, Spacer, styles, useFeedback } from '@/ui/kit';
 import { theme as t } from '@/ui/theme';
 
 export default function SessionScreen() {
   const { ritualId } = useLocalSearchParams<{ ritualId: string }>();
   const { rituals, sessions, setSessions, members, me, family } = useData();
+  const fb = useFeedback();
   const router = useRouter();
   const r = rituals.find((x) => x.id === ritualId);
   const today = todayISO();
@@ -22,6 +23,10 @@ export default function SessionScreen() {
   const persist = (complete: boolean) => {
     const fin = { ...s, completedAt: complete ? new Date().toISOString() : s.completedAt };
     setSessions((l) => (l.some((x) => x.id === fin.id) ? l.map((x) => (x.id === fin.id ? fin : x)) : [...l, fin]));
+    if (complete) {
+      const n = fin.participants.length;
+      fb.celebrate({ title: 'Session terminée', subtitle: n > 1 ? `Bravo à vous ${n} !` : 'Bravo, beau moment !', icon: 'sparkles', tone: 'gold' });
+    } else fb.toast('Progression enregistrée');
     router.back();
   };
   const pct = r.items.length ? s.done.length / r.items.length : 0;
@@ -30,14 +35,18 @@ export default function SessionScreen() {
       <Stack.Screen options={{ title: r.title }} />
       <H1>{r.title}</H1>
       <Muted>{s.done.length} / {r.items.length} étapes{prev?.completedAt ? ' · déjà terminée aujourd’hui' : ''}</Muted>
-      <View style={{ height: 8, backgroundColor: t.surfaceAlt, borderRadius: 4, marginVertical: 10 }}>
-        <View style={{ width: `${Math.round(pct * 100)}%`, height: 8, backgroundColor: t.success, borderRadius: 4 }} />
-      </View>
+      <ProgressBar value={pct} color={t.success} label={`${s.done.length} étapes sur ${r.items.length}`} />
       <Card>
         {r.items.map((it) => {
           const on = s.done.includes(it);
           return (
-            <Pressable key={it} onPress={() => toggle('done', it)} accessibilityRole="checkbox" accessibilityState={{ checked: on }} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 48 }}>
+            <Pressable key={it} onPress={() => {
+                const last = !on && s.done.length + 1 === r.items.length;
+                haptic(last ? 'success' : on ? 'tap' : 'select');
+                toggle('done', it);
+              }}
+              accessibilityLabel={it}
+              accessibilityRole="checkbox" accessibilityState={{ checked: on }} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 48 }}>
               <Ionicons name={on ? 'checkmark-circle' : 'ellipse-outline'} size={26} color={on ? t.success : t.muted} />
               <Text style={{ color: t.text, fontSize: 16, textDecorationLine: on ? 'line-through' : 'none', flex: 1 }}>{it}</Text>
             </Pressable>

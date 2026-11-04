@@ -6,7 +6,7 @@ import { useData } from '@/lib/data';
 import { healthGoalError, HEALTH_DISCLAIMER } from '@/lib/health';
 import { displayName, type Goal } from '@/lib/model';
 import { uid } from '@/lib/storage';
-import { Button, Chip, Field, Muted, Row, Screen, Spacer, styles } from '@/ui/kit';
+import { Button, Chip, Field, Muted, Row, Screen, Spacer, styles, useFeedback } from '@/ui/kit';
 import { theme as t } from '@/ui/theme';
 
 const PRESETS = [
@@ -19,6 +19,7 @@ const PRESETS = [
 export default function GoalEditor() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { goals, setGoals, setActivities, members, me, family } = useData();
+  const fb = useFeedback();
   const router = useRouter();
   const existing = goals.find((g) => g.id === id);
   const [g, setG] = useState<Goal>(() => existing ?? { id: uid('goal_'), familyId: family?.id ?? '', title: '', unit: 'min', weeklyTarget: 60, memberIds: [], icon: 'leaf-outline' });
@@ -32,6 +33,7 @@ export default function GoalEditor() {
     if (banned) return setErr(banned);
     const fin = { ...g, title: g.title.trim(), weeklyTarget: n };
     setGoals((l) => (existing ? l.map((x) => (x.id === fin.id ? fin : x)) : [...l, fin]));
+    fb.toast({ text: existing ? 'Objectif mis à jour' : 'Objectif créé — à vous de jouer !', icon: 'flag' });
     router.back();
   };
   return (

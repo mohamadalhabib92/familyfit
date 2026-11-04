@@ -4,7 +4,7 @@ import { TrialBanner } from '@/components/TrialBanner';
 import { useData } from '@/lib/data';
 import { routeAfterReady } from '@/lib/gate';
 import { supabaseConfigured } from '@/lib/supabase';
-import { Ionicons, LoadingState, type IconName } from '@/ui/kit';
+import { haptic, Ionicons, LoadingState, type IconName } from '@/ui/kit';
 import { theme as t } from '@/ui/theme';
 
 export default function TabsLayout() {
@@ -21,13 +21,16 @@ export default function TabsLayout() {
   if (dest === 'auth') return <Redirect href="/auth" />;
   if (dest === 'onboarding') return <Redirect href="/onboarding" />;
   const icon = (name: IconName) =>
-    function TabIcon({ color, size }: { color: unknown; size: number }) {
-      return <Ionicons name={name} color={typeof color === 'string' ? color : undefined} size={size} />;
+    function TabIcon({ color, size, focused }: { color: unknown; size: number; focused?: boolean }) {
+      // Onglet actif : pictogramme plein (convention iOS), inactif : contour.
+      const n = (focused ? name.replace(/-outline$/, '') : name) as IconName;
+      return <Ionicons name={n} color={typeof color === 'string' ? color : undefined} size={size} />;
     };
   return (
     <View style={{ flex: 1, backgroundColor: t.bg }}>
       <TrialBanner />
       <Tabs
+        screenListeners={{ tabPress: () => haptic('select') }}
         screenOptions={{
           headerStyle: { backgroundColor: t.bg }, headerTintColor: t.text, headerShadowVisible: false,
           tabBarStyle: { backgroundColor: t.surface, borderTopColor: t.border, minHeight: 60 },
