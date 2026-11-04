@@ -62,7 +62,7 @@ export default function SessionScreen() {
         {MOODS.map((e, i) => {
           const v = (i + 1) as Session['mood'];
           return (
-            <Pressable key={e} onPress={() => setS((x) => ({ ...x, mood: x.mood === v ? undefined : v }))} accessibilityLabel={`Humeur ${i + 1} sur 5`}
+            <Pressable key={e} onPress={() => setS((x) => ({ ...x, mood: x.mood === v ? undefined : v }))} accessibilityRole="radio" accessibilityState={{ checked: s.mood === v }} accessibilityLabel={`Humeur ${i + 1} sur 5`}
               style={{ width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center', backgroundColor: s.mood === v ? t.surfaceAlt : 'transparent', borderWidth: s.mood === v ? 2 : 0, borderColor: t.primary }}>
               <Text style={{ fontSize: 24 }}>{e}</Text>
             </Pressable>

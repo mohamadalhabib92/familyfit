@@ -85,7 +85,7 @@ export function Screen({ children, scroll = true, padded = true }: { children: R
 export function H1({ children, style }: { children: ReactNode; style?: StyleProp<TextStyle> }) {
   const s = useFontScale();
   return (
-    <Text accessibilityRole="header" style={[S().h1, { fontSize: 28 * s, lineHeight: 34 * s }, style]}>
+    <Text maxFontSizeMultiplier={1.6} accessibilityRole="header" style={[S().h1, { fontSize: 28 * s, lineHeight: 34 * s }, style]}>
       {children}
     </Text>
   );
@@ -191,7 +191,7 @@ export function Button({
       ) : (
         <>
           {icon ? <Ionicons name={icon} size={small ? 16 : 18} color={fg} /> : null}
-          <Text style={[S().btnText, { fontSize: (small ? 14 : 16) * s, color: fg }]}>{title}</Text>
+          <Text maxFontSizeMultiplier={2} style={[S().btnText, { fontSize: (small ? 14 : 16) * s, color: fg }]}>{title}</Text>
         </>
       )}
     </PressableScale>
@@ -227,7 +227,7 @@ export function Chip({ label, active, onPress, color }: { label: string; active?
         pressed && { opacity: 0.8 },
       ]}
     >
-      <Text style={{ color: active ? inkOn(c) : t.text, fontWeight: '600', fontSize: 14 * s }}>{label}</Text>
+      <Text maxFontSizeMultiplier={1.6} style={{ color: active ? inkOn(c) : t.text, fontWeight: '600', fontSize: 14 * s }}>{label}</Text>
     </PressableScale>
   );
 }
@@ -252,7 +252,7 @@ export function Badge({ label, tone = 'neutral' }: { label: string; tone?: 'neut
   const [bg, fg] = map[tone];
   return (
     <View style={[S().badge, { backgroundColor: bg }]}>
-      <Text style={{ color: fg, fontSize: 12, fontWeight: '700', letterSpacing: 0.3 }}>{label}</Text>
+      <Text maxFontSizeMultiplier={1.6} style={{ color: fg, fontSize: 12, fontWeight: '700', letterSpacing: 0.3 }}>{label}</Text>
     </View>
   );
 }
@@ -300,7 +300,7 @@ export function Segmented<T extends string | number>({ options, value, onChange,
               accessibilityState={{ checked: on }}
               style={[S().segItem, on && { backgroundColor: currentScheme() === 'dark' ? t.border : t.surface, ...shadow(1) }]}
             >
-              <Text style={{ color: on ? t.text : t.muted, fontWeight: on ? '700' : '500', fontSize: 14 }}>{o.label}</Text>
+              <Text maxFontSizeMultiplier={1.6} numberOfLines={2} style={{ color: on ? t.text : t.muted, fontWeight: on ? '700' : '500', fontSize: 14, textAlign: 'center' }}>{o.label}</Text>
             </Pressable>
           );
         })}
@@ -391,7 +391,7 @@ export function ListItem({ title, subtitle, right, icon, onPress }: { title: str
         </View>
       ) : null}
       <View style={{ flex: 1 }}>
-        <Text style={[S().body, { fontWeight: '600' }]} numberOfLines={1}>
+        <Text style={[S().body, { fontWeight: '600' }]} numberOfLines={2}>
           {title}
         </Text>
         {subtitle ? (
@@ -414,7 +414,7 @@ export function Stat({ label, value, sub }: { label: string; value: string; sub?
   return (
     <View style={[S().card, { flex: 1, minWidth: 140, marginBottom: 0 }]}>
       <Muted style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: 0.8 }}>{label}</Muted>
-      <Text style={{ color: t.text, fontSize: 22, fontWeight: '700', marginTop: 4 }}>{value}</Text>
+      <Text maxFontSizeMultiplier={1.6} style={{ color: t.text, fontSize: 22, fontWeight: '700', marginTop: 4 }}>{value}</Text>
       {sub ? <Muted style={{ fontSize: 12, marginTop: 2 }}>{sub}</Muted> : null}
     </View>
   );
@@ -491,9 +491,9 @@ function makeStyles() {
     gap: 8,
   },
   btnSmall: { minHeight: 44, paddingHorizontal: 14 },
-  btnText: { fontSize: 16, fontWeight: '700', letterSpacing: 0.2 },
+  btnText: { fontSize: 16, fontWeight: '700', letterSpacing: 0.2, textAlign: 'center', flexShrink: 1 },
   iconBtn: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
-  chip: { minHeight: 44, paddingHorizontal: 14, borderRadius: 22, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  chip: { minHeight: 44, maxWidth: '100%', paddingVertical: 6, paddingHorizontal: 14, borderRadius: 22, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   badge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 999, alignSelf: 'flex-start' },
   label: { color: t.muted, fontSize: 13, fontWeight: '600', marginBottom: 6, letterSpacing: 0.3 },
   input: {
@@ -507,7 +507,7 @@ function makeStyles() {
     fontSize: 16,
   },
   segment: { flexDirection: 'row', backgroundColor: t.surfaceAlt, borderRadius: t.radius - 2, padding: 4, gap: 4 },
-  segItem: { flex: 1, minHeight: 44, borderRadius: t.radius - 4, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 8 },
+  segItem: { flex: 1, minHeight: 44, paddingVertical: 6, borderRadius: t.radius - 4, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 8 },
   track: { width: 50, height: 30, borderRadius: 15, padding: 3, justifyContent: 'center' },
   thumb: { width: 24, height: 24, borderRadius: 12, backgroundColor: t.surface, ...shadow(1) },
   empty: { alignItems: 'center', paddingVertical: 40, paddingHorizontal: 24, borderRadius: t.radius + 4, backgroundColor: t.surface, borderWidth: StyleSheet.hairlineWidth, borderColor: t.border, marginBottom: 16 },

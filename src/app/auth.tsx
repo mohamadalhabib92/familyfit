@@ -79,7 +79,7 @@ export default function Auth() {
   return (
     <Screen>
       <Eyebrow>FamilyFit</Eyebrow>
-      <Pressable onPress={unlock} accessibilityLabel="Connexion sans mot de passe">
+      <Pressable onPress={unlock} accessibilityRole="header" accessibilityLabel="Connexion sans mot de passe">
         <H1>Connexion sans mot de passe</H1>
       </Pressable>
       <Muted>Recevez un code à 6 chiffres. Aucune donnée n’est partagée hors de votre famille.</Muted>

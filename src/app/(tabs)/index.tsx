@@ -31,7 +31,7 @@ export default function Today() {
   return (
     <Screen>
       {remoteError ? <Notice tone="warning" title={remoteError} /> : null}
-      <Pressable onPress={unlock} accessibilityLabel={family?.name ?? 'Famille'}>
+      <Pressable onPress={unlock} accessibilityRole="header" accessibilityLabel={family?.name ?? 'Famille'}>
         <Eyebrow>{family?.name}</Eyebrow>
       </Pressable>
       <H1>{hour < 12 ? 'Bonjour' : hour < 18 ? 'Bel après-midi' : 'Bonsoir'}{me ? `, ${me.name}` : ''}</H1>
