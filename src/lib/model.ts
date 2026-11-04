@@ -21,12 +21,13 @@ export type Invitation = {
   status: 'pending' | 'accepted' | 'revoked'; acceptedBy?: string;
 };
 
+// `color` est lu à l'usage : il suit le mode clair / sombre.
 export const CATEGORIES = [
-  { key: 'family', label: 'Famille', en: 'Family', color: theme.category.family, icon: 'home-outline' },
-  { key: 'work', label: 'Travail', en: 'Work', color: theme.category.work, icon: 'briefcase-outline' },
-  { key: 'school', label: 'École', en: 'School', color: theme.category.school, icon: 'school-outline' },
-  { key: 'leisure', label: 'Loisirs', en: 'Leisure', color: theme.category.leisure, icon: 'game-controller-outline' },
-  { key: 'wellness', label: 'Bien-être', en: 'Wellness', color: theme.category.wellness, icon: 'leaf-outline' },
+  { key: 'family', label: 'Famille', en: 'Family', icon: 'home-outline', get color() { return theme.category.family; } },
+  { key: 'work', label: 'Travail', en: 'Work', icon: 'briefcase-outline', get color() { return theme.category.work; } },
+  { key: 'school', label: 'École', en: 'School', icon: 'school-outline', get color() { return theme.category.school; } },
+  { key: 'leisure', label: 'Loisirs', en: 'Leisure', icon: 'game-controller-outline', get color() { return theme.category.leisure; } },
+  { key: 'wellness', label: 'Bien-être', en: 'Wellness', icon: 'leaf-outline', get color() { return theme.category.wellness; } },
 ] as const;
 export type Category = (typeof CATEGORIES)[number]['key'];
 export const cat = (k: Category) => CATEGORIES.find((c) => c.key === k) ?? CATEGORIES[0];

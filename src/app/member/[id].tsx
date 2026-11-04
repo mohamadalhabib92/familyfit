@@ -47,7 +47,7 @@ export default function MemberEditor() {
         {MEMBER_PALETTE.map((p) => {
           const on = m.color === p.color;
           return (
-            <Pressable key={p.color} onPress={() => setM({ ...m, color: p.color, glyph: p.glyph })} accessibilityLabel={`Motif ${p.label}`} accessibilityState={{ selected: on }} style={{ width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', borderWidth: on ? 3 : 0, borderColor: t.text }}>
+            <Pressable key={p.color} onPress={() => setM({ ...m, color: p.color, glyph: p.glyph })} accessibilityRole="radio" accessibilityLabel={`Motif ${p.label}`} accessibilityState={{ checked: on }} style={{ width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', borderWidth: on ? 3 : 0, borderColor: t.text }}>
               <MemberMark color={p.color} glyph={p.glyph as IconName} label={p.label} />
             </Pressable>
           );

@@ -7,12 +7,13 @@ import { isTime } from '@/lib/dates';
 import { SLOT_LABEL, type Ritual, type Slot } from '@/lib/model';
 import { askPermission, scheduleDaily } from '@/lib/reminders';
 import { uid } from '@/lib/storage';
-import { Button, Field, IconButton, Muted, Notice, Row, Screen, Segmented, Spacer, styles } from '@/ui/kit';
+import { Button, Field, IconButton, Muted, Notice, Row, Screen, Segmented, Spacer, styles, useFeedback } from '@/ui/kit';
 import { theme as t } from '@/ui/theme';
 
 export default function RitualEditor() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { rituals, setRituals, family } = useData();
+  const fb = useFeedback();
   const router = useRouter();
   const existing = rituals.find((r) => r.id === id);
   const [r, setR] = useState<Ritual>(() => existing ?? { id: uid('rit_'), familyId: family?.id ?? '', title: '', slot: 'evening', items: [] });
@@ -30,6 +31,7 @@ export default function RitualEditor() {
       if (p === 'granted') await scheduleDaily(r.title, `C’est l’heure du rituel du ${SLOT_LABEL[r.slot].toLowerCase()}`, r.reminder);
       else { setInfo('Notifications refusées : le rituel est enregistré sans rappel. Autorisez-les dans les réglages du téléphone.'); return; }
     }
+    fb.toast({ text: existing ? 'Rituel mis à jour' : 'Rituel créé', icon: 'repeat' });
     router.back();
   };
   return (

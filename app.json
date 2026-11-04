@@ -6,7 +6,7 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
     "description": "FamilyFit — agenda familial partagé (grégorien + hégirien), rituels et bien-être.",
     "splash": {
       "image": "./assets/splash-icon.png",

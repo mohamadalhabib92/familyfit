@@ -9,6 +9,7 @@
     "@react-native-community/netinfo": "12.0.1",
     "expo": "~58.0.19",
     "expo-constants": "~58.0.13",
+    "expo-haptics": "~58.0.7",
     "expo-linking": "~58.0.14",
     "expo-notifications": "~58.1.6",
     "expo-router": "~58.0.26",
@@ -33,7 +34,7 @@
     "typecheck": "tsc --noEmit",
     "build:web": "expo export -p web && node scripts/pwa-postbuild.mjs",
     "icons": "python3 scripts/make-icons.py",
-    "test": "node scripts/test-hijri.mjs && node scripts/test-persist.mjs && node scripts/test-gate.mjs && node scripts/test-foundations.mjs && node scripts/test-rls-local.mjs"
+    "test": "node scripts/test-hijri.mjs && node scripts/test-persist.mjs && node scripts/test-gate.mjs && node scripts/test-foundations.mjs && node scripts/test-dark.mjs && node scripts/test-rls-local.mjs"
   },
   "private": true
 }

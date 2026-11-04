@@ -9,12 +9,13 @@ import { formatHijri } from '@/lib/hijri';
 import { CATEGORIES, displayName, RECURRENCE_LABEL, type FamilyEvent, type Recurrence } from '@/lib/model';
 import { scheduleAt } from '@/lib/reminders';
 import { uid } from '@/lib/storage';
-import { Button, Chip, Field, Muted, Notice, Row, Screen, Segmented, Spacer, Toggle, styles } from '@/ui/kit';
+import { Button, Chip, Field, Muted, Notice, Row, Screen, Segmented, Spacer, Toggle, styles, useFeedback } from '@/ui/kit';
 import { theme as t } from '@/ui/theme';
 
 export default function EventEditor() {
   const { id, date } = useLocalSearchParams<{ id: string; date?: string }>();
   const { events, setEvents, family, members, me, prefs } = useData();
+  const fb = useFeedback();
   const router = useRouter();
   const existing = events.find((e) => e.id === id);
   const [d, setD] = useState<FamilyEvent>(() => existing ?? {
@@ -46,6 +47,7 @@ export default function EventEditor() {
       const when = fromISO(final.date); when.setHours(h, m - final.reminderMin, 0, 0);
       if (when.getTime() > Date.now()) await scheduleAt(final.title, `À ${final.start} · ${CATEGORIES.find((c) => c.key === final.category)?.label}`, when);
     }
+    fb.toast({ text: existing ? 'Événement mis à jour' : `« ${final.title} » ajouté à l’agenda`, icon: 'calendar' });
     router.back();
   };
 

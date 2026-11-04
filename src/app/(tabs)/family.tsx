@@ -13,6 +13,7 @@ import { shareInvitation } from '@/lib/share';
 import { exportAll } from '@/lib/storage';
 import { supabaseConfigured } from '@/lib/supabase';
 import { Badge, Button, Card, Divider, H2, ListItem, MemberMark, Muted, Row, Screen, Segmented, Spacer, Toggle, type IconName } from '@/ui/kit';
+import { useVibrations } from '@/ui/access';
 import { theme as t } from '@/ui/theme';
 
 
@@ -25,6 +26,7 @@ export default function FamilyTab() {
   const [perm, setPerm] = useState<PermState>('undetermined');
   const [successor, setSuccessor] = useState<string | null>(null);
   const [accountMsg, setAccountMsg] = useState<string | null>(null);
+  const [vibrations, setVibrations] = useVibrations();
   const unlock = useSecretTap(() => {
     markDiagnosticUnlocked();
     setPrefs((p) => ({ ...p, devConfigUnlocked: true }));
@@ -38,7 +40,7 @@ export default function FamilyTab() {
   const pending = invitations.filter((i) => i.status === 'pending' && i.expiresAt >= todayISO());
   return (
     <Screen>
-      <Pressable onPress={unlock} accessibilityLabel={family?.name ?? 'Famille'}>
+      <Pressable onPress={unlock} accessibilityRole="header" accessibilityLabel={family?.name ?? 'Famille'}>
         <H2>{family?.name}</H2>
       </Pressable>
       <Card>
@@ -96,6 +98,7 @@ export default function FamilyTab() {
         <Segmented label="Ajustement hégirien (jours, observation locale)" options={[-2, -1, 0, 1, 2].map((n) => ({ label: n > 0 ? `+${n}` : String(n), value: n }))} value={prefs.hijriOffset} onChange={(v) => setPrefs((p) => ({ ...p, hijriOffset: v }))} />
       ) : null}
       <Toggle label="Texte large" value={prefs.largeText} onChange={(v) => setPrefs((p) => ({ ...p, largeText: v }))} hint="Agrandit le texte. Le réglage du téléphone peut encore aller jusqu’à 200 %." />
+      <Toggle label="Vibrations" value={vibrations} onChange={setVibrations} hint="Petits retours tactiles quand vous touchez un bouton ou validez un moment." />
       <Spacer h={8} />
       <Card>
         <Row style={{ justifyContent: 'space-between' }}>
