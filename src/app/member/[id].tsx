@@ -61,7 +61,7 @@ export default function MemberEditor() {
       <Button title="Enregistrer" icon="checkmark" onPress={save} />
       <Spacer h={8} />
       {existing && manage && !existing.isMe ? (
-        <Button variant="danger" title="Retirer de la famille" onPress={() => confirmAsk(`Retirer ${existing.name} ? Ses données personnelles seront supprimées de cet appareil.`, () => {
+        <Button variant="danger" title="Retirer de la famille" onPress={() => confirmAsk(`Retirer ${existing.name} de la liste des membres ? Le prénom est retiré des événements. Les séances, les activités et le reste de l’historique restent sur cet appareil.`, () => {
           setMembers((l) => l.filter((x) => x.id !== existing.id));
           setEvents((l) => l.map((e) => ({ ...e, memberIds: e.memberIds.filter((x) => x !== existing.id) })));
           router.back();
