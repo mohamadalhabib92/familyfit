@@ -4,12 +4,19 @@ import { canPersist, noteLoadFinished, noteLoadStarted, shouldApplyLoad } from '
 import {
   QUARANTINE_KEY,
   SCHEMA_META_KEY,
+  WRITE_FAILURE_MESSAGE,
   appendQuarantine,
   buildSnapshot,
   payloadWriteAllowed,
   retainUnknown,
+  trackAfterEdit,
+  trackAfterLoad,
+  trackAfterWrite,
+  withUnsavedExport,
   type QuarantineReason,
   type Snapshot,
+  type TrackedKey,
+  type UnsavedExport,
 } from './preservation';
 
 /**
@@ -76,14 +83,73 @@ export function writesAreBlocked(): boolean {
   return !payloadWriteAllowed(observedSchemaVersion, true);
 }
 
-export async function saveJSON<T>(key: string, value: T): Promise<void> {
-  if (!canPersist(key)) return;
-  if (writesAreBlocked()) return;
+export type SaveResult = { ok: true; skipped: false } | { ok: false; skipped: boolean; error: string };
+
+const tracked = new Map<string, TrackedKey>();
+const writeTails = new Map<string, Promise<void>>();
+let diskCleared = false;
+const writeListeners = new Set<() => void>();
+
+function emitWrites(): void {
+  writeListeners.forEach((fn) => fn());
+}
+
+export function subscribeWrites(fn: () => void): () => void {
+  writeListeners.add(fn);
+  return () => writeListeners.delete(fn);
+}
+
+export function unsavedEntries(): UnsavedExport[] {
+  return [...tracked.values()]
+    .filter((row) => row.unsaved)
+    .map((row) => ({ key: row.key, error: row.error ?? WRITE_FAILURE_MESSAGE, value: row.memory }));
+}
+
+/** Dernière lecture réussie : c’est la copie de référence, pas un brouillon. */
+export function noteHydratedValue(key: string, value: unknown): void {
+  tracked.set(key, trackAfterLoad(key, value));
+  emitWrites();
+}
+
+/** Après un effacement confirmé, plus aucune ancienne copie n’est sur le disque. */
+export function resetWriteTracker(): void {
+  tracked.clear();
+  diskCleared = true;
+  emitWrites();
+}
+
+async function writeNow<T>(key: string, value: T, previous: T | undefined): Promise<SaveResult> {
+  if (!canPersist(key)) return { ok: false, skipped: true, error: 'Lecture non terminée' };
+  if (writesAreBlocked()) return { ok: false, skipped: true, error: 'Écritures en pause' };
+  const existing = tracked.get(key);
+  const next = trackAfterEdit(existing, key, previous, value, diskCleared && !existing);
+  tracked.set(key, next);
   try {
     await AsyncStorage.setItem(PREFIX + key, JSON.stringify(value));
+    tracked.set(key, trackAfterWrite(tracked.get(key) ?? next, true));
+    emitWrites();
+    return { ok: true, skipped: false };
   } catch {
-    // stockage plein / indisponible : on ne crashe jamais l'UI
+    tracked.set(key, trackAfterWrite({ ...(tracked.get(key) ?? next), memory: value }, false));
+    emitWrites();
+    return { ok: false, skipped: false, error: WRITE_FAILURE_MESSAGE };
   }
+}
+
+export async function saveJSON<T>(key: string, value: T, previous?: T): Promise<SaveResult> {
+  const prev = writeTails.get(key) ?? Promise.resolve();
+  let result: SaveResult = { ok: false, skipped: true, error: 'Lecture non terminée' };
+  const job = prev.then(() => writeNow(key, value, previous), () => writeNow(key, value, previous)).then((r) => {
+    result = r;
+  });
+  writeTails.set(key, job.then(() => undefined, () => undefined));
+  await job;
+  return result;
+}
+
+export async function retryUnsavedWrites(): Promise<void> {
+  const pending = unsavedEntries();
+  for (const row of pending) await saveJSON(row.key, row.value);
 }
 
 /**
@@ -142,9 +208,9 @@ export async function exportAll(): Promise<Record<string, unknown>> {
   return out;
 }
 
-/** Instantané visible : comptes, condensé, copie de quarantaine. Pas une restauration. */
-export async function exportSnapshot(exportedAt = new Date().toISOString()): Promise<Snapshot> {
-  return buildSnapshot(await exportAll(), exportedAt);
+/** Instantané du disque, plus les brouillons non écrits. Le condensé porte seulement le disque. */
+export async function exportSnapshot(exportedAt = new Date().toISOString()): Promise<Snapshot & { unsaved: UnsavedExport[] }> {
+  return withUnsavedExport(buildSnapshot(await exportAll(), exportedAt), unsavedEntries());
 }
 
 /**
@@ -184,6 +250,7 @@ export function usePersistentState<T>(key: string, initial: T | (() => T), boot 
         return;
       }
       noteLoadFinished(key, true);
+      noteHydratedValue(key, result.value);
       setCorruptRaw(null);
       setValue(result.value);
       setReady(true);
@@ -200,7 +267,7 @@ export function usePersistentState<T>(key: string, initial: T | (() => T), boot 
       setValue((prev) => {
         const v = typeof next === 'function' ? (next as (p: T) => T)(prev) : next;
         const kept = (typeof next === 'function' ? retainUnknown(prev, v) : v) as T;
-        if (canPersist(key)) void saveJSON(key, kept);
+        if (canPersist(key)) void saveJSON(key, kept, prev);
         return kept;
       });
     },

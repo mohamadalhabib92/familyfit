@@ -11,7 +11,7 @@ writeFileSync(f, js);
 const m = await import(f);
 
 const fixture = JSON.parse(readFileSync(new URL('./fixtures/legacy-disk-v0.json', import.meta.url), 'utf8'));
-const res = [...m.runPreservationSelfTests(), ...m.auditFixture(fixture)];
+const res = [...m.runPreservationSelfTests(), ...m.runWriteFailureTests(), ...m.auditFixture(fixture)];
 for (const r of res) console.log(r.ok ? '✓' : '✗', r.name);
 
 const data = readFileSync(new URL('../src/lib/data.tsx', import.meta.url), 'utf8');
@@ -24,11 +24,23 @@ const checks = [
   ['réinitialisation : quarantaine avant remplacement', resetFn.indexOf('rememberUnreadable') !== -1 && resetFn.indexOf('rememberUnreadable') < resetFn.indexOf('replaceUnreadableKey')],
   ['lecture illisible copie en quarantaine', storage.includes("rememberUnreadable(key, result.raw, 'corrupt')")],
   ['saveJSON bloque si la version n’autorise pas l’écriture', (() => {
-    const body = storage.slice(storage.indexOf('export async function saveJSON'));
-    const guard = body.indexOf('if (!canPersist(key)) return;');
-    const schema = body.indexOf('if (writesAreBlocked()) return;');
+    const body = storage.slice(storage.indexOf('async function writeNow'), storage.indexOf('export async function saveJSON'));
+    const guard = body.indexOf('if (!canPersist(key)) return');
+    const schema = body.indexOf('if (writesAreBlocked()) return');
     const setItem = body.indexOf('AsyncStorage.setItem');
-    return guard !== -1 && schema !== -1 && setItem !== -1 && guard < schema && schema < setItem;
+    const reported = body.indexOf('WRITE_FAILURE_MESSAGE');
+    const emptyCatch = /catch\s*\{\s*\}/.test(body);
+    return guard !== -1 && schema !== -1 && setItem !== -1 && reported !== -1 && guard < schema && schema < setItem && !emptyCatch;
+  })()],
+  ['retrait de membre : le texte dit l’effet réel, sans cascade', (() => {
+    const member = readFileSync(new URL('../src/app/member/[id].tsx', import.meta.url), 'utf8');
+    const handler = member.slice(member.indexOf('title="Retirer de la famille"'), member.indexOf("', 'Retirer')"));
+    return handler.includes('Les séances, les activités et le reste de l’historique restent')
+      && !handler.includes('données personnelles seront supprimées')
+      && !handler.includes('setSessions')
+      && !handler.includes('setActivities')
+      && handler.includes('setMembers')
+      && handler.includes('memberIds');
   })()],
   ['mise à jour partielle garde les champs inconnus', storage.includes('retainUnknown(prev, v)')],
   ['effacement confirmé relâche la porte de version', data.includes('releaseSchemaGateAfterErase()')],

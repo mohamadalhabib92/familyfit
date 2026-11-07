@@ -6,6 +6,8 @@ Lecture du code sur `main` au SHA `3959aabdd0e45ddf390ba1fe5fb376e18b1aa79e` (fu
 
 FamilyFit est un agenda familial local (Expo 58, iOS, Android et PWA) : semaine grégorienne, date hégirienne tabulaire, rituels du matin et du soir, objectifs de bien-être légers. Ce n’est pas un carnet d’entraînement, ni un dossier de santé, ni une application de culte. Les données cœur vivent dans AsyncStorage, préfixe `@familyfit/` ; Supabase, s’il est configuré, sert à l’OTP et à quelques RPC, pas à une synchro des événements. La PR #2 bloque déjà l’écriture tant que la lecture d’une clé n’a pas réussi ; il manquait la version de schéma, le maintien des champs inconnus, une quarantaine et un export qui dit ce qu’il est. La déconnexion ne doit pas effacer la famille : la route le garantissait, le fournisseur de données pouvait encore vider `family` si cette décision changeait. Aucun téléphone, aucune sauvegarde d’appareil et aucune base de production n’ont été ouverts. Une restauration future devra comparer comptes et condensé sur une copie isolée, puis pouvoir revenir en arrière. Ce n’est pas une promesse de perte nulle.
 
+Suivi sur la même PR #4 : un disque plein ne passe plus pour une sauvegarde. L’ancienne copie reste sur l’appareil, le brouillon reste à l’écran, un bandeau accessible propose réessai et export. Le texte « Retirer de la famille » décrit l’effet réel (liste des membres et prénom dans les événements) et ne promet plus la suppression des séances ni des activités. Aucune cascade n’a été ajoutée. `isMe` reste un marquage local : ce n’est pas une autorisation serveur.
+
 ## Périmètre réel
 
 Vérifié dans le dépôt, pas par supposition.
@@ -48,8 +50,9 @@ Effort de 1 (correctif local) à 5 (chantier). Priorité P0 = cette fondation, P
 | JSON illisible | Le brut restait la seule copie. « Réinitialiser » le remplaçait par une valeur vide. | Copie en quarantaine avant remplacement, sans écraser une quarantaine déjà illisible. L’effacement confirmé, lui, retire aussi la quarantaine. | Une donnée cassée n’est plus détruite par le seul bouton de réparation. Le droit d’effacer reste entier. | 2 | P0, fait ici |
 | Export | JSON brut, sans comptes ni condensé, présenté comme « mes données ». | Instantané `local-snapshot` : comptes par clé, SHA-256, phrase « ce n’est pas une restauration ». Visible dans Famille et sur le bandeau d’écritures en pause. | L’utilisateur voit un fichier honnête. Personne ne peut le prendre pour une restauration garantie. | 2 | P0, fait ici |
 | Champs et clés futurs | Un objet reconstruit sans les champs inconnus les perdait à la sauvegarde. Aucune version n’interdisait d’écraser un disque plus récent. | `retainUnknown` sur les mises à jour fonction. `planMigration` ne supprime aucune clé. Version supérieure : écritures en pause, lecture et export possibles. | Les notes futures, une clé `imports`, une métadonnée `legacyNote` survivent. | 3 | P0, fait ici |
-| Appareil partagé | Un seul `isMe`. Pas de code, pas de profil verrouillé. Humeurs, notes, contacts adultes sont dans le même stockage. `displayName` masque le prénom d’un mineur seulement pour un lecteur non parent. | Prochaine passe : verrou local ou choix de lecteur, sans copier les données sensibles d’un profil vers un autre. Ne pas le faire dans cette PR. | Un enfant qui ouvre l’app sur le téléphone familial voit aujourd’hui le contenu de l’appareil. | 4 | P1 |
-| Retrait d’un membre | Le bouton dit que les données personnelles seront supprimées. Le code retire le membre et son id dans les événements, pas les séances, humeurs ni activités (`src/app/member/[id].tsx`). | Aligner le texte et le geste : soit effacement confirmé des lignes de ce membre, soit dire que l’historique familial est conservé. | Évite une fausse promesse d’effacement, sans manger l’historique des autres. | 2 | P1 |
+| Disque plein | `saveJSON` avalait l’exception. L’écran montrait la nouvelle valeur comme si elle était enregistrée. | Échec explicite. Le disque garde la dernière écriture réussie. La mémoire garde le brouillon. Bandeau « Modifications non enregistrées » (alerte), réessai, export du disque et du brouillon. Pas de remise à vide. | L’utilisateur voit que ce n’est pas enregistré et peut réessayer ou emporter le brouillon. | 2 | P0, fait ici |
+| Appareil partagé | Un seul `isMe`. Pas de code, pas de profil verrouillé. Humeurs, notes, contacts adultes sont dans le même stockage. `displayName` masque le prénom d’un mineur seulement pour un lecteur non parent. | Limite enregistrée, pas corrigée. `isMe` et `displayName` sont de l’affichage local. Ils ne remplacent pas la RLS. Cette PR ne les transforme pas en contrôle serveur. | Un enfant qui ouvre l’app sur le téléphone familial voit le contenu de l’appareil. | 4 | P1, ouvert |
+| Retrait d’un membre | Le bouton disait que les données personnelles seraient supprimées. Le code retire le membre et son id dans les événements, pas les séances, humeurs ni activités. | Le texte dit maintenant cet effet. Les séances et les activités restent. Pas de suppression en cascade ajoutée. | La phrase ne promet plus un effacement que le code ne fait pas. L’historique familial reste. | 1 | P0, fait ici |
 | CI | `.github/workflows/pages.yml` lance `tsc` et l’export web, puis déploie GitHub Pages. `npm test` n’y est pas. | Ajouter `npm test` avant l’upload. Ne pas déployer si les fixtures de conservation échouent. | Une régression de logout ou de quarantaine ne part pas en PWA sur `main`. | 2 | P1 |
 | Fiche store | Brouillon : nom déjà pris par Family Fit GmbH, mot-clé `islam`, « nous ne collectons pas de données », texte « jusqu’à 200 % » sans plafond dans le code (`store/ios-metadata.md`, `family.tsx`). | Décision de Mohamed : nom, mots-clés, étiquettes nutrition, phrase d’accessibilité. Pas de soumission dans cette PR. | Réduit le risque de refus App Store et d’étiquette fausse si Supabase est activé. | 2 | P1 |
 | iPad, web, VoiceOver | `supportsTablet: true`, orientation portrait, contenu plafonné à 860 px. Pas de disposition iPad. VoiceOver non parcouru. Rappels absents sur le web, le dit l’écran Famille. | Passe dédiée : grands pointeurs, ordre de focus, semaine lisible en paysage si le produit le veut. | L’iPad est accepté par la fiche mais l’écran reste celui du téléphone. | 3 | P2 |
@@ -156,15 +159,15 @@ Non mesurées ici. Pas de profil batterie, pas de taille d’IPA/AAB, pas d’ex
 - Google Play Families : aucune fiche dans le dépôt. Ne pas extrapoler.
 - Croissance : pas de KPI codé (pas d’analytics). Un indicateur éthique possible, plus tard, serait le nombre de familles qui exportent avant une migration, pas le temps passé ni une série.
 - Composants partagés (`kit`, `EventRow`, `ExampleLists`, `TrialBanner`) n’embarquent pas le contenu d’un autre profil. Le risque de mélange est le stockage unique de l’appareil, pas un import croisé entre composants.
-- `displayName` évite d’afficher le prénom d’un mineur sans consentement à un membre non parent. Sur un seul appareil, le lecteur est `isMe`. Le masquage ne protège pas contre la personne qui tient le téléphone.
+- `displayName` évite d’afficher le prénom d’un mineur sans consentement à un membre non parent. Sur un seul appareil, le lecteur est `isMe`. Ce masquage est local. Il ne constitue pas une frontière serveur, ni une preuve que la RLS isole les familles. La RLS est déclarée dans `supabase/schema.sql` et relue comme texte par `test-foundations.mjs`. Elle n’a pas été exécutée ici : `initdb` manque, et aucun projet de production n’a été contacté.
 
 ## Top 5 de la semaine
 
-1. **Fondation de conservation** — cette PR. Gardes, export visible, quarantaine, fixtures.
+1. **Fondation de conservation, y compris disque plein et texte de retrait** — dans cette PR. Le reste de la liste est encore ouvert.
 2. **Faire échouer la CI si `npm test` échoue**, avant le déploiement Pages. Sans cela la fondation ne protège que les machines qui lancent les tests.
-3. **Appareil partagé** : un lecteur qui n’est pas parent ne doit pas voir notes, humeurs et contacts. Décision de produit courte, puis un verrou borné. Pas de nouveau backend.
-4. **Retrait de membre honnête** : le texte et les lignes réellement ôtées (séances, activités) doivent coïncider, avec confirmation, sans effacer les événements des autres.
-5. **Fiche store et phrase « 200 % »** : nom distinct de Family Fit GmbH, mot-clé `islam` retiré ou assumé par écrit, étiquette « données non collectées » revue si l’OTP est actif, libellé d’accessibilité aligné sur le code. Aucune soumission.
+3. **Appareil partagé, en local seulement** : un lecteur qui n’est pas parent ne doit pas voir notes, humeurs et contacts. Verrou ou choix de lecteur sur l’appareil. Ne pas présenter `isMe` comme une sécurité serveur. Pas de nouveau backend.
+4. **Fiche store et phrase « 200 % »** : nom distinct de Family Fit GmbH, mot-clé `islam` retiré ou assumé par écrit, étiquette « données non collectées » revue si l’OTP est actif, libellé d’accessibilité aligné sur le code. Aucune soumission.
+5. **Conflits de synchro** : aujourd’hui le mot « conflit » désigne deux rendez-vous qui se chevauchent. Une future synchro devra versionner les enregistrements. Pas dans cette PR.
 
 ## Cinq invites prêtes à coller
 
@@ -172,7 +175,7 @@ Non mesurées ici. Pas de profil batterie, pas de taille d’IPA/AAB, pas d’ex
 
 2. « FamilyFit. Sur un seul appareil, `isMe` voit notes, humeurs et contacts. Propose un verrou local (code à 4 chiffres stocké seulement comme condensé, ou choix du lecteur parent) qui masque ces champs aux autres rôles. N’envoie rien au serveur. Fixture : un membre non parent ne reçoit pas la note de séance ni le contact. Garde l’export complet pour le parent qui a le verrou. »
 
-3. « FamilyFit. Le bouton Retirer de la famille dit que les données personnelles sont supprimées, mais les séances et activités restent. Aligne le texte et le code, avec confirmation. Ne supprime pas les événements des autres membres. Teste un membre réel et un membre démo. »
+3. « FamilyFit. Le retrait d’un membre enlève la fiche et le prénom dans les événements. Les séances et les activités restent, et le texte le dit. N’ajoute pas de cascade. Un éventuel effacement des lignes de cette personne sera un second bouton, confirmé, qui ne touche pas à l’historique des autres. »
 
 4. « FamilyFit. Passe accessibilité iPhone et iPad en portrait : VoiceOver sur Agenda et Famille, texte système à 200 % sans `allowFontScaling` forcé, corrige la phrase qui promet un plafond absent. Pas de refonte graphique, pas la branche UX ouverte. »
 
@@ -190,6 +193,8 @@ Non mesurées ici. Pas de profil batterie, pas de taille d’IPA/AAB, pas d’ex
 | Brut illisible perdu lors d’une réinitialisation confirmée | 0 copie manquante en quarantaine | Tenue sur la fonction pure. Pas rejoué sur un appareil |
 | Instantané sans condensé ni phrase « pas une restauration » | 0 | Tenue |
 | Effacement confirmé qui laisserait la quarantaine | 0 | Tenue par `diskAfterConfirmedWipe` et `clearAll` |
+| Échec d’écriture qui change le condensé du disque ou vide la clé | 0 | Tenue, 12 contrôles simulés (échec, réessai, redémarrage, champs inconnus) |
+| Échec d’écriture présenté comme enregistré | 0 | Tenue : `unsaved` reste vrai tant que le réessai n’a pas réussi |
 | Contraste texte / fond | ≥ 4,5:1 | Tenue, test des fondations (chiffres affichés par le script) |
 | `npm test` dans le workflow Pages | présent | Non. Cible suivante |
 | Restauration isolée : comptes et condensé égaux, puis rollback | protocole écrit et exécuté sur copie | Non exécuté. Pas une promesse de perte nulle |
@@ -203,8 +208,10 @@ Fichiers : `src/lib/preservation.ts`, `src/lib/storage.ts`, `src/lib/data.tsx`, 
 - Version supérieure à 1 : bandeau « Écritures en pause », export possible, pas de réensemencement d’essai.
 - Mise à jour via fonction : les champs non cités restent. Un remplacement direct (effacement confirmé, nouvelle valeur entière) reste un remplacement voulu.
 - Quarantaine des bruts illisibles. La zone n’est pas écrasée si elle-même est illisible ou d’une forme inconnue.
-- Export visible : comptes, SHA-256, phrase d’avertissement. Écran vie privée aligné.
+- Export visible : comptes, SHA-256, phrase d’avertissement. En cas d’échec d’écriture, le fichier ajoute `unsaved` (le brouillon) sans le compter dans le condensé du disque.
+- Échec d’écriture (disque plein, stockage indisponible) : bandeau accessible, réessai, pas de remise à vide. Les écritures d’une même clé sont en file, pour qu’un échec ne fasse pas croire qu’une valeur plus ancienne est encore la dernière.
 - Déconnexion : session seule. `setFamily(null)` retiré de ce chemin.
+- Retrait d’un membre : le texte correspond au code. Séances et activités conservées.
 - Effacements confirmés inchangés dans leur intention : tout l’appareil, compte, recommencer l’essai, retirer la démo, réinitialiser une clé illisible. Ils restent distincts du logout.
 - Fixture v0 : famille, membres dont un enfant, événements, rituels, séances, objectifs, activités, listes, préférence future, clé `imports`. La démo est retirée sans emporter le réel.
 
@@ -212,21 +219,29 @@ Hors de cette PR, volontairement : pas de réécriture Swift ou Next, pas de nou
 
 ## Limites qui restent vraies après la PR
 
-- `saveJSON` avale encore l’erreur si le disque est plein. L’UI ne le dit pas. Les données précédentes restent si `setItem` a échoué, mais l’écran montre l’état mémoire.
+- Un redémarrage du processus relit le disque. Le brouillon qui n’a pas été réécrit ni exporté n’est plus en mémoire. Le bandeau existe pour exporter avant cela. Le disque, lui, n’est pas vidé par l’échec.
 - La quarantaine déduplique par clé et condensé. Elle ne versionne pas plusieurs raisons pour le même brut.
-- Le retrait de membre et la suppression d’un objectif (qui, elle, retire aussi les activités, avec confirmation) ne sont pas unifiés.
+- Supprimer un objectif retire encore son suivi, avec confirmation. Ce n’est pas le même geste que retirer un membre.
+- `isMe` et `displayName` ne sont pas une sécurité serveur. L’appareil partagé reste ouvert.
 - Aucune copie de sauvegarde appareil n’a été ouverte. Le protocole de bascule n’a pas été exécuté.
 - Un créneau très court existe au démarrage : les écritures sont fermées le temps de lire le tampon. Une frappe dans ce créneau met à jour la mémoire et n’est écrite qu’à la sauvegarde suivante, une fois la porte ouverte.
 - L’expression qui refuse le poids ne couvre pas toutes les langues.
+- `npm test` n’est toujours pas dans le workflow Pages. Le déploiement de `main` ne lance donc pas ces 139 contrôles.
 
 ## Tests réellement lancés
 
-Commandes, dans cet environnement, après `npm ci` :
+Commandes, dans cet environnement, le 7 novembre 2026, après le correctif disque plein :
 
-- `npx tsc --noEmit` : succès.
-- `npm test` : succès. Détail : hijri, garde d’écriture, routes, fondations (contrastes chiffrés, clés, RLS déclarée, secrets, phrase santé), conservation (vecteurs SHA-256 vide et `abc`, fixture v0), puis RLS locale ignorée avec le message `initdb absent`. Aucun projet Supabase contacté.
+- `npx tsc --noEmit` : code de sortie 0.
+- `npm test` : code de sortie 0. **139 lignes `✓`, 0 ligne `✗`, 1 ligne `○`.**
+  - hijri : 11
+  - garde d’écriture : 10
+  - routes : 10
+  - fondations (contrastes, clés, RLS déclarée dans le SQL, secrets, phrase santé) : 59
+  - conservation, dont 12 contrôles d’échec d’écriture simulé (disque inchangé, condensé, brouillon, champs inconnus, réessai, redémarrage, export) : 49
+  - RLS locale : 0 contrôle exécuté. La seule ligne est `○ initdb absent : test RLS local ignoré. Aucun projet Supabase n’est contacté.` Ce n’est pas une preuve d’isolation, ni une preuve d’accès à une base de production. Aucune requête de production n’a été faite.
 
-Non lancés : Expo sur simulateur, téléphone, iPad, navigateur cliqué, export web, EAS, lint de dépôt (il n’y a pas de config ESLint versionnée), restauration depuis une sauvegarde, requête de production.
+Non lancés : Expo sur simulateur, téléphone, iPad, navigateur cliqué, export web, EAS, lint de dépôt (pas de config ESLint versionnée), restauration depuis une sauvegarde, échec réel de quota sur un appareil. L’échec d’écriture est simulé dans `simulateStorageWrite`.
 
 ## Entrées manquantes
 
@@ -258,7 +273,7 @@ SHA de lecture : `3959aabdd0e45ddf390ba1fe5fb376e18b1aa79e`.
 | Rappels locaux, web non supporté | `src/lib/reminders.ts` | 4–15 |
 | Schéma membre, consentement booléen, pas de journal | `supabase/schema.sql` | 20–31 |
 | Suppression de compte serveur | `supabase/schema.sql` | 377–479 |
-| Retrait membre incomplet vs la phrase | `src/app/member/[id].tsx` | 63–67 |
+| Phrase de retrait trop forte, avant correction | `src/app/member/[id].tsx` sur `3959aab` | 63–67 |
 | Historique de rituel conservé à la suppression du rituel | `src/app/ritual/[id].tsx` | 58 |
 | Suppression d’objectif retire le suivi, avec confirmation | `src/app/goal/[id].tsx` | 60 |
 | Texte large ×1,5, largeur 860, pas de plafond 200 % | `src/ui/kit.tsx` | 78–104, 419 |
@@ -274,8 +289,11 @@ Lignes de la fondation (cette branche, après le diff) :
 | Version, note d’instantané, effacements distincts | `src/lib/preservation.ts` | 8–29, 60–68 |
 | Champs inconnus, plan sans suppression | `src/lib/preservation.ts` | 147–176, 205–216 |
 | Déconnexion de disque, retrait démo | `src/lib/preservation.ts` | 243–244, 278–296 |
-| Porte d’écriture et quarantaine | `src/lib/storage.ts` | 48–82, 93–111, 181 |
-| Lecture de version, logout, reset | `src/lib/data.tsx` | 133–168, 253–270 |
-| Bandeau et export | `src/app/_layout.tsx` lignes 19–44 ; `src/app/(tabs)/family.tsx` lignes 131–149 | — |
+| Porte d’écriture et quarantaine | `src/lib/storage.ts` | 48–84, 160–190 |
+| Échec d’écriture, file, réessai | `src/lib/preservation.ts` `trackAfterWrite` ; `src/lib/storage.ts` `writeNow` / `retryUnsavedWrites` | 322–333 et 121–151 |
+| Bandeau non enregistré | `src/app/_layout.tsx` | 47–73 |
+| Texte de retrait aligné sur le code | `src/app/member/[id].tsx` | 64–68 |
+| Lecture de version, logout, reset | `src/lib/data.tsx` | 140–175, 264–288 |
+| Bandeau de pause et export | `src/app/_layout.tsx` ; `src/app/(tabs)/family.tsx` | bandeau de pause en tête de fichier ; export dans Famille |
 | Fixture | `scripts/fixtures/legacy-disk-v0.json` | fichier entier |
 | Phrase droits | `src/app/privacy.tsx` | 9 |

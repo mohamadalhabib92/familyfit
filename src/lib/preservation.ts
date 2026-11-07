@@ -296,6 +296,50 @@ export function withoutDemo<T extends Record<string, unknown>>(disk: T & {
   };
 }
 
+export const WRITE_FAILURE_MESSAGE =
+  'Espace insuffisant ou stockage indisponible. Les changements restent à l’écran et ne sont pas enregistrés. L’ancienne copie reste sur l’appareil.';
+
+export type TrackedKey = {
+  key: string;
+  /** Dernière valeur dont l’écriture a réussi. Inchangée si le disque refuse. */
+  persisted: unknown;
+  /** Valeur à l’écran, y compris si l’écriture a échoué. */
+  memory: unknown;
+  unsaved: boolean;
+  error: string | null;
+};
+
+export function trackAfterLoad(key: string, value: unknown): TrackedKey {
+  return { key, persisted: value, memory: value, unsaved: false, error: null };
+}
+
+/** `persisted` ne recule pas vers un brouillon. Sans suivi, le disque vidé n’a pas d’ancienne copie. */
+export function trackAfterEdit(current: TrackedKey | undefined, key: string, previousMemory: unknown, nextMemory: unknown, diskCleared = false): TrackedKey {
+  const persisted = current ? current.persisted : diskCleared ? undefined : previousMemory;
+  return { key, persisted, memory: nextMemory, unsaved: current?.unsaved ?? false, error: current?.error ?? null };
+}
+
+export function trackAfterWrite(current: TrackedKey, ok: boolean): TrackedKey {
+  if (ok) return { ...current, persisted: current.memory, unsaved: false, error: null };
+  return { ...current, unsaved: true, error: WRITE_FAILURE_MESSAGE };
+}
+
+/** Relecture du disque. Ne remplace pas le disque par une valeur vide, et ne fait pas passer le brouillon pour enregistré. */
+export function trackRestart(current: TrackedKey): TrackedKey {
+  return { key: current.key, persisted: current.persisted, memory: current.persisted, unsaved: false, error: null };
+}
+
+export function simulateStorageWrite(disk: Record<string, string>, key: string, value: unknown, fail: boolean): { disk: Record<string, string>; ok: boolean; error: string | null } {
+  if (fail) return { disk, ok: false, error: WRITE_FAILURE_MESSAGE };
+  return { disk: { ...disk, [key]: stableStringify(value) }, ok: true, error: null };
+}
+
+export type UnsavedExport = { key: string; error: string; value: unknown };
+
+export function withUnsavedExport<T extends Snapshot>(snapshot: T, unsaved: UnsavedExport[]): T & { unsaved: UnsavedExport[] } {
+  return { ...snapshot, unsaved };
+}
+
 export function shouldSeedTrial(input: { ready: boolean; supabaseConfigured: boolean; hasSession: boolean; hasFamily: boolean; trialDeclined: boolean; writesPaused: boolean }): boolean {
   if (!input.ready || input.writesPaused || input.supabaseConfigured || input.hasSession || input.hasFamily || input.trialDeclined) return false;
   return true;
@@ -369,6 +413,54 @@ export function auditFixture(disk: Record<string, unknown>): { name: string; ok:
   check('instantané : pas une restauration', snap.note.includes('n’est pas une restauration') && snap.note.includes('Aucune promesse de perte nulle') && !/perte nulle garantie|zéro perte/i.test(snap.note));
   check('pas de réensemencement après déconnexion si la famille est là', shouldSeedTrial({ ready: true, supabaseConfigured: false, hasSession: false, hasFamily: true, trialDeclined: false, writesPaused: false }) === false);
   check('pas de réensemencement tant que les écritures sont en pause', shouldSeedTrial({ ready: true, supabaseConfigured: false, hasSession: false, hasFamily: false, trialDeclined: false, writesPaused: true }) === false);
+  return out;
+}
+
+export function runWriteFailureTests(): { name: string; ok: boolean }[] {
+  const out: { name: string; ok: boolean }[] = [];
+  const check = (name: string, ok: boolean) => out.push({ name, ok });
+  const persisted = { showHijri: true, hijriOffset: 1, localeFuture: 'ar-DZ' };
+  const dirty = retainUnknown(persisted, { showHijri: false, cityFuture: 'Genève' }) as Record<string, unknown>;
+  const originalRaw = stableStringify(persisted);
+  const hashBefore = sha256Hex(originalRaw);
+  let disk: Record<string, string> = { prefs: originalRaw };
+  const diskRef = disk;
+
+  let tracked = trackAfterLoad('prefs', persisted);
+  tracked = trackAfterEdit(tracked, 'prefs', tracked.memory, dirty, false);
+  const failed = simulateStorageWrite(disk, 'prefs', tracked.memory, true);
+  disk = failed.disk;
+  tracked = trackAfterWrite(tracked, failed.ok);
+
+  check('échec simulé : le disque n’est pas remplacé', failed.ok === false && disk === diskRef && disk.prefs === originalRaw);
+  check('échec simulé : le condensé du disque ne change pas', sha256Hex(disk.prefs) === hashBefore);
+  check('échec simulé : pas l’état enregistré', tracked.unsaved === true && tracked.error === WRITE_FAILURE_MESSAGE && tracked.memory !== tracked.persisted);
+  check('échec simulé : brouillon et champ inconnu gardés en mémoire', (tracked.memory as Record<string, unknown>).showHijri === false && (tracked.memory as Record<string, unknown>).localeFuture === 'ar-DZ' && (tracked.memory as Record<string, unknown>).cityFuture === 'Genève');
+  check('échec simulé : l’ancienne copie et son champ inconnu restent la référence', (tracked.persisted as Record<string, unknown>).showHijri === true && (tracked.persisted as Record<string, unknown>).localeFuture === 'ar-DZ' && (tracked.persisted as Record<string, unknown>).cityFuture === undefined);
+  check('échec simulé : pas de remise à vide', disk.prefs !== '[]' && disk.prefs !== '{}' && disk.prefs !== 'null');
+
+  const retryFail = simulateStorageWrite(disk, 'prefs', tracked.memory, true);
+  disk = retryFail.disk;
+  tracked = trackAfterWrite(tracked, retryFail.ok);
+  check('nouvel échec : disque et condensé identiques', disk.prefs === originalRaw && sha256Hex(disk.prefs) === hashBefore && tracked.unsaved === true);
+
+  const retryOk = simulateStorageWrite(disk, 'prefs', tracked.memory, false);
+  disk = retryOk.disk;
+  tracked = trackAfterWrite({ ...tracked, memory: dirty }, true);
+  const diskValue = JSON.parse(disk.prefs) as Record<string, unknown>;
+  check('réessai réussi : le disque égale le brouillon', retryOk.ok === true && tracked.unsaved === false && tracked.error === null && sha256Hex(disk.prefs) === sha256Hex(stableStringify(tracked.memory)));
+  check('réessai réussi : champs inconnus des deux côtés', diskValue.localeFuture === 'ar-DZ' && diskValue.cityFuture === 'Genève' && diskValue.showHijri === false);
+
+  let diskRestart: Record<string, string> = { prefs: originalRaw };
+  let restarted = trackAfterEdit(trackAfterLoad('prefs', persisted), 'prefs', persisted, dirty, false);
+  const blocked = simulateStorageWrite(diskRestart, 'prefs', dirty, true);
+  diskRestart = blocked.disk;
+  restarted = trackAfterWrite(restarted, false);
+  const afterBoot = trackRestart(restarted);
+  check('redémarrage : le disque n’est pas vidé', sha256Hex(diskRestart.prefs) === hashBefore && diskRestart.prefs === originalRaw);
+  check('redémarrage : on relit l’ancienne copie, pas le brouillon ni une valeur vide', (afterBoot.memory as Record<string, unknown>).localeFuture === 'ar-DZ' && (afterBoot.memory as Record<string, unknown>).cityFuture === undefined && (afterBoot.memory as Record<string, unknown>).showHijri === true && afterBoot.unsaved === false);
+  const snap = withUnsavedExport(buildSnapshot({ prefs: persisted }, '2026-11-07T12:00:00.000Z'), [{ key: 'prefs', error: WRITE_FAILURE_MESSAGE, value: dirty }]);
+  check('export : condensé du disque, brouillon à part', snap.sha256 === sha256Hex(stableStringify({ prefs: persisted })) && snap.unsaved[0]?.value === dirty && (snap.data.prefs as Record<string, unknown>).cityFuture === undefined);
   return out;
 }
 

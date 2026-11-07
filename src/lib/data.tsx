@@ -19,8 +19,12 @@ import {
   releaseSchemaGateAfterErase,
   rememberUnreadable,
   replaceUnreadableKey,
+  resetWriteTracker,
+  retryUnsavedWrites,
   saveJSON,
+  subscribeWrites,
   uid,
+  unsavedEntries,
   usePersistentState,
   writeSchemaMeta,
 } from './storage';
@@ -78,6 +82,9 @@ type Ctx = {
   remoteError: string | null;
   /** Version future ou métadonnée illisible : les contenus déjà lus ne sont pas réécrits. */
   writesPaused: boolean;
+  /** Écritures refusées par le stockage. Le brouillon reste en mémoire, le disque aussi. */
+  unsaved: { key: string; error: string }[];
+  retryUnsaved: () => Promise<void>;
 };
 const C = createContext<Ctx | null>(null);
 
@@ -88,6 +95,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [boot, setBoot] = useState(0);
   const [schemaChecked, setSchemaChecked] = useState(false);
   const [writesPaused, setWritesPaused] = useState(false);
+  const [writeTick, setWriteTick] = useState(0);
+  useEffect(() => subscribeWrites(() => setWriteTick((n) => n + 1)), []);
+  const unsaved = (writeTick >= 0 ? unsavedEntries() : []).map(({ key, error }) => ({ key, error }));
   const [session, setSession, r1, s1, c1] = usePersistentState<AuthSession | null>('session', null, boot);
   const [prefs, setPrefs, r2, s2, c2] = usePersistentState<Prefs>('prefs', DEFAULT_PREFS, boot);
   const [family, setFamily, r3, s3, c3] = usePersistentState<Family | null>('family', null, boot);
@@ -267,7 +277,11 @@ export function DataProvider({ children }: { children: ReactNode }) {
       if (!allowed.has(key)) continue;
       const raw = corrupt.find((c) => c.key === key)?.raw;
       if (typeof raw === 'string') await rememberUnreadable(key, raw, 'reset-confirmed');
-      await replaceUnreadableKey(key, emptyFor(key));
+      try {
+        await replaceUnreadableKey(key, emptyFor(key));
+      } catch {
+        return;
+      }
     }
     closeSchemaGate();
     setSchemaChecked(false);
@@ -275,6 +289,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   };
   const wipe = async () => {
     await clearAll();
+    resetWriteTracker();
     releaseSchemaGateAfterErase();
     setWritesPaused(false);
     setSchemaChecked(true);
@@ -297,6 +312,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     const largeText = mergedPrefs.largeText;
     const devConfigUnlocked = mergedPrefs.devConfigUnlocked;
     await clearAll();
+    resetWriteTracker();
     releaseSchemaGateAfterErase();
     setWritesPaused(false);
     setSchemaChecked(true);
@@ -347,6 +363,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         rituals, setRituals, sessions, setSessions, goals, setGoals, activities, setActivities, lists, setLists,
         createFamily, createInvitation, revokeInvitation, acceptInvitation, hasDemo, removeDemo, signOut, wipe, corrupt, resetCorrupt,
         keepTrialData, restartKeepingSession, deleteAccount, remoteError, writesPaused,
+        unsaved, retryUnsaved: retryUnsavedWrites,
       }}
     >
       {children}

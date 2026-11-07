@@ -13,9 +13,9 @@ const res = m.runPersistGuardSelfTests();
 for (const r of res) console.log(r.ok ? '✓' : '✗', r.name);
 
 const storage = readFileSync(new URL('../src/lib/storage.ts', import.meta.url), 'utf8');
-const saveBody = storage.slice(storage.indexOf('export async function saveJSON'));
+const saveBody = storage.slice(storage.indexOf('async function writeNow'), storage.indexOf('export async function saveJSON'));
 const setItemAt = saveBody.indexOf('AsyncStorage.setItem');
-const guardAt = saveBody.indexOf('if (!canPersist(key)) return;');
+const guardAt = saveBody.indexOf('if (!canPersist(key)) return');
 if (guardAt === -1 || setItemAt === -1 || guardAt > setItemAt) {
   console.log('✗', 'saveJSON écrit avant d’avoir vérifié la lecture');
   res.push({ name: 'garde dans saveJSON', ok: false });

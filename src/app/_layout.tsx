@@ -9,6 +9,7 @@ import { todayISO } from '@/lib/dates';
 import { downloadText } from '@/lib/download';
 import { installCrashHooks } from '@/lib/sentry';
 import { exportSnapshot } from '@/lib/storage';
+import { WRITE_FAILURE_MESSAGE } from '@/lib/preservation';
 import { AppErrorBoundary } from '@/ui/ErrorBoundary';
 import { Button, FontScaleProvider, LoadingState } from '@/ui/kit';
 import { theme as t } from '@/ui/theme';
@@ -43,6 +44,34 @@ function WritesPausedBanner() {
   );
 }
 
+function UnsavedBanner() {
+  const { unsaved, retryUnsaved } = useData();
+  const [note, setNote] = useState<string | null>(null);
+  if (!unsaved.length) return null;
+  const keys = unsaved.map((row) => row.key).join(', ');
+  return (
+    <View accessibilityRole="alert" accessibilityLiveRegion="assertive" style={{ backgroundColor: t.dangerBg, paddingHorizontal: 16, paddingVertical: 12, gap: 8 }}>
+      <Text accessibilityRole="header" style={{ color: t.text, fontWeight: '700' }}>Modifications non enregistrées</Text>
+      <Text style={{ color: t.text, fontSize: 14, lineHeight: 20 }}>
+        {unsaved[0]?.error ?? WRITE_FAILURE_MESSAGE} Clés : {keys}. L’écran garde vos changements. L’appareil garde l’ancienne copie. Rien n’a été remis à vide.
+      </Text>
+      <Button small title="Réessayer l’enregistrement" onPress={() => { void retryUnsaved().then(() => setNote(null)); }} />
+      <Button
+        small
+        variant="secondary"
+        title="Exporter y compris le non-enregistré"
+        onPress={() => {
+          void exportSnapshot().then(async (snap) => {
+            await downloadText(`familyfit-${todayISO()}.json`, JSON.stringify(snap, null, 2), 'application/json');
+            setNote(`Export : disque ${snap.sha256.slice(0, 12)}, ${snap.unsaved.length} brouillon(s). Ce fichier ne restaure rien tout seul.`);
+          });
+        }}
+      />
+      {note ? <Text style={{ color: t.text, fontSize: 13 }}>{note}</Text> : null}
+    </View>
+  );
+}
+
 function RootNavigator() {
   const { ready, storageSlow, reloadStorage, corrupt, resetCorrupt } = useData();
   if (!ready) {
@@ -60,6 +89,7 @@ function RootNavigator() {
     <View style={{ flex: 1, backgroundColor: t.bg }}>
       <StatusBar style="dark" />
       <WritesPausedBanner />
+      <UnsavedBanner />
       <Stack screenOptions={{ headerStyle: { backgroundColor: t.bg }, headerTintColor: t.text, headerTitleStyle: { fontWeight: '700' }, headerShadowVisible: false, contentStyle: { backgroundColor: t.bg } }}>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="config" options={{ title: 'Diagnostic' }} />
