@@ -22,7 +22,10 @@ if (guardAt === -1 || setItemAt === -1 || guardAt > setItemAt) {
 } else {
   console.log('✓', 'saveJSON vérifie la lecture avant setItem');
 }
-if (!storage.includes('if (canPersist(key)) void saveJSON(key, v);')) {
+const setter = storage.slice(storage.indexOf('const set = useCallback'));
+const setterGuard = setter.indexOf('if (canPersist(key))');
+const setterSave = setter.indexOf('void saveJSON(key,');
+if (setterGuard === -1 || setterSave === -1 || setterGuard > setterSave) {
   console.log('✗', 'le setter persiste sans garde');
   res.push({ name: 'garde dans le setter', ok: false });
 } else {

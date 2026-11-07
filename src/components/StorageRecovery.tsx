@@ -14,7 +14,7 @@ export function StorageRecovery({ keys, onRetry, onReset }: { keys: CorruptKey[]
     <View style={{ flex: 1, backgroundColor: t.bg, justifyContent: 'center', padding: 24 }}>
       <Text accessibilityRole="header" style={{ color: t.text, fontSize: 22, fontWeight: '700' }}>Donnée locale illisible</Text>
       <Muted style={{ marginTop: 8 }}>
-        {names} n’a pas pu être lu. Le contenu d’origine est conservé tel quel. Rien n’est remplacé tant que vous ne le confirmez pas.
+        {names} n’a pas pu être lu. Le contenu d’origine reste sur cet appareil, et une copie est mise de côté si la zone de quarantaine est lisible. Rien n’est remplacé tant que vous ne le confirmez pas. Cette copie part seulement avec « Supprimer toutes les données » ou la suppression du compte.
       </Muted>
       <Button
         title="Exporter le brut"
@@ -29,7 +29,7 @@ export function StorageRecovery({ keys, onRetry, onReset }: { keys: CorruptKey[]
         variant="danger"
         style={{ marginTop: 8 }}
         onPress={() => confirmAsk(
-          `Remplacer ${names} par une valeur vide ? Exportez le brut avant si vous voulez le conserver. Cette étape est irréversible.${keys.some((k) => k.key === 'family') ? ' Réinitialiser family puis repasser par l’onboarding recrée la famille et remplace les listes.' : ''}`,
+          `Remplacer ${names} par une valeur vide ? Une copie brute est gardée sur cet appareil jusqu’à un effacement confirmé. Exportez aussi le brut si vous voulez un fichier. Cette étape est irréversible.${keys.some((k) => k.key === 'family') ? ' Réinitialiser family puis repasser par l’onboarding recrée la famille et remplace les listes.' : ''}`,
           () => onReset(keys.map((k) => k.key)),
           'Réinitialiser',
         )}

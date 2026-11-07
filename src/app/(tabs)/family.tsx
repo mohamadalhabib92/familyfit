@@ -10,7 +10,8 @@ import { dayCH, todayISO } from '@/lib/dates';
 import { canManage, displayName, memberMark, ROLE_LABEL, type Role } from '@/lib/model';
 import { askPermission, getPermission, type PermState } from '@/lib/reminders';
 import { shareInvitation } from '@/lib/share';
-import { exportAll } from '@/lib/storage';
+import { exportSnapshot, loadJSON } from '@/lib/storage';
+import { QUARANTINE_KEY } from '@/lib/preservation';
 import { supabaseConfigured } from '@/lib/supabase';
 import { Badge, Button, Card, Divider, H2, ListItem, MemberMark, Muted, Row, Screen, Segmented, Spacer, Toggle, type IconName } from '@/ui/kit';
 import { theme as t } from '@/ui/theme';
@@ -25,6 +26,13 @@ export default function FamilyTab() {
   const [perm, setPerm] = useState<PermState>('undetermined');
   const [successor, setSuccessor] = useState<string | null>(null);
   const [accountMsg, setAccountMsg] = useState<string | null>(null);
+  const [exportNote, setExportNote] = useState<string | null>(null);
+  const [quarantineCount, setQuarantineCount] = useState(0);
+  useEffect(() => {
+    void loadJSON<unknown>(QUARANTINE_KEY, []).then((loaded) => {
+      setQuarantineCount(loaded.ok && Array.isArray(loaded.value) ? loaded.value.length : 0);
+    });
+  }, []);
   const unlock = useSecretTap(() => {
     markDiagnosticUnlocked();
     setPrefs((p) => ({ ...p, devConfigUnlocked: true }));
@@ -121,7 +129,20 @@ export default function FamilyTab() {
         {diagnosticUnlocked(prefs.devConfigUnlocked) ? (
           <ListItem icon="settings-outline" title="Diagnostic" subtitle={supabaseConfigured ? 'Clés présentes' : 'Mode essai local'} onPress={() => router.push('/config')} />
         ) : null}
-        <ListItem icon="download-outline" title="Exporter mes données (JSON)" onPress={async () => downloadText(`familyfit-${todayISO()}.json`, JSON.stringify(await exportAll(), null, 2), 'application/json')} />
+        <ListItem
+          icon="download-outline"
+          title="Exporter mes données (JSON)"
+          subtitle={exportNote ?? 'Instantané local : comptes et condensé. Ce n’est pas une restauration.'}
+          onPress={async () => {
+            const snap = await exportSnapshot();
+            await downloadText(`familyfit-${todayISO()}.json`, JSON.stringify(snap, null, 2), 'application/json');
+            const listed = Object.values(snap.counts).reduce<number>((sum, n) => sum + (typeof n === 'number' ? n : 0), 0);
+            setExportNote(`Instantané exporté · ${listed} éléments comptés · condensé ${snap.sha256.slice(0, 12)}. Ce fichier ne restaure rien tout seul.`);
+          }}
+        />
+        {quarantineCount > 0 ? (
+          <ListItem icon="archive-outline" title="Copies mises de côté" subtitle={`${quarantineCount} donnée(s) illisible(s) conservée(s) jusqu’à un effacement confirmé.`} />
+        ) : null}
         {hasDemo ? <ListItem icon="flask-outline" title="Supprimer les données démo" onPress={() => confirmAsk('Supprimer les données d’exemple ?', removeDemo)} /> : null}
         <ListItem icon="log-out-outline" title="Se déconnecter" subtitle={session?.contact || (session?.trial ? 'Mode essai' : undefined)} onPress={signOut} />
         <ListItem icon="trash-outline" title="Supprimer toutes les données" subtitle="Cet appareil seulement" onPress={() => confirmAsk('Supprimer définitivement toutes les données de cet appareil ?', () => void wipe())} />
