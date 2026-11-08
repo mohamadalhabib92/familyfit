@@ -2,7 +2,33 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
 import { addDays, todayISO } from './dates';
 import { MEMBER_PALETTE, type Activity, type Family, type FamilyEvent, type FamilyList, type Goal, type Invitation, type Member, type Ritual, type Role, type Session } from './model';
 import { demoData } from './seed';
-import { clearAll, replaceUnreadableKey, saveJSON, uid, usePersistentState } from './storage';
+import {
+  memoryAfterExplicitWipe,
+  nextSchemaMeta,
+  readSchemaVersion,
+  SCHEMA_META_KEY,
+  shouldSeedTrial,
+  shouldStampSchema,
+  STORAGE_SCHEMA_VERSION,
+  withoutDemo,
+} from './preservation';
+import {
+  clearAll,
+  closeSchemaGate,
+  openSchemaGate,
+  readSchemaMeta,
+  releaseSchemaGateAfterErase,
+  rememberUnreadable,
+  replaceUnreadableKey,
+  resetWriteTracker,
+  retryUnsavedWrites,
+  saveJSON,
+  subscribeWrites,
+  uid,
+  unsavedEntries,
+  usePersistentState,
+  writeSchemaMeta,
+} from './storage';
 import { signOut as signedOutState } from './gate';
 import { rpc, supabaseConfigured, type AuthSession } from './supabase';
 
@@ -48,13 +74,19 @@ type Ctx = {
   revokeInvitation: (id: string) => void;
   acceptInvitation: (code: string, name: string, isMinor: boolean) => Promise<{ ok: boolean; message: string }>;
   hasDemo: boolean; removeDemo: () => void;
-  signOut: () => void; wipe: () => Promise<void>;
+  signOut: () => void; wipe: () => Promise<{ ok: boolean; message: string }>;
   corrupt: { key: string; raw: string }[];
+  resetError: string | null;
   resetCorrupt: (keys: string[]) => Promise<void>;
   keepTrialData: () => void;
-  restartKeepingSession: () => Promise<void>;
+  restartKeepingSession: () => Promise<{ ok: boolean; message: string }>;
   deleteAccount: (transferTo?: string) => Promise<{ ok: boolean; message: string }>;
   remoteError: string | null;
+  /** Version future ou métadonnée illisible : les contenus déjà lus ne sont pas réécrits. */
+  writesPaused: boolean;
+  /** Écritures refusées par le stockage. Le brouillon reste en mémoire, le disque aussi. */
+  unsaved: { key: string; error: string }[];
+  retryUnsaved: () => Promise<void>;
 };
 const C = createContext<Ctx | null>(null);
 
@@ -63,6 +95,12 @@ const paletteAt = (i: number) => MEMBER_PALETTE[i % MEMBER_PALETTE.length] ?? ME
 
 export function DataProvider({ children }: { children: ReactNode }) {
   const [boot, setBoot] = useState(0);
+  const [schemaChecked, setSchemaChecked] = useState(false);
+  const [writesPaused, setWritesPaused] = useState(false);
+  const [resetError, setResetError] = useState<string | null>(null);
+  const [writeTick, setWriteTick] = useState(0);
+  useEffect(() => subscribeWrites(() => setWriteTick((n) => n + 1)), []);
+  const unsaved = (writeTick >= 0 ? unsavedEntries() : []).map(({ key, error }) => ({ key, error }));
   const [session, setSession, r1, s1, c1] = usePersistentState<AuthSession | null>('session', null, boot);
   const [prefs, setPrefs, r2, s2, c2] = usePersistentState<Prefs>('prefs', DEFAULT_PREFS, boot);
   const [family, setFamily, r3, s3, c3] = usePersistentState<Family | null>('family', null, boot);
@@ -106,7 +144,51 @@ export function DataProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
-    if (!ready || supabaseConfigured || session || family || mergedPrefs.trialDeclined) return;
+    if (!ready) return;
+    let cancel = false;
+    closeSchemaGate();
+    void (async () => {
+      const loaded = await readSchemaMeta();
+      if (cancel) return;
+      if (!loaded.ok) {
+        if (loaded.reason === 'corrupt') await rememberUnreadable(SCHEMA_META_KEY, loaded.raw, 'corrupt');
+        openSchemaGate(null, true);
+        setWritesPaused(true);
+        setSchemaChecked(true);
+        return;
+      }
+      const version = readSchemaVersion(loaded.value);
+      if (loaded.value != null && version == null) {
+        openSchemaGate(null, true);
+        setWritesPaused(true);
+        setSchemaChecked(true);
+        return;
+      }
+      if (version != null && version > STORAGE_SCHEMA_VERSION) {
+        openSchemaGate(version, false);
+        setWritesPaused(true);
+        setSchemaChecked(true);
+        return;
+      }
+      if (shouldStampSchema(loaded.value)) await writeSchemaMeta(nextSchemaMeta(loaded.value, new Date().toISOString()));
+      openSchemaGate(STORAGE_SCHEMA_VERSION, false);
+      setWritesPaused(false);
+      setSchemaChecked(true);
+    })();
+    return () => {
+      cancel = true;
+    };
+  }, [ready, boot]);
+
+  useEffect(() => {
+    if (!shouldSeedTrial({
+      ready: ready && schemaChecked,
+      supabaseConfigured,
+      hasSession: !!session,
+      hasFamily: !!family,
+      trialDeclined: mergedPrefs.trialDeclined,
+      writesPaused,
+    })) return;
     const fam: Family = { id: uid('fam_'), name: 'Famille Martin (essai)', createdAt: new Date().toISOString(), trial: true };
     const mark = paletteAt(0);
     const me: Member = { id: uid('mem_'), familyId: fam.id, name: 'Alex', role: 'admin', color: mark.color, glyph: mark.glyph, isMinor: false, isMe: true };
@@ -122,7 +204,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     setInvitations([]);
     setSession({ mode: 'demo', contact: '', userId: me.id, trial: true });
     setPrefs((p) => ({ ...DEFAULT_PREFS, ...p, onboarded: true, trialMode: true, configAck: true }));
-  }, [ready, session, family, mergedPrefs.trialDeclined]);
+  }, [ready, schemaChecked, writesPaused, session, family, mergedPrefs.trialDeclined]);
 
   const createFamily: Ctx['createFamily'] = async (name, myName, withDemo) => {
     if (!ready) return;
@@ -171,13 +253,14 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const isDemo = (x: { demo?: boolean; id: string }) => !!x.demo || x.id.startsWith('demo-');
   const hasDemo = members.some(isDemo) || events.some(isDemo) || rituals.some(isDemo) || goals.some(isDemo) || lists.some(isDemo);
   const removeDemo = () => {
-    setMembers((l) => l.filter((x) => !isDemo(x)));
-    setEvents((l) => l.filter((x) => !isDemo(x)).map((e) => ({ ...e, memberIds: e.memberIds.filter((id) => !id.startsWith('demo-')) })));
-    setRituals((l) => l.filter((x) => !isDemo(x)));
-    setSessions((l) => l.filter((x) => !x.ritualId.startsWith('demo-')));
-    setGoals((l) => l.filter((x) => !isDemo(x)));
-    setActivities((l) => l.filter((x) => !x.goalId.startsWith('demo-') && !x.memberId.startsWith('demo-')));
-    setLists((l) => l.filter((x) => !isDemo(x)));
+    const next = withoutDemo({ members, events, rituals, sessions, goals, activities, lists });
+    setMembers(next.members);
+    setEvents(next.events);
+    setRituals(next.rituals);
+    setSessions(next.sessions);
+    setGoals(next.goals);
+    setActivities(next.activities);
+    setLists(next.lists);
   };
 
   const signOut = () => {
@@ -188,24 +271,49 @@ export function DataProvider({ children }: { children: ReactNode }) {
       onboarded: mergedPrefs.onboarded,
       trialDeclined: mergedPrefs.trialDeclined,
     });
+    // Session seule. La famille, l'historique et la quarantaine restent sur l'appareil.
     setSession(next.session ? session : null);
-    if (!next.family) setFamily(null);
   };
   const resetCorrupt = async (keys: string[]) => {
     const allowed = new Set<string>(corrupt.map((c) => c.key));
     for (const key of keys) {
       if (!allowed.has(key)) continue;
-      await replaceUnreadableKey(key, emptyFor(key));
+      const raw = corrupt.find((c) => c.key === key)?.raw;
+      if (typeof raw === 'string') await rememberUnreadable(key, raw, 'reset-confirmed');
+      try {
+        await replaceUnreadableKey(key, emptyFor(key));
+      } catch {
+        setResetError('La réinitialisation n’a pas été enregistrée. La donnée illisible est toujours sur l’appareil. Rien n’a été remplacé par du vide.');
+        return;
+      }
     }
+    setResetError(null);
+    closeSchemaGate();
+    setSchemaChecked(false);
     setBoot((n) => n + 1);
   };
-  const wipe = async () => {
-    await clearAll();
+  const wipe = async (): Promise<{ ok: boolean; message: string }> => {
+    let cleared = false;
+    try {
+      await clearAll();
+      cleared = true;
+    } catch {
+      cleared = false;
+    }
+    if (!memoryAfterExplicitWipe('présent', 'vide', cleared).reportedCleared) {
+      return { ok: false, message: 'Effacement interrompu. Les données encore présentes n’ont pas été remplacées par du vide.' };
+    }
+    resetWriteTracker();
+    releaseSchemaGateAfterErase();
+    setWritesPaused(false);
+    setSchemaChecked(true);
+    await writeSchemaMeta(nextSchemaMeta(null, new Date().toISOString()));
     setSession(null);
     setPrefs({ ...DEFAULT_PREFS, trialDeclined: true });
     setFamily(null);
     emptyContent();
     setRemoteError(null);
+    return { ok: true, message: 'Données de cet appareil effacées.' };
   };
 
   const keepTrialData = () => {
@@ -214,17 +322,32 @@ export function DataProvider({ children }: { children: ReactNode }) {
     setFamily((f) => (f ? { ...f, trial: false } : f));
   };
 
-  const restartKeepingSession = async () => {
+  const restartKeepingSession = async (): Promise<{ ok: boolean; message: string }> => {
     const keep = session;
     const largeText = mergedPrefs.largeText;
     const devConfigUnlocked = mergedPrefs.devConfigUnlocked;
-    await clearAll();
+    let cleared = false;
+    try {
+      await clearAll();
+      cleared = true;
+    } catch {
+      cleared = false;
+    }
+    if (!memoryAfterExplicitWipe(keep, null, cleared).reportedCleared) {
+      return { ok: false, message: 'Effacement interrompu. Les données d’essai sont toujours sur cet appareil.' };
+    }
+    resetWriteTracker();
+    releaseSchemaGateAfterErase();
+    setWritesPaused(false);
+    setSchemaChecked(true);
+    await writeSchemaMeta(nextSchemaMeta(null, new Date().toISOString()));
     setFamily(null);
     emptyContent();
     setRemoteError(null);
     setPrefs({ ...DEFAULT_PREFS, trialDeclined: true, configAck: true, largeText, devConfigUnlocked });
     setSession(keep);
     if (keep) void saveJSON('session', keep);
+    return { ok: true, message: 'Données d’essai effacées. Le compte reste connecté.' };
   };
 
   const deleteAccount: Ctx['deleteAccount'] = async (transferTo) => {
@@ -252,7 +375,15 @@ export function DataProvider({ children }: { children: ReactNode }) {
         return { ok: false, message: `${msg} Rien n’a été effacé sur cet appareil.` };
       }
     }
-    await wipe();
+    const local = await wipe();
+    if (!local.ok) {
+      return {
+        ok: false,
+        message: session?.mode === 'supabase'
+          ? `Le serveur a accepté la suppression, mais l’effacement sur cet appareil a échoué. ${local.message}`
+          : local.message,
+      };
+    }
     return { ok: true, message: session?.mode === 'supabase' ? 'Compte supprimé.' : 'Données de cet appareil supprimées. Il n’y avait pas de compte en ligne.' };
   };
 
@@ -260,11 +391,12 @@ export function DataProvider({ children }: { children: ReactNode }) {
   return (
     <C.Provider
       value={{
-        ready, storageSlow, reloadStorage: () => setBoot((n) => n + 1),
+        ready, storageSlow, reloadStorage: () => { closeSchemaGate(); setSchemaChecked(false); setBoot((n) => n + 1); },
         session, setSession, prefs: mergedPrefs, setPrefs, family, members, setMembers, me, invitations, events, setEvents,
         rituals, setRituals, sessions, setSessions, goals, setGoals, activities, setActivities, lists, setLists,
-        createFamily, createInvitation, revokeInvitation, acceptInvitation, hasDemo, removeDemo, signOut, wipe, corrupt, resetCorrupt,
-        keepTrialData, restartKeepingSession, deleteAccount, remoteError,
+        createFamily, createInvitation, revokeInvitation, acceptInvitation, hasDemo, removeDemo, signOut, wipe, corrupt, resetError, resetCorrupt,
+        keepTrialData, restartKeepingSession, deleteAccount, remoteError, writesPaused,
+        unsaved, retryUnsaved: retryUnsavedWrites,
       }}
     >
       {children}

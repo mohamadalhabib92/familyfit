@@ -1,13 +1,17 @@
-import { useEffect, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { View } from 'react-native';
+import { Text, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StorageRecovery } from '@/components/StorageRecovery';
 import { DataProvider, useData } from '@/lib/data';
+import { todayISO } from '@/lib/dates';
+import { downloadText } from '@/lib/download';
 import { installCrashHooks } from '@/lib/sentry';
+import { exportSnapshot } from '@/lib/storage';
+import { WRITE_FAILURE_MESSAGE } from '@/lib/preservation';
 import { AppErrorBoundary } from '@/ui/ErrorBoundary';
-import { FontScaleProvider, LoadingState } from '@/ui/kit';
+import { Button, FontScaleProvider, LoadingState } from '@/ui/kit';
 import { theme as t } from '@/ui/theme';
 
 function Shell({ children }: { children: ReactNode }) {
@@ -15,13 +19,66 @@ function Shell({ children }: { children: ReactNode }) {
   return <FontScaleProvider scale={prefs.largeText ? 1.5 : 1}>{children}</FontScaleProvider>;
 }
 
+function WritesPausedBanner() {
+  const { writesPaused } = useData();
+  const [note, setNote] = useState<string | null>(null);
+  if (!writesPaused) return null;
+  return (
+    <View style={{ backgroundColor: t.warningBg, paddingHorizontal: 16, paddingVertical: 12, gap: 8 }}>
+      <Text accessibilityRole="header" style={{ color: t.text, fontWeight: '700' }}>Écritures en pause</Text>
+      <Text style={{ color: t.text, fontSize: 14, lineHeight: 20 }}>
+        Ces données viennent d’une version plus récente, ou leur métadonnée est illisible. FamilyFit ne les réécrit pas. L’export est un instantané, pas une restauration. La suppression confirmée reste dans Famille.
+      </Text>
+      <Button
+        small
+        title="Exporter l’instantané"
+        onPress={() => {
+          void exportSnapshot().then(async (snap) => {
+            await downloadText(`familyfit-${todayISO()}.json`, JSON.stringify(snap, null, 2), 'application/json');
+            setNote(`Condensé ${snap.sha256.slice(0, 12)}. Ce fichier ne restaure rien tout seul.`);
+          });
+        }}
+      />
+      {note ? <Text style={{ color: t.text, fontSize: 13 }}>{note}</Text> : null}
+    </View>
+  );
+}
+
+function UnsavedBanner() {
+  const { unsaved, retryUnsaved } = useData();
+  const [note, setNote] = useState<string | null>(null);
+  if (!unsaved.length) return null;
+  const keys = unsaved.map((row) => row.key).join(', ');
+  return (
+    <View accessibilityRole="alert" accessibilityLiveRegion="assertive" style={{ backgroundColor: t.dangerBg, paddingHorizontal: 16, paddingVertical: 12, gap: 8 }}>
+      <Text accessibilityRole="header" style={{ color: t.text, fontWeight: '700' }}>Modifications non enregistrées</Text>
+      <Text style={{ color: t.text, fontSize: 14, lineHeight: 20 }}>
+        {unsaved[0]?.error ?? WRITE_FAILURE_MESSAGE} Clés : {keys}. L’écran garde vos changements. L’appareil garde l’ancienne copie. Rien n’a été remis à vide.
+      </Text>
+      <Button small title="Réessayer l’enregistrement" onPress={() => { void retryUnsaved().then(() => setNote(null)); }} />
+      <Button
+        small
+        variant="secondary"
+        title="Exporter y compris le non-enregistré"
+        onPress={() => {
+          void exportSnapshot().then(async (snap) => {
+            await downloadText(`familyfit-${todayISO()}.json`, JSON.stringify(snap, null, 2), 'application/json');
+            setNote(`Export : disque ${snap.sha256.slice(0, 12)}, ${snap.unsaved.length} brouillon(s). Ce fichier ne restaure rien tout seul.`);
+          });
+        }}
+      />
+      {note ? <Text style={{ color: t.text, fontSize: 13 }}>{note}</Text> : null}
+    </View>
+  );
+}
+
 function RootNavigator() {
-  const { ready, storageSlow, reloadStorage, corrupt, resetCorrupt } = useData();
+  const { ready, storageSlow, reloadStorage, corrupt, resetCorrupt, resetError } = useData();
   if (!ready) {
     return (
       <View style={{ flex: 1, backgroundColor: t.bg }}>
         {corrupt.length ? (
-          <StorageRecovery keys={corrupt} onRetry={reloadStorage} onReset={(keys) => void resetCorrupt(keys)} />
+          <StorageRecovery keys={corrupt} error={resetError} onRetry={reloadStorage} onReset={(keys) => void resetCorrupt(keys)} />
         ) : (
           <LoadingState slow={storageSlow} onRetry={reloadStorage} />
         )}
@@ -31,6 +88,8 @@ function RootNavigator() {
   return (
     <View style={{ flex: 1, backgroundColor: t.bg }}>
       <StatusBar style="dark" />
+      <WritesPausedBanner />
+      <UnsavedBanner />
       <Stack screenOptions={{ headerStyle: { backgroundColor: t.bg }, headerTintColor: t.text, headerTitleStyle: { fontWeight: '700' }, headerShadowVisible: false, contentStyle: { backgroundColor: t.bg } }}>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="config" options={{ title: 'Diagnostic' }} />
