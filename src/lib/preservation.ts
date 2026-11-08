@@ -307,26 +307,59 @@ export type TrackedKey = {
   memory: unknown;
   unsaved: boolean;
   error: string | null;
+  /** Une écriture est en cours : une relecture ne doit pas remplacer l’écran. */
+  pending: boolean;
 };
 
 export function trackAfterLoad(key: string, value: unknown): TrackedKey {
-  return { key, persisted: value, memory: value, unsaved: false, error: null };
+  return { key, persisted: value, memory: value, unsaved: false, error: null, pending: false };
 }
 
 /** `persisted` ne recule pas vers un brouillon. Sans suivi, le disque vidé n’a pas d’ancienne copie. */
 export function trackAfterEdit(current: TrackedKey | undefined, key: string, previousMemory: unknown, nextMemory: unknown, diskCleared = false): TrackedKey {
   const persisted = current ? current.persisted : diskCleared ? undefined : previousMemory;
-  return { key, persisted, memory: nextMemory, unsaved: current?.unsaved ?? false, error: current?.error ?? null };
+  return { key, persisted, memory: nextMemory, unsaved: current?.unsaved ?? false, error: current?.error ?? null, pending: false };
+}
+
+export const WRITE_REFUSED_MESSAGE =
+  'Écritures en pause. Les changements restent à l’écran et ne sont pas enregistrés. L’ancienne copie reste sur l’appareil.';
+
+/** Porte fermée : on note le brouillon, on n’écrit pas, on ne dit pas que c’est enregistré. */
+export function recordRefusedEdit(current: TrackedKey | undefined, key: string, previousMemory: unknown, nextMemory: unknown, diskCleared = false): TrackedKey {
+  const base = trackAfterEdit(current, key, previousMemory, nextMemory, diskCleared);
+  return { ...base, unsaved: true, error: WRITE_REFUSED_MESSAGE, pending: false };
 }
 
 export function trackAfterWrite(current: TrackedKey, ok: boolean): TrackedKey {
-  if (ok) return { ...current, persisted: current.memory, unsaved: false, error: null };
-  return { ...current, unsaved: true, error: WRITE_FAILURE_MESSAGE };
+  if (ok) return { ...current, persisted: current.memory, unsaved: false, error: null, pending: false };
+  return { ...current, unsaved: true, error: WRITE_FAILURE_MESSAGE, pending: false };
+}
+
+/** Une relecture n’adopte le disque que si rien n’est en attente. Sinon l’écran garderait le vide ou l’ancienne copie à la place du brouillon. */
+export function shouldAdoptHydration(current: TrackedKey | undefined): boolean {
+  if (!current) return true;
+  if (current.unsaved || current.pending) return false;
+  return true;
+}
+
+/**
+ * Lecture terminée. Corrupt ou indisponible : on garde la mémoire, on n’y met pas le repli vide.
+ * Le brouillon n’est pas remplacé par le disque.
+ */
+export function valueAfterLoad(current: unknown, outcome: 'ok' | 'corrupt' | 'unavailable', diskValue: unknown, adopt: boolean): unknown {
+  if (outcome !== 'ok' || !adopt) return current;
+  return diskValue;
+}
+
+/** Effacement explicite. Si le stockage n’a pas confirmé le vidage, la mémoire saine reste. */
+export function memoryAfterExplicitWipe<T>(memory: T, empty: T, cleared: boolean): { memory: T; reportedCleared: boolean } {
+  if (!cleared) return { memory, reportedCleared: false };
+  return { memory: empty, reportedCleared: true };
 }
 
 /** Relecture du disque. Ne remplace pas le disque par une valeur vide, et ne fait pas passer le brouillon pour enregistré. */
 export function trackRestart(current: TrackedKey): TrackedKey {
-  return { key: current.key, persisted: current.persisted, memory: current.persisted, unsaved: false, error: null };
+  return { key: current.key, persisted: current.persisted, memory: current.persisted, unsaved: false, error: null, pending: false };
 }
 
 export function simulateStorageWrite(disk: Record<string, string>, key: string, value: unknown, fail: boolean): { disk: Record<string, string>; ok: boolean; error: string | null } {
@@ -459,6 +492,18 @@ export function runWriteFailureTests(): { name: string; ok: boolean }[] {
   const afterBoot = trackRestart(restarted);
   check('redémarrage : le disque n’est pas vidé', sha256Hex(diskRestart.prefs) === hashBefore && diskRestart.prefs === originalRaw);
   check('redémarrage : on relit l’ancienne copie, pas le brouillon ni une valeur vide', (afterBoot.memory as Record<string, unknown>).localeFuture === 'ar-DZ' && (afterBoot.memory as Record<string, unknown>).cityFuture === undefined && (afterBoot.memory as Record<string, unknown>).showHijri === true && afterBoot.unsaved === false);
+  check('processus tué : le brouillon n’est pas durable et le disque n’est pas vidé', sha256Hex(diskRestart.prefs) === hashBefore && (afterBoot.memory as Record<string, unknown>).cityFuture === undefined && diskRestart.prefs !== '[]');
+  const refusedDisk = { prefs: originalRaw };
+  const refused = recordRefusedEdit(trackAfterLoad('prefs', persisted), 'prefs', persisted, dirty, false);
+  const refusedWrite = simulateStorageWrite(refusedDisk, 'prefs', dirty, true);
+  check('écriture refusée : disque inchangé, brouillon visible, pas enregistré', refused.unsaved === true && refused.error === WRITE_REFUSED_MESSAGE && sha256Hex(refusedWrite.disk.prefs) === hashBefore && (refused.memory as Record<string, unknown>).cityFuture === 'Genève' && (refused.persisted as Record<string, unknown>).localeFuture === 'ar-DZ');
+  const hydrated = shouldAdoptHydration(refused);
+  check('relecture : un brouillon non enregistré n’est pas remplacé par le disque ni par vide', hydrated === false && valueAfterLoad(refused.memory, 'ok', persisted, hydrated) === refused.memory && valueAfterLoad(persisted, 'corrupt', null, true) === persisted && valueAfterLoad(persisted, 'unavailable', [], true) === persisted);
+  check('relecture saine : on adopte le disque, champs inconnus compris', shouldAdoptHydration(trackAfterLoad('prefs', persisted)) === true && (valueAfterLoad(null, 'ok', persisted, true) as Record<string, unknown>).localeFuture === 'ar-DZ');
+  const kept = memoryAfterExplicitWipe<unknown>(persisted, {}, false);
+  const wipedMem = memoryAfterExplicitWipe<unknown>(persisted, {}, true);
+  check('effacement non confirmé : la mémoire saine reste', kept.reportedCleared === false && kept.memory === persisted);
+  check('effacement confirmé : la mémoire vide est assumée', wipedMem.reportedCleared === true && wipedMem.memory !== persisted);
   const snap = withUnsavedExport(buildSnapshot({ prefs: persisted }, '2026-11-07T12:00:00.000Z'), [{ key: 'prefs', error: WRITE_FAILURE_MESSAGE, value: dirty }]);
   check('export : condensé du disque, brouillon à part', snap.sha256 === sha256Hex(stableStringify({ prefs: persisted })) && snap.unsaved[0]?.value === dirty && (snap.data.prefs as Record<string, unknown>).cityFuture === undefined);
   return out;

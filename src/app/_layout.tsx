@@ -73,12 +73,12 @@ function UnsavedBanner() {
 }
 
 function RootNavigator() {
-  const { ready, storageSlow, reloadStorage, corrupt, resetCorrupt } = useData();
+  const { ready, storageSlow, reloadStorage, corrupt, resetCorrupt, resetError } = useData();
   if (!ready) {
     return (
       <View style={{ flex: 1, backgroundColor: t.bg }}>
         {corrupt.length ? (
-          <StorageRecovery keys={corrupt} onRetry={reloadStorage} onReset={(keys) => void resetCorrupt(keys)} />
+          <StorageRecovery keys={corrupt} error={resetError} onRetry={reloadStorage} onReset={(keys) => void resetCorrupt(keys)} />
         ) : (
           <LoadingState slow={storageSlow} onRetry={reloadStorage} />
         )}

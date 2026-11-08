@@ -27,6 +27,7 @@ export default function FamilyTab() {
   const [successor, setSuccessor] = useState<string | null>(null);
   const [accountMsg, setAccountMsg] = useState<string | null>(null);
   const [exportNote, setExportNote] = useState<string | null>(null);
+  const [wipeMsg, setWipeMsg] = useState<string | null>(null);
   const [quarantineCount, setQuarantineCount] = useState(0);
   useEffect(() => {
     void loadJSON<unknown>(QUARANTINE_KEY, []).then((loaded) => {
@@ -145,7 +146,8 @@ export default function FamilyTab() {
         ) : null}
         {hasDemo ? <ListItem icon="flask-outline" title="Supprimer les données démo" onPress={() => confirmAsk('Supprimer les données d’exemple ?', removeDemo)} /> : null}
         <ListItem icon="log-out-outline" title="Se déconnecter" subtitle={session?.contact || (session?.trial ? 'Mode essai' : undefined)} onPress={signOut} />
-        <ListItem icon="trash-outline" title="Supprimer toutes les données" subtitle="Cet appareil seulement" onPress={() => confirmAsk('Supprimer définitivement toutes les données de cet appareil ?', () => void wipe())} />
+        <ListItem icon="trash-outline" title="Supprimer toutes les données" subtitle="Cet appareil seulement" onPress={() => confirmAsk('Supprimer définitivement toutes les données de cet appareil ?', () => { void wipe().then((r) => setWipeMsg(r.message)); })} />
+        {wipeMsg ? <Text accessibilityRole="alert" style={{ color: t.danger, marginTop: 8 }}>{wipeMsg}</Text> : null}
       </Card>
       <H2>Compte</H2>
       <Card>

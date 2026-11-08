@@ -3,6 +3,7 @@ import { addDays, todayISO } from './dates';
 import { MEMBER_PALETTE, type Activity, type Family, type FamilyEvent, type FamilyList, type Goal, type Invitation, type Member, type Ritual, type Role, type Session } from './model';
 import { demoData } from './seed';
 import {
+  memoryAfterExplicitWipe,
   nextSchemaMeta,
   readSchemaVersion,
   SCHEMA_META_KEY,
@@ -73,11 +74,12 @@ type Ctx = {
   revokeInvitation: (id: string) => void;
   acceptInvitation: (code: string, name: string, isMinor: boolean) => Promise<{ ok: boolean; message: string }>;
   hasDemo: boolean; removeDemo: () => void;
-  signOut: () => void; wipe: () => Promise<void>;
+  signOut: () => void; wipe: () => Promise<{ ok: boolean; message: string }>;
   corrupt: { key: string; raw: string }[];
+  resetError: string | null;
   resetCorrupt: (keys: string[]) => Promise<void>;
   keepTrialData: () => void;
-  restartKeepingSession: () => Promise<void>;
+  restartKeepingSession: () => Promise<{ ok: boolean; message: string }>;
   deleteAccount: (transferTo?: string) => Promise<{ ok: boolean; message: string }>;
   remoteError: string | null;
   /** Version future ou métadonnée illisible : les contenus déjà lus ne sont pas réécrits. */
@@ -95,6 +97,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [boot, setBoot] = useState(0);
   const [schemaChecked, setSchemaChecked] = useState(false);
   const [writesPaused, setWritesPaused] = useState(false);
+  const [resetError, setResetError] = useState<string | null>(null);
   const [writeTick, setWriteTick] = useState(0);
   useEffect(() => subscribeWrites(() => setWriteTick((n) => n + 1)), []);
   const unsaved = (writeTick >= 0 ? unsavedEntries() : []).map(({ key, error }) => ({ key, error }));
@@ -280,15 +283,26 @@ export function DataProvider({ children }: { children: ReactNode }) {
       try {
         await replaceUnreadableKey(key, emptyFor(key));
       } catch {
+        setResetError('La réinitialisation n’a pas été enregistrée. La donnée illisible est toujours sur l’appareil. Rien n’a été remplacé par du vide.');
         return;
       }
     }
+    setResetError(null);
     closeSchemaGate();
     setSchemaChecked(false);
     setBoot((n) => n + 1);
   };
-  const wipe = async () => {
-    await clearAll();
+  const wipe = async (): Promise<{ ok: boolean; message: string }> => {
+    let cleared = false;
+    try {
+      await clearAll();
+      cleared = true;
+    } catch {
+      cleared = false;
+    }
+    if (!memoryAfterExplicitWipe('présent', 'vide', cleared).reportedCleared) {
+      return { ok: false, message: 'Effacement interrompu. Les données encore présentes n’ont pas été remplacées par du vide.' };
+    }
     resetWriteTracker();
     releaseSchemaGateAfterErase();
     setWritesPaused(false);
@@ -299,6 +313,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     setFamily(null);
     emptyContent();
     setRemoteError(null);
+    return { ok: true, message: 'Données de cet appareil effacées.' };
   };
 
   const keepTrialData = () => {
@@ -307,11 +322,20 @@ export function DataProvider({ children }: { children: ReactNode }) {
     setFamily((f) => (f ? { ...f, trial: false } : f));
   };
 
-  const restartKeepingSession = async () => {
+  const restartKeepingSession = async (): Promise<{ ok: boolean; message: string }> => {
     const keep = session;
     const largeText = mergedPrefs.largeText;
     const devConfigUnlocked = mergedPrefs.devConfigUnlocked;
-    await clearAll();
+    let cleared = false;
+    try {
+      await clearAll();
+      cleared = true;
+    } catch {
+      cleared = false;
+    }
+    if (!memoryAfterExplicitWipe(keep, null, cleared).reportedCleared) {
+      return { ok: false, message: 'Effacement interrompu. Les données d’essai sont toujours sur cet appareil.' };
+    }
     resetWriteTracker();
     releaseSchemaGateAfterErase();
     setWritesPaused(false);
@@ -323,6 +347,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     setPrefs({ ...DEFAULT_PREFS, trialDeclined: true, configAck: true, largeText, devConfigUnlocked });
     setSession(keep);
     if (keep) void saveJSON('session', keep);
+    return { ok: true, message: 'Données d’essai effacées. Le compte reste connecté.' };
   };
 
   const deleteAccount: Ctx['deleteAccount'] = async (transferTo) => {
@@ -350,7 +375,15 @@ export function DataProvider({ children }: { children: ReactNode }) {
         return { ok: false, message: `${msg} Rien n’a été effacé sur cet appareil.` };
       }
     }
-    await wipe();
+    const local = await wipe();
+    if (!local.ok) {
+      return {
+        ok: false,
+        message: session?.mode === 'supabase'
+          ? `Le serveur a accepté la suppression, mais l’effacement sur cet appareil a échoué. ${local.message}`
+          : local.message,
+      };
+    }
     return { ok: true, message: session?.mode === 'supabase' ? 'Compte supprimé.' : 'Données de cet appareil supprimées. Il n’y avait pas de compte en ligne.' };
   };
 
@@ -361,7 +394,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         ready, storageSlow, reloadStorage: () => { closeSchemaGate(); setSchemaChecked(false); setBoot((n) => n + 1); },
         session, setSession, prefs: mergedPrefs, setPrefs, family, members, setMembers, me, invitations, events, setEvents,
         rituals, setRituals, sessions, setSessions, goals, setGoals, activities, setActivities, lists, setLists,
-        createFamily, createInvitation, revokeInvitation, acceptInvitation, hasDemo, removeDemo, signOut, wipe, corrupt, resetCorrupt,
+        createFamily, createInvitation, revokeInvitation, acceptInvitation, hasDemo, removeDemo, signOut, wipe, corrupt, resetError, resetCorrupt,
         keepTrialData, restartKeepingSession, deleteAccount, remoteError, writesPaused,
         unsaved, retryUnsaved: retryUnsavedWrites,
       }}

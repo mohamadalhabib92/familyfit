@@ -8,7 +8,7 @@ import { theme as t } from '@/ui/theme';
 export type CorruptKey = { key: string; raw: string };
 
 /** Lecture illisible : on n'écrase pas. Export brut, puis réinitialisation seulement après confirmation. */
-export function StorageRecovery({ keys, onRetry, onReset }: { keys: CorruptKey[]; onRetry: () => void; onReset: (keys: string[]) => void }) {
+export function StorageRecovery({ keys, onRetry, onReset, error }: { keys: CorruptKey[]; onRetry: () => void; onReset: (keys: string[]) => void; error?: string | null }) {
   const names = keys.map((k) => k.key).join(', ');
   return (
     <View style={{ flex: 1, backgroundColor: t.bg, justifyContent: 'center', padding: 24 }}>
@@ -23,6 +23,7 @@ export function StorageRecovery({ keys, onRetry, onReset }: { keys: CorruptKey[]
         style={{ marginTop: 16 }}
         onPress={() => downloadText(`familyfit-brut-${todayISO()}.json`, JSON.stringify(keys, null, 2), 'application/json')}
       />
+      {error ? <Text accessibilityRole="alert" style={{ color: t.danger, marginTop: 12, fontSize: 15, lineHeight: 21 }}>{error}</Text> : null}
       <Button title="Réessayer la lecture" variant="ghost" style={{ marginTop: 8 }} onPress={onRetry} />
       <Button
         title="Réinitialiser ces données"

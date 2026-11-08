@@ -8,6 +8,8 @@ FamilyFit est un agenda familial local (Expo 58, iOS, Android et PWA) : semaine 
 
 Suivi sur la même PR #4 : un disque plein ne passe plus pour une sauvegarde. L’ancienne copie reste sur l’appareil, le brouillon reste à l’écran, un bandeau accessible propose réessai et export. Le texte « Retirer de la famille » décrit l’effet réel (liste des membres et prénom dans les événements) et ne promet plus la suppression des séances ni des activités. Aucune cascade n’a été ajoutée. `isMe` reste un marquage local : ce n’est pas une autorisation serveur.
 
+Préparation publication, toujours sur la PR #4, sans merge, sans build, sans déploiement. Trois défauts de conservation étaient atteignables dans le code : une écriture refusée par la porte de version mettait l’écran à jour sans le dire dans l’export ; une relecture pouvait remplacer un brouillon par le disque ; un effacement dont le vidage échoue continuait comme s’il avait réussi. Ils sont corrigés. Le brouillon en mémoire n’est toujours pas durable si le processus meurt ou si le disque refuse l’écriture : on ne promet pas le contraire. La publication réelle reste bloquée tant qu’une sauvegarde et une restauration sur appareil ne sont pas prouvées.
+
 ## Périmètre réel
 
 Vérifié dans le dépôt, pas par supposition.
@@ -50,7 +52,10 @@ Effort de 1 (correctif local) à 5 (chantier). Priorité P0 = cette fondation, P
 | JSON illisible | Le brut restait la seule copie. « Réinitialiser » le remplaçait par une valeur vide. | Copie en quarantaine avant remplacement, sans écraser une quarantaine déjà illisible. L’effacement confirmé, lui, retire aussi la quarantaine. | Une donnée cassée n’est plus détruite par le seul bouton de réparation. Le droit d’effacer reste entier. | 2 | P0, fait ici |
 | Export | JSON brut, sans comptes ni condensé, présenté comme « mes données ». | Instantané `local-snapshot` : comptes par clé, SHA-256, phrase « ce n’est pas une restauration ». Visible dans Famille et sur le bandeau d’écritures en pause. | L’utilisateur voit un fichier honnête. Personne ne peut le prendre pour une restauration garantie. | 2 | P0, fait ici |
 | Champs et clés futurs | Un objet reconstruit sans les champs inconnus les perdait à la sauvegarde. Aucune version n’interdisait d’écraser un disque plus récent. | `retainUnknown` sur les mises à jour fonction. `planMigration` ne supprime aucune clé. Version supérieure : écritures en pause, lecture et export possibles. | Les notes futures, une clé `imports`, une métadonnée `legacyNote` survivent. | 3 | P0, fait ici |
-| Disque plein | `saveJSON` avalait l’exception. L’écran montrait la nouvelle valeur comme si elle était enregistrée. | Échec explicite. Le disque garde la dernière écriture réussie. La mémoire garde le brouillon. Bandeau « Modifications non enregistrées » (alerte), réessai, export du disque et du brouillon. Pas de remise à vide. | L’utilisateur voit que ce n’est pas enregistré et peut réessayer ou emporter le brouillon. | 2 | P0, fait ici |
+| Disque plein | `saveJSON` avalait l’exception. L’écran montrait la nouvelle valeur comme si elle était enregistrée. | Échec explicite. Le disque garde la dernière écriture réussie. La mémoire garde le brouillon. Bandeau « Modifications non enregistrées » (alerte), réessai, export du disque et du brouillon. Pas de remise à vide. Si le disque refuse, le brouillon meurt avec le processus. | L’utilisateur voit que ce n’est pas enregistré et peut réessayer ou emporter le brouillon tant que l’écran est ouvert. | 2 | P0, fait ici |
+| Écriture refusée | Porte de version fermée : l’écran changeait, l’export ne contenait pas le brouillon, rien ne disait « non enregistré ». | Le refus est noté comme brouillon, le disque n’est pas touché, le bandeau et l’export le montrent. Réessayer tant que la porte est fermée n’écrit pas et ne dit pas succès. | On ne masque plus un refus derrière un écran qui a l’air à jour. | 2 | P0, fait ici |
+| Relecture | Une hydratation adoptait toujours le disque, y compris par-dessus un brouillon ou une écriture en cours. Une lecture illisible ne doit pas non plus poser le repli vide. | On n’adopte le disque que si rien n’est en attente. Corrupt ou indisponible : la mémoire courante reste. | Un état sain ou un brouillon n’est pas remplacé par vide ni par une copie plus ancienne pendant que l’écran vit. | 2 | P0, fait ici |
+| Effacement non abouti | `clearAll` qui échoue laissait l’appelant continuer, ou partait en erreur sans message. | Si le vidage n’est pas confirmé, la mémoire n’est pas vidée et le message le dit. La navigation « recommencer » ne part pas. | Un échec d’effacement ne fait pas semblant d’avoir réussi. | 1 | P0, fait ici |
 | Appareil partagé | Un seul `isMe`. Pas de code, pas de profil verrouillé. Humeurs, notes, contacts adultes sont dans le même stockage. `displayName` masque le prénom d’un mineur seulement pour un lecteur non parent. | Limite enregistrée, pas corrigée. `isMe` et `displayName` sont de l’affichage local. Ils ne remplacent pas la RLS. Cette PR ne les transforme pas en contrôle serveur. | Un enfant qui ouvre l’app sur le téléphone familial voit le contenu de l’appareil. | 4 | P1, ouvert |
 | Retrait d’un membre | Le bouton disait que les données personnelles seraient supprimées. Le code retire le membre et son id dans les événements, pas les séances, humeurs ni activités. | Le texte dit maintenant cet effet. Les séances et les activités restent. Pas de suppression en cascade ajoutée. | La phrase ne promet plus un effacement que le code ne fait pas. L’historique familial reste. | 1 | P0, fait ici |
 | CI | `.github/workflows/pages.yml` lance `tsc` et l’export web, puis déploie GitHub Pages. `npm test` n’y est pas. | Ajouter `npm test` avant l’upload. Ne pas déployer si les fixtures de conservation échouent. | Une régression de logout ou de quarantaine ne part pas en PWA sur `main`. | 2 | P1 |
@@ -60,7 +65,7 @@ Effort de 1 (correctif local) à 5 (chantier). Priorité P0 = cette fondation, P
 | Consentement mineurs | Booléen `parentConsentShare` / colonne `parent_consent_share`. Pas de journal (qui, quand, révocation). L’âge « 16 ans » cité dans la PR #1 n’est pas une constante du code sur `main`. | Journal local append-only, plus tard, sans pièce d’identité. Ne pas inventer un âge légal dans l’app tant que le conseil ne l’a pas fixé. | Le drapeau existe. La preuve du consentement, non. | 3 | P2 |
 | Santé et motivation | Refus poids / IMC / calories. Phrase « consultez un professionnel ». Encouragements sans honte ni série. Pas de mesure scientifique embarquée : ce sont des repères déclaratifs. | Garder l’interdit. Ne pas ajouter de courbe de poids « pour les parents ». | Le produit reste un agenda, pas un dispositif médical. | 1 | P2, déjà tenu |
 | IA | Aucun SDK, aucun appel modèle. | Ne pas en ajouter pour « conseiller la famille ». Si un jour un texte est proposé : coût plafonné, pas de diagnostic, pas d’envoi des prénoms d’enfants, arrêt clair. | Rien à débrancher. Le risque est une passe future trop large. | 1 | P2 |
-| RLS exécutable | Le SQL d’isolation est dans le dépôt et relu par `test-foundations`. `test-rls-local.mjs` a quitté 0 sans Postgres : `initdb` absent. Aucun projet Supabase contacté. | Installer Postgres dans la CI si l’on veut rejouer l’isolation, sans pointer vers la prod. | La politique est écrite. Elle n’a pas été exécutée ici. | 2 | P2 |
+| RLS exécutable | Le SQL d’isolation est dans le dépôt. Il a été rejoué sur un Postgres 16.15 local jetable, fixtures synthétiques, transaction annulée. Aucun projet Supabase, aucun secret, aucune donnée utilisateur. | Garder ce test dans `npm test` là où `initdb` existe. Ne pas le déclarer valide s’il est sauté. Ne pas l’appliquer à la production depuis ici. | Preuve locale d’isolation seulement. Pas une preuve d’appareil ni de projet hébergé. | 2 | P1, prouvé en local seulement |
 
 ## Douze axes
 
@@ -197,6 +202,8 @@ Non mesurées ici. Pas de profil batterie, pas de taille d’IPA/AAB, pas d’ex
 | Échec d’écriture présenté comme enregistré | 0 | Tenue : `unsaved` reste vrai tant que le réessai n’a pas réussi |
 | Contraste texte / fond | ≥ 4,5:1 | Tenue, test des fondations (chiffres affichés par le script) |
 | `npm test` dans le workflow Pages | présent | Non. Cible suivante |
+| RLS locale synthétique exécutée | 2 contrôles verts, 0 saut | Tenue ici, Postgres 16.15 jetable. Pas le projet hébergé |
+| Sauvegarde et restauration appareil avant publication | prouvées, avec retour arrière | Absentes. Publication non faite |
 | Restauration isolée : comptes et condensé égaux, puis rollback | protocole écrit et exécuté sur copie | Non exécuté. Pas une promesse de perte nulle |
 | Batterie, taille binaire, VoiceOver, OTP réel | mesurés | Non mesurés |
 
@@ -210,6 +217,7 @@ Fichiers : `src/lib/preservation.ts`, `src/lib/storage.ts`, `src/lib/data.tsx`, 
 - Quarantaine des bruts illisibles. La zone n’est pas écrasée si elle-même est illisible ou d’une forme inconnue.
 - Export visible : comptes, SHA-256, phrase d’avertissement. En cas d’échec d’écriture, le fichier ajoute `unsaved` (le brouillon) sans le compter dans le condensé du disque.
 - Échec d’écriture (disque plein, stockage indisponible) : bandeau accessible, réessai, pas de remise à vide. Les écritures d’une même clé sont en file, pour qu’un échec ne fasse pas croire qu’une valeur plus ancienne est encore la dernière.
+- Écriture refusée par la porte de version : brouillon noté, disque intact, export séparé. Relecture : on n’adopte pas le disque par-dessus un brouillon. Effacement non confirmé : la mémoire saine reste, avec message.
 - Déconnexion : session seule. `setFamily(null)` retiré de ce chemin.
 - Retrait d’un membre : le texte correspond au code. Séances et activités conservées.
 - Effacements confirmés inchangés dans leur intention : tout l’appareil, compte, recommencer l’essai, retirer la démo, réinitialiser une clé illisible. Ils restent distincts du logout.
@@ -217,9 +225,26 @@ Fichiers : `src/lib/preservation.ts`, `src/lib/storage.ts`, `src/lib/data.tsx`, 
 
 Hors de cette PR, volontairement : pas de réécriture Swift ou Next, pas de nouveau SDK, pas de changement de contenu des rituels, pas de migration SQL, pas de build, pas de soumission, pas de lecture de données réelles, pas de restauration.
 
+## Préparation à la publication
+
+Publication réelle : non faite, et elle ne doit pas l’être tant que les preuves manquantes ci-dessous existent. Mohamed a autorisé une publication seulement si les données sont préservées et si une sauvegarde, une restauration et un retour arrière sont vérifiés. Cette session n’a vérifié ni sauvegarde d’appareil, ni restauration, ni retour arrière.
+
+| Preuve | État |
+|---|---|
+| `npx tsc --noEmit` | Code de sortie 0, sur l’arbre de cette préparation |
+| `npm test` | Code de sortie 0. **147 `✓`, 0 `✗`, 0 `○`.** hijri 11, garde 10, routes 10, fondations 59, conservation 55, RLS locale 2 |
+| RLS locale | Postgres 16.15, `initdb` `/usr/lib/postgresql/16/bin/initdb`, cluster jetable dans un répertoire temporaire, `listen_addresses` vide, rôles anon/authenticated fictifs, utilisateurs `*@example.test`, `ROLLBACK` en fin de script. Deux libellés verts : superutilisateur du cluster, et rôle `postgres`. Cluster arrêté et répertoire supprimé par le script. Aucun projet Supabase créé ou contacté |
+| Sauvegarde / restauration appareil | Absente. Pas de téléphone, pas d’iPad, pas de copie iCloud ou Android, pas de restauration isolée, pas de comparaison de comptes après retour arrière |
+| Quota disque réel | Simulé par `simulateStorageWrite`. Pas une carte pleine |
+| Processus tué | Prouvé seulement en mémoire de test : le disque garde l’ancienne copie et son condensé, le brouillon (`cityFuture`) n’est pas sur le disque. Ce n’est pas durable. On ne le promet pas quand le disque refuse |
+| Build EAS, store, Pages, merge | Non lancés |
+
+Parent git avant ces correctifs : `18b8dd86ced0228e145184bf401e34bce7af1353`. Base produit : `3959aabdd0e45ddf390ba1fe5fb376e18b1aa79e`. La PR #3 (UX) n’a pas été modifiée. Les consentements (`parentConsentShare`, colonne `parent_consent_share`) n’ont pas été réécrits. `isMe` n’est toujours pas une authentification.
+
 ## Limites qui restent vraies après la PR
 
-- Un redémarrage du processus relit le disque. Le brouillon qui n’a pas été réécrit ni exporté n’est plus en mémoire. Le bandeau existe pour exporter avant cela. Le disque, lui, n’est pas vidé par l’échec.
+- Un processus tué, ou un disque qui refuse l’écriture, ne conserve pas le brouillon. L’écran peut l’exporter seulement tant qu’il est ouvert. Après redémarrage, on relit le disque. Le disque n’est pas vidé par l’échec, et on ne le remplace pas par une valeur vide pour « réparer ».
+- Il n’existe pas de promesse de perte nulle. Une restauration future exige un instantané vérifié, une copie isolée, l’égalité des comptes et du condensé, puis un retour arrière. Rien de cela n’a été exécuté sur un appareil.
 - La quarantaine déduplique par clé et condensé. Elle ne versionne pas plusieurs raisons pour le même brut.
 - Supprimer un objectif retire encore son suivi, avec confirmation. Ce n’est pas le même geste que retirer un membre.
 - `isMe` et `displayName` ne sont pas une sécurité serveur. L’appareil partagé reste ouvert.
@@ -230,18 +255,18 @@ Hors de cette PR, volontairement : pas de réécriture Swift ou Next, pas de nou
 
 ## Tests réellement lancés
 
-Commandes, dans cet environnement, le 7 novembre 2026, après le correctif disque plein :
+Commandes, le 8 novembre 2026, Postgres local installé seulement pour le test jetable (`postgresql-16` 16.15). Le service système n’a pas été démarré (`policy-rc.d` a refusé le start du paquet). Le test RLS ouvre son propre cluster et le détruit.
 
 - `npx tsc --noEmit` : code de sortie 0.
-- `npm test` : code de sortie 0. **139 lignes `✓`, 0 ligne `✗`, 1 ligne `○`.**
+- `npm test` : code de sortie 0. **147 `✓`, 0 `✗`, 0 `○`.**
   - hijri : 11
   - garde d’écriture : 10
   - routes : 10
   - fondations (contrastes, clés, RLS déclarée dans le SQL, secrets, phrase santé) : 59
-  - conservation, dont 12 contrôles d’échec d’écriture simulé (disque inchangé, condensé, brouillon, champs inconnus, réessai, redémarrage, export) : 49
-  - RLS locale : 0 contrôle exécuté. La seule ligne est `○ initdb absent : test RLS local ignoré. Aucun projet Supabase n’est contacté.` Ce n’est pas une preuve d’isolation, ni une preuve d’accès à une base de production. Aucune requête de production n’a été faite.
+  - conservation : 55, dont échec simulé, réessai, processus tué, écriture refusée, relecture qui ne remplace pas le brouillon, effacement non confirmé
+  - RLS locale exécutée : 2 (`isolation RLS` superutilisateur, et `isolation RLS` rôle postgres). Fixtures synthétiques. `ROLLBACK`. Ce n’est pas une validation du projet hébergé de Mohamed. Si `initdb` manque, le script quitte 0 avec `○` et cette ligne ne doit pas être comptée comme une preuve.
 
-Non lancés : Expo sur simulateur, téléphone, iPad, navigateur cliqué, export web, EAS, lint de dépôt (pas de config ESLint versionnée), restauration depuis une sauvegarde, échec réel de quota sur un appareil. L’échec d’écriture est simulé dans `simulateStorageWrite`.
+Non lancés : Expo sur simulateur, téléphone, iPad, navigateur cliqué, export web, EAS, lint de dépôt (pas de config ESLint versionnée), sauvegarde ou restauration d’appareil, quota réel. L’échec d’écriture disque est simulé.
 
 ## Entrées manquantes
 

@@ -26,11 +26,12 @@ const checks = [
   ['saveJSON bloque si la version n’autorise pas l’écriture', (() => {
     const body = storage.slice(storage.indexOf('async function writeNow'), storage.indexOf('export async function saveJSON'));
     const guard = body.indexOf('if (!canPersist(key)) return');
-    const schema = body.indexOf('if (writesAreBlocked()) return');
+    const schema = body.indexOf('if (writesAreBlocked())');
     const setItem = body.indexOf('AsyncStorage.setItem');
     const reported = body.indexOf('WRITE_FAILURE_MESSAGE');
+    const refused = body.indexOf('WRITE_REFUSED_MESSAGE');
     const emptyCatch = /catch\s*\{\s*\}/.test(body);
-    return guard !== -1 && schema !== -1 && setItem !== -1 && reported !== -1 && guard < schema && schema < setItem && !emptyCatch;
+    return guard !== -1 && schema !== -1 && setItem !== -1 && reported !== -1 && refused !== -1 && guard < schema && schema < refused && refused < setItem && !emptyCatch;
   })()],
   ['retrait de membre : le texte dit l’effet réel, sans cascade', (() => {
     const member = readFileSync(new URL('../src/app/member/[id].tsx', import.meta.url), 'utf8');

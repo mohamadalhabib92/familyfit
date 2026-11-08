@@ -8,10 +8,14 @@ import {
   appendQuarantine,
   buildSnapshot,
   payloadWriteAllowed,
+  WRITE_REFUSED_MESSAGE,
+  recordRefusedEdit,
   retainUnknown,
+  shouldAdoptHydration,
   trackAfterEdit,
   trackAfterLoad,
   trackAfterWrite,
+  valueAfterLoad,
   withUnsavedExport,
   type QuarantineReason,
   type Snapshot,
@@ -105,10 +109,17 @@ export function unsavedEntries(): UnsavedExport[] {
     .map((row) => ({ key: row.key, error: row.error ?? WRITE_FAILURE_MESSAGE, value: row.memory }));
 }
 
-/** Dernière lecture réussie : c’est la copie de référence, pas un brouillon. */
-export function noteHydratedValue(key: string, value: unknown): void {
+/**
+ * Dernière lecture réussie. Retourne faux si un brouillon ou une écriture en cours
+ * doit rester à l’écran : on n’adopte alors pas le disque.
+ */
+export function noteHydratedValue(key: string, value: unknown): boolean {
+  const existing = tracked.get(key);
+  if (!shouldAdoptHydration(existing)) return false;
+  diskCleared = false;
   tracked.set(key, trackAfterLoad(key, value));
   emitWrites();
+  return true;
 }
 
 /** Après un effacement confirmé, plus aucune ancienne copie n’est sur le disque. */
@@ -120,17 +131,24 @@ export function resetWriteTracker(): void {
 
 async function writeNow<T>(key: string, value: T, previous: T | undefined): Promise<SaveResult> {
   if (!canPersist(key)) return { ok: false, skipped: true, error: 'Lecture non terminée' };
-  if (writesAreBlocked()) return { ok: false, skipped: true, error: 'Écritures en pause' };
+  if (writesAreBlocked()) {
+    const existing = tracked.get(key);
+    tracked.set(key, recordRefusedEdit(existing, key, previous, value, diskCleared && !existing));
+    emitWrites();
+    return { ok: false, skipped: true, error: WRITE_REFUSED_MESSAGE };
+  }
   const existing = tracked.get(key);
-  const next = trackAfterEdit(existing, key, previous, value, diskCleared && !existing);
+  const next = { ...trackAfterEdit(existing, key, previous, value, diskCleared && !existing), pending: true };
   tracked.set(key, next);
   try {
     await AsyncStorage.setItem(PREFIX + key, JSON.stringify(value));
-    tracked.set(key, trackAfterWrite(tracked.get(key) ?? next, true));
+    const cur = tracked.get(key) ?? next;
+    tracked.set(key, trackAfterWrite({ ...cur, memory: value }, true));
     emitWrites();
     return { ok: true, skipped: false };
   } catch {
-    tracked.set(key, trackAfterWrite({ ...(tracked.get(key) ?? next), memory: value }, false));
+    const cur = tracked.get(key) ?? next;
+    tracked.set(key, trackAfterWrite({ ...cur, memory: value, persisted: next.persisted }, false));
     emitWrites();
     return { ok: false, skipped: false, error: WRITE_FAILURE_MESSAGE };
   }
@@ -250,9 +268,9 @@ export function usePersistentState<T>(key: string, initial: T | (() => T), boot 
         return;
       }
       noteLoadFinished(key, true);
-      noteHydratedValue(key, result.value);
+      const adopt = noteHydratedValue(key, result.value);
       setCorruptRaw(null);
-      setValue(result.value);
+      setValue((current) => valueAfterLoad(current, 'ok', result.value, adopt) as T);
       setReady(true);
       setSlow(false);
     });
