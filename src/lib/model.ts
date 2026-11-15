@@ -11,6 +11,10 @@ export type Family = { id: string; name: string; createdAt: string; trial?: bool
 export type Member = {
   id: string; familyId: string; name: string; role: Role; color: string; isMinor: boolean;
   glyph?: string; // motif en plus de la couleur (daltonisme)
+  /** Tranche d’âge choisie, jamais une date de naissance. */
+  ageBand?: '4-7' | '8-12' | 'teen' | 'adult' | 'senior';
+  /** Mineur : séances guidées seulement si un parent a mis true. */
+  guidedWorkouts?: boolean;
   contact?: string; // adultes uniquement
   parentConsentShare?: boolean; // mineurs : consentement parent pour partager prénom/événements avec des invités
   isMe?: boolean; demo?: boolean;

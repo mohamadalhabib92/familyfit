@@ -3,14 +3,16 @@ import { useState } from 'react';
 import { Pressable, Text } from 'react-native';
 import { confirmAsk } from '@/lib/confirm';
 import { useData } from '@/lib/data';
+import { translate } from '@/lib/i18n';
 import { canManage, MEMBER_PALETTE, memberMark, ROLE_LABEL, type Member, type Role } from '@/lib/model';
+import { AGE_BANDS, type AgeBand } from '@/lib/workoutEngine';
 import { uid } from '@/lib/storage';
-import { Button, Empty, Field, Ionicons, MemberMark, Notice, Row, Screen, Segmented, Spacer, Toggle, styles, type IconName } from '@/ui/kit';
+import { Button, Empty, Field, Ionicons, MemberMark, Muted, Notice, Row, Screen, Segmented, Spacer, Toggle, styles, type IconName } from '@/ui/kit';
 import { theme as t } from '@/ui/theme';
 
 export default function MemberEditor() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { members, setMembers, me, family, setEvents } = useData();
+  const { members, setMembers, me, family, setEvents, prefs } = useData();
   const router = useRouter();
   const existing = members.find((m) => m.id === id);
   const manage = canManage(me?.role);
@@ -30,7 +32,10 @@ export default function MemberEditor() {
     <Screen>
       <Stack.Screen options={{ title: existing ? 'Membre' : 'Ajouter un enfant' }} />
       <Field label="Prénom (ou surnom)" value={m.name} onChangeText={(v) => setM({ ...m, name: v })} hint="Le prénom suffit : pas de nom de famille, ni date de naissance." />
-      {manage && !m.isMe ? <Toggle label="Mineur" value={m.isMinor} onChange={(v) => setM({ ...m, isMinor: v })} hint="Profil protégé : pas de contact, pas de compte, jamais visible publiquement." /> : null}
+      {manage && !m.isMe ? <Toggle label="Mineur" value={m.isMinor} onChange={(v) => setM({ ...m, isMinor: v, guidedWorkouts: v ? m.guidedWorkouts === true : undefined })} hint="Profil protégé : pas de contact, pas de compte, jamais visible publiquement." /> : null}
+      <Segmented label={translate(prefs.locale, 'member.band')} options={AGE_BANDS.map((band) => ({ label: translate(prefs.locale, `age.${band}` as 'age.adult'), value: band }))} value={(m.ageBand ?? (m.isMinor ? '4-7' : 'adult')) as AgeBand} onChange={(v) => setM({ ...m, ageBand: v })} />
+      <Muted>{translate(prefs.locale, 'member.bandHint')}</Muted>
+      {m.isMinor ? <Toggle label={translate(prefs.locale, 'member.guided')} value={m.guidedWorkouts === true} onChange={(v) => manage && setM({ ...m, guidedWorkouts: v })} hint={translate(prefs.locale, 'member.guidedHint')} /> : null}
       {m.isMinor ? (
         <>
           <Toggle label="Consentement parental : afficher le prénom aux membres invités" value={!!m.parentConsentShare} onChange={(v) => manage && setM({ ...m, parentConsentShare: v })} hint="Sinon, les membres non-parents voient « Enfant »." />

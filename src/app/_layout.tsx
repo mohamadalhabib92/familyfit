@@ -13,10 +13,15 @@ import { WRITE_FAILURE_MESSAGE } from '@/lib/preservation';
 import { AppErrorBoundary } from '@/ui/ErrorBoundary';
 import { Button, FontScaleProvider, LoadingState } from '@/ui/kit';
 import { theme as t } from '@/ui/theme';
+import { ThemeProvider, useColorMode } from '@/ui/ThemeProvider';
 
 function Shell({ children }: { children: ReactNode }) {
   const { prefs } = useData();
-  return <FontScaleProvider scale={prefs.largeText ? 1.5 : 1}>{children}</FontScaleProvider>;
+  return (
+    <ThemeProvider scheme={prefs.colorScheme} haptics={prefs.haptics}>
+      <FontScaleProvider scale={prefs.largeText ? 1.5 : 1}>{children}</FontScaleProvider>
+    </ThemeProvider>
+  );
 }
 
 function WritesPausedBanner() {
@@ -74,6 +79,7 @@ function UnsavedBanner() {
 
 function RootNavigator() {
   const { ready, storageSlow, reloadStorage, corrupt, resetCorrupt, resetError } = useData();
+  const mode = useColorMode();
   if (!ready) {
     return (
       <View style={{ flex: 1, backgroundColor: t.bg }}>
@@ -87,7 +93,7 @@ function RootNavigator() {
   }
   return (
     <View style={{ flex: 1, backgroundColor: t.bg }}>
-      <StatusBar style="dark" />
+      <StatusBar style={mode === 'dark' ? 'light' : 'dark'} />
       <WritesPausedBanner />
       <UnsavedBanner />
       <Stack screenOptions={{ headerStyle: { backgroundColor: t.bg }, headerTintColor: t.text, headerTitleStyle: { fontWeight: '700' }, headerShadowVisible: false, contentStyle: { backgroundColor: t.bg } }}>
@@ -101,6 +107,8 @@ function RootNavigator() {
         <Stack.Screen name="session/[ritualId]" options={{ title: 'Session' }} />
         <Stack.Screen name="member/[id]" options={{ title: 'Membre' }} />
         <Stack.Screen name="goal/[id]" options={{ title: 'Objectif' }} />
+        <Stack.Screen name="workout/[id]" options={{ title: 'Séance' }} />
+        <Stack.Screen name="tv" options={{ title: 'Salon', headerShown: false }} />
         <Stack.Screen name="privacy" options={{ title: 'Vie privée & mineurs' }} />
       </Stack>
     </View>

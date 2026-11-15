@@ -10,5 +10,10 @@ module.exports = ({ config }) => {
       config.experiments = rest;
     }
   }
+  config.extra = { ...(config.extra || {}), tv: process.env.EXPO_TV === '1' };
+  if (process.env.EXPO_TV === '1') {
+    process.env.RCT_USE_PREBUILT_RNCORE = '0';
+    config.plugins = [...(config.plugins || []), './plugins/withTvFromSource'];
+  }
   return config;
 };

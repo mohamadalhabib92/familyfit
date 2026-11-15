@@ -461,4 +461,57 @@ begin
   if n_by <> 1 then raise exception 'ASSERT accepted_by n''est pas null'; end if;
 end $$;
 
+-- Séances : Bruno ne lit pas le journal d'Alice, et n'écrit pas dedans.
+select public.rls_as('11111111-1111-4111-8111-111111111111');
+set role authenticated;
+insert into public.workout_logs (family_id, routine_id, coach_id, duration_sec, member_ids)
+select p.v, 'morning-together', 'lina', 600, array[fm.id]
+from public.rls_probe p
+join public.family_members fm on fm.family_id = p.v and fm.user_id = '11111111-1111-4111-8111-111111111111'
+where p.k = 'fam_a';
+
+insert into public.family_challenges (family_id, title, week_start, target_minutes)
+select v, '30 minutes ensemble', current_date, 30 from public.rls_probe where k = 'fam_a';
+
+do $$
+declare n int;
+begin
+  perform public.rls_as('11111111-1111-4111-8111-111111111111');
+  select count(*) into n from public.workout_logs
+  where family_id = (select v from public.rls_probe where k = 'fam_a');
+  if n <> 1 then
+    raise exception 'ASSERT Alice ne voit pas sa séance (%)', n;
+  end if;
+end $$;
+
+select public.rls_as('22222222-2222-4222-8222-222222222222');
+do $$
+declare n int;
+begin
+  perform public.rls_as('22222222-2222-4222-8222-222222222222');
+  select count(*) into n from public.workout_logs
+  where family_id = (select v from public.rls_probe where k = 'fam_a');
+  if n <> 0 then
+    raise exception 'ASSERT Bruno voit % séance(s) de la famille A', n;
+  end if;
+  select count(*) into n from public.family_challenges
+  where family_id = (select v from public.rls_probe where k = 'fam_a');
+  if n <> 0 then
+    raise exception 'ASSERT Bruno voit un défi de la famille A';
+  end if;
+end $$;
+
+do $$
+begin
+  perform public.rls_as('22222222-2222-4222-8222-222222222222');
+  insert into public.workout_logs (family_id, routine_id, coach_id, duration_sec)
+  select v, 'morning-together', 'lina', 60 from public.rls_probe where k = 'fam_a';
+  raise exception 'ASSERT séance croisée autorisée';
+exception
+  when insufficient_privilege then
+    if SQLERRM not like '%row-level security%' and SQLERRM not like '%politique%' then
+      raise exception 'ASSERT message RLS séance inattendu: %', SQLERRM;
+    end if;
+end $$;
+
 rollback;

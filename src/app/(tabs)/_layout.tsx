@@ -1,4 +1,6 @@
 import { Redirect, Tabs } from 'expo-router';
+import { translate } from '@/lib/i18n';
+import { isTv } from '@/lib/platform';
 import { View } from 'react-native';
 import { TrialBanner } from '@/components/TrialBanner';
 import { useData } from '@/lib/data';
@@ -20,6 +22,8 @@ export default function TabsLayout() {
   if (dest === 'trial') return <LoadingState slow onRetry={reloadStorage} />;
   if (dest === 'auth') return <Redirect href="/auth" />;
   if (dest === 'onboarding') return <Redirect href="/onboarding" />;
+  if (isTv()) return <Redirect href="/tv" />;
+  const copy = (key: Parameters<typeof translate>[1]) => translate(prefs.locale, key);
   const icon = (name: IconName) =>
     function TabIcon({ color, size }: { color: unknown; size: number }) {
       return <Ionicons name={name} color={typeof color === 'string' ? color : undefined} size={size} />;
@@ -35,11 +39,12 @@ export default function TabsLayout() {
           sceneStyle: { backgroundColor: t.bg },
         }}
       >
-        <Tabs.Screen name="index" options={{ title: 'Aujourd’hui', tabBarIcon: icon('sunny-outline') }} />
-        <Tabs.Screen name="agenda" options={{ title: 'Agenda', tabBarIcon: icon('calendar-outline') }} />
-        <Tabs.Screen name="rituals" options={{ title: 'Rituels', tabBarIcon: icon('repeat-outline') }} />
-        <Tabs.Screen name="wellness" options={{ title: 'Bien-être', tabBarIcon: icon('leaf-outline') }} />
-        <Tabs.Screen name="family" options={{ title: 'Famille', tabBarIcon: icon('people-outline') }} />
+        <Tabs.Screen name="index" options={{ title: copy('tab.today'), tabBarIcon: icon('sunny-outline') }} />
+        <Tabs.Screen name="agenda" options={{ title: copy('tab.agenda'), tabBarIcon: icon('calendar-outline') }} />
+        <Tabs.Screen name="rituals" options={{ title: copy('tab.rituals'), tabBarIcon: icon('repeat-outline') }} />
+        <Tabs.Screen name="wellness" options={{ title: copy('tab.wellness'), tabBarIcon: icon('leaf-outline') }} />
+        <Tabs.Screen name="train" options={{ title: copy('tab.train'), tabBarIcon: icon('fitness-outline') }} />
+        <Tabs.Screen name="family" options={{ title: copy('tab.family'), tabBarIcon: icon('people-outline') }} />
       </Tabs>
     </View>
   );

@@ -1,0 +1,139 @@
+import { useEffect, useRef, useState } from 'react';
+import { Text, View } from 'react-native';
+import { CoachAvatar } from '@/components/CoachAvatar';
+import { coachById, SCRIPTED_COACH, type CoachBrain } from '@/lib/coaches';
+import { deviceSpeaker, silentSpeaker, type Speaker } from '@/lib/speechVoice';
+import { activeBlock, buildTimeline, cuesBetween, pausePlayer, requestSkipWarmup, startPlayer, tick, variantFor, type AgeBand, type Block, type CoachId, type Locale, type Player } from '@/lib/workoutEngine';
+import { createPlayer } from '@/lib/workoutEngine';
+import { translate, type CopyKey } from '@/lib/i18n';
+import { HEALTH_DISCLAIMER } from '@/lib/health';
+import { Button, Card, Muted, Notice } from '@/ui/kit';
+import { useReduceMotion } from '@/ui/motion';
+import { theme as t } from '@/ui/theme';
+
+export function SessionPlayer({
+  blocks,
+  coachId,
+  locale,
+  band,
+  voice = true,
+  participants,
+  onComplete,
+  brain,
+}: {
+  blocks: Block[];
+  coachId: CoachId;
+  locale: Locale;
+  band: AgeBand;
+  voice?: boolean;
+  participants: { id: string; name: string; band: AgeBand }[];
+  onComplete: (durationSec: number) => void;
+  brain?: CoachBrain | null;
+}) {
+  const coach = coachById(coachId);
+  const mind = brain ?? SCRIPTED_COACH;
+  const speaker = useRef<Speaker>(voice ? deviceSpeaker() : silentSpeaker());
+  const reduce = useReduceMotion();
+  const [{ player, line, note }, setUi] = useState(() => ({ player: createPlayer(), line: '', note: '' }));
+  const timeline = buildTimeline(blocks);
+  const warm = blocks.filter((b) => b.phase === 'warmup').reduce((s, b) => s + b.workSec + b.restSec, 0);
+  const saved = useRef(false);
+  const copy = (key: CopyKey) => translate(locale, key);
+
+  const speakRange = (from: number, to: number, current: Player) => {
+    const due = cuesBetween(timeline.cues, from, to);
+    const last = due[due.length - 1];
+    if (!last) return current;
+    const text = mind.line({ cue: last, locale, coachId, band });
+    if (text && !reduce) speaker.current.speak(text, coach, locale);
+    return current;
+  };
+
+  useEffect(() => {
+    speaker.current = voice && !reduce ? deviceSpeaker() : silentSpeaker();
+    return () => speaker.current.stop();
+  }, [voice, reduce, coachId]);
+
+  useEffect(() => {
+    if (!player.running) return;
+    let last = Date.now();
+    const id = setInterval(() => {
+      const now = Date.now();
+      const delta = (now - last) / 1000;
+      last = now;
+      setUi((ui) => {
+        const step = tick(ui.player, delta, timeline.durationSec, warm);
+        const spoken = speakRange(step.from, step.to, step.player);
+        const cue = cuesBetween(timeline.cues, step.from, step.to).at(-1);
+        const text = cue ? mind.line({ cue, locale, coachId, band }) : ui.line;
+        return { player: spoken, line: text || ui.line, note: ui.note };
+      });
+    }, 250);
+    return () => clearInterval(id);
+  }, [player.running, timeline.durationSec, warm, locale, coachId, band, mind]);
+
+  useEffect(() => {
+    if (player.done && !saved.current) {
+      saved.current = true;
+      onComplete(Math.round(timeline.durationSec));
+    }
+  }, [player.done, onComplete, timeline.durationSec]);
+
+  const here = activeBlock(blocks, player.elapsedSec);
+  const variant = here ? variantFor(here.block.moveId, band) : null;
+  const resting = here ? here.into >= here.block.workSec && here.block.restSec > 0 : false;
+  const mm = Math.floor(player.elapsedSec / 60);
+  const ss = Math.floor(player.elapsedSec % 60);
+
+  return (
+    <View style={{ gap: 12 }}>
+      <Card>
+        <View style={{ flexDirection: 'row', gap: 16, alignItems: 'center' }}>
+          <CoachAvatar coachId={coachId} size={96} />
+          <View style={{ flex: 1, gap: 4 }}>
+            <Text style={{ color: t.muted, fontWeight: '700', letterSpacing: 1 }}>{coach.name}</Text>
+            <Text accessibilityRole="timer" style={{ color: t.text, fontSize: 40, fontWeight: '700', letterSpacing: -1 }}>{`${mm}:${String(ss).padStart(2, '0')}`}</Text>
+            <Text style={{ color: t.text, fontSize: 18, fontWeight: '700' }}>{variant ? variant.name[locale] : copy('player.done')}</Text>
+            <Muted>{resting ? copy('player.rest') : copy('player.work')}{here ? ` · ${here.remaining}s` : ''}</Muted>
+          </View>
+        </View>
+        <Text accessibilityLiveRegion="polite" style={{ color: t.text, fontSize: 16, lineHeight: 23, marginTop: 12 }}>{line || variant?.steps[locale]}</Text>
+        {variant ? <Muted style={{ marginTop: 8 }}>{variant.contraindication[locale]}</Muted> : null}
+      </Card>
+      {participants.length > 1 && here ? (
+        <Card>
+          <Text style={{ color: t.text, fontWeight: '700', marginBottom: 8 }}>{copy('player.together')}</Text>
+          {participants.map((p) => {
+            const own = variantFor(here.block.moveId, p.band);
+            return (
+              <Text key={p.id} style={{ color: t.text, fontSize: 15, lineHeight: 22 }}>
+                {p.name} · {own.workSec}s · {own.steps[locale]}
+              </Text>
+            );
+          })}
+        </Card>
+      ) : null}
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+        {player.running ? (
+          <Button title={copy('player.pause')} variant="secondary" onPress={() => { speaker.current.stop(); setUi((ui) => ({ ...ui, player: pausePlayer(ui.player) })); }} />
+        ) : (
+          <Button title={player.elapsedSec > 0 ? copy('player.resume') : copy('train.start')} onPress={() => {
+            setUi((ui) => {
+              const next = startPlayer(ui.player);
+              const text = cuesBetween(timeline.cues, next.elapsedSec - 0.001, next.elapsedSec).at(-1);
+              const spoken = text ? mind.line({ cue: text, locale, coachId, band }) : ui.line;
+              if (spoken && next.elapsedSec === 0) speaker.current.speak(spoken, coach, locale);
+              return { player: next, line: spoken || ui.line, note: '' };
+            });
+          }} />
+        )}
+        <Button title={copy('player.skip')} variant="ghost" onPress={() => {
+          const refused = requestSkipWarmup(player);
+          setUi((ui) => ({ ...ui, player: refused.player, note: copy('player.skipNo') }));
+        }} />
+      </View>
+      {note ? <Notice tone="warning" title={note} /> : null}
+      {player.done ? <Notice tone="success" title={copy('player.done')} text={HEALTH_DISCLAIMER} /> : null}
+    </View>
+  );
+}

@@ -13,6 +13,8 @@ import { shareInvitation } from '@/lib/share';
 import { exportSnapshot, loadJSON } from '@/lib/storage';
 import { QUARANTINE_KEY } from '@/lib/preservation';
 import { supabaseConfigured } from '@/lib/supabase';
+import { translate } from '@/lib/i18n';
+import { LOCALES } from '@/lib/workoutEngine';
 import { Badge, Button, Card, Divider, H2, ListItem, MemberMark, Muted, Row, Screen, Segmented, Spacer, Toggle, type IconName } from '@/ui/kit';
 import { theme as t } from '@/ui/theme';
 
@@ -100,6 +102,9 @@ export default function FamilyTab() {
       )}
       <Spacer />
       <H2>Réglages</H2>
+      <Segmented label={translate(prefs.locale, 'settings.language')} options={LOCALES.map((locale) => ({ label: locale.toUpperCase(), value: locale }))} value={prefs.locale} onChange={(v) => setPrefs((p) => ({ ...p, locale: v }))} />
+      <Segmented label={translate(prefs.locale, 'settings.appearance')} options={(['system', 'light', 'dark'] as const).map((value) => ({ label: translate(prefs.locale, value === 'system' ? 'settings.system' : value === 'light' ? 'settings.light' : 'settings.dark'), value }))} value={prefs.colorScheme} onChange={(v) => setPrefs((p) => ({ ...p, colorScheme: v }))} />
+      <Toggle label={translate(prefs.locale, 'settings.haptics')} value={prefs.haptics} onChange={(v) => setPrefs((p) => ({ ...p, haptics: v }))} />
       <Toggle label="Afficher la date hégirienne" value={prefs.showHijri} onChange={(v) => setPrefs((p) => ({ ...p, showHijri: v }))} />
       {prefs.showHijri ? (
         <Segmented label="Ajustement hégirien (jours, observation locale)" options={[-2, -1, 0, 1, 2].map((n) => ({ label: n > 0 ? `+${n}` : String(n), value: n }))} value={prefs.hijriOffset} onChange={(v) => setPrefs((p) => ({ ...p, hijriOffset: v }))} />

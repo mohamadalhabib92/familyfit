@@ -28,6 +28,15 @@
       "env": {
         "EXPO_NO_CAPABILITY_SYNC": "1"
       }
+    },
+    "production-tv": {
+      "extends": "production",
+      "autoIncrement": false,
+      "env": {
+        "EXPO_TV": "1",
+        "RCT_USE_PREBUILT_RNCORE": "0",
+        "EXPO_NO_CAPABILITY_SYNC": "1"
+      }
     }
   },
   "submit": {
