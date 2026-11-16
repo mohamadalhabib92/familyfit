@@ -9,9 +9,11 @@
     "@react-native-community/netinfo": "12.0.1",
     "expo": "~58.0.19",
     "expo-constants": "~58.0.13",
+    "expo-haptics": "~58.0.8",
     "expo-linking": "~58.0.14",
     "expo-notifications": "~58.1.6",
     "expo-router": "~58.0.26",
+    "expo-speech": "~58.0.4",
     "expo-status-bar": "~58.0.4",
     "react": "19.3.0",
     "react-dom": "19.3.0",
@@ -22,6 +24,7 @@
     "react-native-web": "^0.21.4"
   },
   "devDependencies": {
+    "@react-native-tvos/config-tv": "^0.1.7",
     "@types/react": "~19.3.0",
     "typescript": "~6.0.3"
   },
@@ -33,7 +36,9 @@
     "typecheck": "tsc --noEmit",
     "build:web": "expo export -p web && node scripts/pwa-postbuild.mjs",
     "icons": "python3 scripts/make-icons.py",
-    "test": "node scripts/test-hijri.mjs && node scripts/test-persist.mjs && node scripts/test-gate.mjs && node scripts/test-foundations.mjs && node scripts/test-preservation.mjs && node scripts/test-rls-local.mjs"
+    "eas-build-pre-install": "node scripts/eas-tv-preinstall.mjs",
+    "eas-build-post-install": "node scripts/eas-tv-preinstall.mjs --check-installed",
+    "test": "node scripts/test-hijri.mjs && node scripts/test-persist.mjs && node scripts/test-gate.mjs && node scripts/test-foundations.mjs && node scripts/test-preservation.mjs && node scripts/test-workout-engine.mjs && node scripts/test-rls-local.mjs"
   },
   "private": true
 }

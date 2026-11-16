@@ -6,7 +6,7 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
     "description": "FamilyFit — agenda familial partagé (grégorien + hégirien), rituels et bien-être.",
     "splash": {
       "image": "./assets/splash-icon.png",
@@ -79,7 +79,9 @@
     },
     "plugins": [
       "expo-router",
-      "expo-notifications"
+      "expo-notifications",
+      "@react-native-tvos/config-tv",
+      "./plugins/withFamilyFitHealth"
     ],
     "experiments": {
       "baseUrl": "/familyfit"

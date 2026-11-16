@@ -4,7 +4,7 @@
  * le réserver aux pastilles et icônes. Le texte utilise accentText (≈ 5,9:1).
  * Les ratios sont vérifiés par scripts/test-foundations.mjs.
  */
-export const theme = {
+const lightTheme = {
   bg: '#F6F4EF',
   surface: '#FFFFFF',
   surfaceAlt: '#ECEAE3',
@@ -31,7 +31,7 @@ export const theme = {
   info: '#2F5F8A',
   infoBg: '#E7EFF7',
   shadow: '#1D2522',
-  radius: 16,
+  radius: 20,
   displayFont: undefined as string | undefined,
   category: {
     family: '#2F4B43',
@@ -54,6 +54,21 @@ export const theme = {
     { color: '#8A5A00', glyph: 'bookmark', label: 'Signet' },
     { color: '#15616D', glyph: 'water', label: 'Goutte' },
   ],
+  /** Échelle d’espace. Les écrans s’en servent au lieu de marges au hasard. */
+  space: { xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32, section: 40 },
+  /** Rayons. `radius` reste le rayon des cartes. */
+  radii: { sm: 12, md: 20, lg: 28, pill: 999 },
+  type: {
+    display: { size: 34, line: 40, tracking: -0.8 },
+    title: { size: 22, line: 28, tracking: -0.3 },
+    body: { size: 17, line: 24, tracking: 0 },
+    label: { size: 13, line: 18, tracking: 0.2 },
+    eyebrow: { size: 12, line: 16, tracking: 1.4 },
+  },
+  motion: { fast: 140, base: 220, slow: 380 },
 } as const;
 
-export type Theme = typeof theme;
+export type Theme = { -readonly [K in keyof typeof lightTheme]: (typeof lightTheme)[K] };
+export { lightTheme };
+/** Objet vivant : le ThemeProvider y copie le clair ou le sombre avant de peindre. */
+export const theme: Theme = { ...lightTheme };

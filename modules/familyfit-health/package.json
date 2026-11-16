@@ -1,0 +1,11 @@
+{
+  "name": "familyfit-health",
+  "version": "1.0.0",
+  "description": "HealthKit and Health Connect bridge for FamilyFit. Optional, permission-gated.",
+  "main": "src/index.ts",
+  "peerDependencies": {
+    "expo": "*",
+    "react": "*",
+    "react-native": "*"
+  }
+}

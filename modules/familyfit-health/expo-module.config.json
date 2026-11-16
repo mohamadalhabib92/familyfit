@@ -1,0 +1,9 @@
+{
+  "platforms": ["apple", "android"],
+  "apple": {
+    "modules": ["FamilyfitHealthModule"]
+  },
+  "android": {
+    "modules": ["expo.modules.familyfithealth.FamilyfitHealthModule"]
+  }
+}

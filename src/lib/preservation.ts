@@ -21,6 +21,7 @@ export const DATA_KEYS = [
   'activities',
   'lists',
   'remoteError',
+  'fitness',
 ] as const;
 
 export const QUARANTINE_KEY = 'quarantine';

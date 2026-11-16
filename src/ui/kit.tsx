@@ -16,8 +16,11 @@ import {
   type ViewStyle,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as Haptics from 'expo-haptics';
+import { isTv, useUiScale } from '@/lib/platform';
 import { inkOn } from './contrast';
 import { theme as t } from './theme';
+import { useHapticsEnabled } from './ThemeProvider';
 
 const FontScaleContext = createContext(1);
 export function FontScaleProvider({ scale, children }: { scale: number; children: ReactNode }) {
@@ -59,11 +62,13 @@ export { Ionicons };
 /** Conteneur d'écran défilant, largeur max sur desktop (PWA). */
 export function Screen({ children, scroll = true, padded = true }: { children: ReactNode; scroll?: boolean; padded?: boolean }) {
   const insets = useSafeAreaInsets();
+  const ui = useUiScale();
+  const pad = Math.round((isTv() ? 36 : 20) * ui);
   const inner = (
-    <View style={[styles.inner, padded && { padding: 20 }, { paddingBottom: 40 + insets.bottom }]}>{children}</View>
+    <View style={[styles.inner, { maxWidth: isTv() ? 1280 : 920 }, padded && { padding: pad }, { paddingBottom: 48 + insets.bottom }]}>{children}</View>
   );
   return (
-    <View style={styles.screen}>
+    <View style={[styles.screen, { backgroundColor: t.bg }]}>
       {scroll ? (
         <ScrollView contentInsetAdjustmentBehavior="automatic" keyboardShouldPersistTaps="handled">
           {inner}
@@ -75,54 +80,58 @@ export function Screen({ children, scroll = true, padded = true }: { children: R
   );
 }
 
+function useTypeScale() {
+  return useFontScale() * useUiScale();
+}
 export function H1({ children, style }: { children: ReactNode; style?: StyleProp<TextStyle> }) {
-  const s = useFontScale();
+  const s = useTypeScale();
   return (
-    <Text accessibilityRole="header" style={[styles.h1, { fontSize: 28 * s, lineHeight: 34 * s }, style]}>
+    <Text accessibilityRole="header" style={[styles.h1, { color: t.text, fontSize: t.type.display.size * s, lineHeight: t.type.display.line * s, letterSpacing: t.type.display.tracking }, style]}>
       {children}
     </Text>
   );
 }
 export function H2({ children, style }: { children: ReactNode; style?: StyleProp<TextStyle> }) {
-  const s = useFontScale();
+  const s = useTypeScale();
   return (
-    <Text accessibilityRole="header" style={[styles.h2, { fontSize: 18 * s, lineHeight: 24 * s }, style]}>
+    <Text accessibilityRole="header" style={[styles.h2, { color: t.text, fontSize: t.type.title.size * s, lineHeight: t.type.title.line * s, letterSpacing: t.type.title.tracking }, style]}>
       {children}
     </Text>
   );
 }
 export function Body({ children, style, numberOfLines }: { children: ReactNode; style?: StyleProp<TextStyle>; numberOfLines?: number }) {
-  const s = useFontScale();
+  const s = useTypeScale();
   return (
-    <Text style={[styles.body, { fontSize: 16 * s, lineHeight: 23 * s }, style]} numberOfLines={numberOfLines}>
+    <Text style={[styles.body, { color: t.text, fontSize: t.type.body.size * s, lineHeight: t.type.body.line * s }, style]} numberOfLines={numberOfLines}>
       {children}
     </Text>
   );
 }
 export function Muted({ children, style }: { children: ReactNode; style?: StyleProp<TextStyle> }) {
-  const s = useFontScale();
-  return <Text style={[styles.muted, { fontSize: 15 * s, lineHeight: 21 * s }, style]}>{children}</Text>;
+  const s = useTypeScale();
+  return <Text style={[styles.muted, { color: t.muted, fontSize: 15 * s, lineHeight: 21 * s }, style]}>{children}</Text>;
 }
 export function Eyebrow({ children, style }: { children: ReactNode; style?: StyleProp<TextStyle> }) {
-  const s = useFontScale();
-  return <Text style={[styles.eyebrow, { fontSize: 12 * s }, style]}>{children}</Text>;
+  const s = useTypeScale();
+  return <Text style={[styles.eyebrow, { color: t.accentText, fontSize: t.type.eyebrow.size * s, letterSpacing: t.type.eyebrow.tracking }, style]}>{children}</Text>;
 }
 
 export function Card({ children, style, onPress, accessibilityLabel }: { children: ReactNode; style?: StyleProp<ViewStyle>; onPress?: () => void; accessibilityLabel?: string }) {
   const reduce = useReduceMotion();
+  const face: ViewStyle = { backgroundColor: t.surface, borderColor: t.border, borderRadius: t.radii.md };
   if (onPress) {
     return (
       <Pressable
         onPress={onPress}
         accessibilityRole="button"
         accessibilityLabel={accessibilityLabel}
-        style={({ pressed }) => [styles.card, pressed && { opacity: 0.85 }, pressed && !reduce && { transform: [{ scale: 0.995 }] }, style]}
+        style={({ pressed, focused }: { pressed: boolean; focused?: boolean }) => [styles.card, face, pressed && { opacity: 0.92 }, pressed && !reduce && { transform: [{ scale: 0.985 }] }, focused && { borderColor: t.primary, borderWidth: 3 }, style]}
       >
         {children}
       </Pressable>
     );
   }
-  return <View style={[styles.card, style]}>{children}</View>;
+  return <View style={[styles.card, face, style]}>{children}</View>;
 }
 
 export function Row({ children, style, gap = 8, wrap }: { children: ReactNode; style?: StyleProp<ViewStyle>; gap?: number; wrap?: boolean }) {
@@ -156,23 +165,30 @@ export function Button({
   small?: boolean;
   accessibilityLabel?: string;
 }) {
-  const s = useFontScale();
+  const s = useTypeScale();
+  const reduce = useReduceMotion();
+  const hapticsOn = useHapticsEnabled();
   const bg = { primary: t.primary, secondary: t.surfaceAlt, ghost: 'transparent', danger: t.danger }[variant];
   const fg = { primary: t.onPrimary, secondary: t.text, ghost: t.primary, danger: t.onDanger }[variant];
   const off = disabled || loading;
   return (
     <Pressable
-      onPress={off ? undefined : onPress}
+      onPress={off ? undefined : () => {
+        if (hapticsOn && !reduce && variant === 'primary') void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined);
+        onPress?.();
+      }}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel ?? title}
       accessibilityState={{ disabled: !!off, busy: !!loading }}
       hitSlop={6}
-      style={({ pressed }) => [
+      style={({ pressed, focused }: { pressed: boolean; focused?: boolean }) => [
         styles.btn,
         small && styles.btnSmall,
-        { backgroundColor: bg, minHeight: Math.max(small ? 44 : 48, 44 * s) },
+        { backgroundColor: bg, borderRadius: t.radii.md, minHeight: Math.max(small ? 44 : 52, 44 * s) },
         variant === 'ghost' && { borderWidth: 1, borderColor: t.border },
-        pressed && !off && { opacity: 0.8 },
+        pressed && !off && { opacity: 0.88 },
+        pressed && !off && !reduce && { transform: [{ scale: 0.985 }] },
+        focused && { borderWidth: 3, borderColor: t.accentText },
         off && { opacity: 0.45 },
         style,
       ]}
@@ -249,11 +265,11 @@ export function Badge({ label, tone = 'neutral' }: { label: string; tone?: 'neut
 export function Field({ label, hint, error, style, ...props }: TextInputProps & { label: string; hint?: string; error?: string | null }) {
   return (
     <View style={{ marginBottom: 14 }}>
-      <Text style={styles.label}>{label}</Text>
+      <Text style={[styles.label, { color: t.muted }]}>{label}</Text>
       <TextInput
         placeholderTextColor={t.muted}
         accessibilityLabel={label}
-        style={[styles.input, props.multiline && { minHeight: 88, textAlignVertical: 'top', paddingTop: 12 }, error ? { borderColor: t.danger } : null, style]}
+        style={[styles.input, { color: t.text, backgroundColor: t.surface, borderColor: t.border, borderRadius: t.radii.sm }, props.multiline && { minHeight: 88, textAlignVertical: 'top', paddingTop: 12 }, error ? { borderColor: t.danger } : null, style]}
         {...props}
       />
       {error ? <Text style={{ color: t.danger, marginTop: 4, fontSize: 13 }}>{error}</Text> : hint ? <Muted style={{ marginTop: 4, fontSize: 13 }}>{hint}</Muted> : null}
@@ -265,8 +281,8 @@ export function Field({ label, hint, error, style, ...props }: TextInputProps & 
 export function Segmented<T extends string | number>({ options, value, onChange, label }: { options: { label: string; value: T }[]; value: T; onChange: (v: T) => void; label?: string }) {
   return (
     <View style={{ marginBottom: 14 }}>
-      {label ? <Text style={styles.label}>{label}</Text> : null}
-      <View style={styles.segment} accessibilityRole="radiogroup">
+      {label ? <Text style={[styles.label, { color: t.muted }]}>{label}</Text> : null}
+      <View style={[styles.segment, { backgroundColor: t.surfaceAlt, borderRadius: t.radii.md }]} accessibilityRole="radiogroup">
         {options.map((o) => {
           const on = o.value === value;
           return (
@@ -308,12 +324,24 @@ export function Toggle({ label, value, onChange, hint }: { label: string; value:
 
 export function Empty({ icon = 'sparkles-outline', title, text, action }: { icon?: IconName; title: string; text?: string; action?: ReactNode }) {
   return (
-    <View style={styles.empty}>
-      <View style={styles.emptyIcon}>
+    <View style={[styles.empty, { borderColor: t.border, backgroundColor: t.surface, borderRadius: t.radii.lg }]}>
+      <View style={[styles.emptyIcon, { backgroundColor: t.surfaceAlt }]}>
         <Ionicons name={icon} size={28} color={t.accent} />
       </View>
-      <Text style={[styles.h2, { textAlign: 'center', marginBottom: 6 }]}>{title}</Text>
-      {text ? <Muted style={{ textAlign: 'center', marginBottom: 14 }}>{text}</Muted> : null}
+      <Text style={[styles.h2, { color: t.text, textAlign: 'center', marginBottom: 6 }]}>{title}</Text>
+      {text ? <Muted style={{ textAlign: 'center', marginBottom: 14, maxWidth: 420 }}>{text}</Muted> : null}
+      {action}
+    </View>
+  );
+}
+
+/** Bandeau d’entrée : une promesse, une action, pas une publicité. */
+export function Hero({ kicker, title, text, action }: { kicker: string; title: string; text: string; action?: ReactNode }) {
+  return (
+    <View style={{ backgroundColor: t.primary, borderRadius: t.radii.lg, padding: t.space.xl, marginBottom: t.space.lg, gap: t.space.sm }}>
+      <Text style={{ color: t.onPrimary, fontSize: 12, fontWeight: '700', letterSpacing: 1.4, textTransform: 'uppercase', opacity: 0.8 }}>{kicker}</Text>
+      <Text accessibilityRole="header" style={{ color: t.onPrimary, fontSize: 28, lineHeight: 34, fontWeight: '700', letterSpacing: -0.6 }}>{title}</Text>
+      <Text style={{ color: t.onPrimary, fontSize: 16, lineHeight: 23, opacity: 0.92 }}>{text}</Text>
       {action}
     </View>
   );
@@ -348,7 +376,7 @@ export function ListItem({ title, subtitle, right, icon, onPress }: { title: str
         </View>
       ) : null}
       <View style={{ flex: 1 }}>
-        <Text style={[styles.body, { fontWeight: '600' }]} numberOfLines={1}>
+        <Text style={[styles.body, { color: t.text, fontWeight: '600' }]} numberOfLines={1}>
           {title}
         </Text>
         {subtitle ? (
@@ -424,8 +452,8 @@ export const styles = StyleSheet.create({
   eyebrow: { color: t.accentText, fontSize: 12, fontWeight: '700', letterSpacing: 1.6, textTransform: 'uppercase', marginBottom: 6 },
   card: {
     backgroundColor: t.surface,
-    borderRadius: t.radius,
-    padding: 16,
+    borderRadius: t.radii.md,
+    padding: 18,
     marginBottom: 12,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: t.border,

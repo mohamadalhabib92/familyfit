@@ -44,6 +44,15 @@ const checks = [
       && handler.includes('memberIds');
   })()],
   ['mise à jour partielle garde les champs inconnus', storage.includes('retainUnknown(prev, v)')],
+  ['version de schéma inchangée', m.STORAGE_SCHEMA_VERSION === 1],
+  ['clés historiques toujours lues', ['session', 'prefs', 'family', 'members', 'invitations', 'events', 'rituals', 'sessions', 'goals', 'activities', 'lists', 'remoteError'].every((k) => m.DATA_KEYS.includes(k))],
+  ['clé fitness ajoutée sans retirer les autres', m.DATA_KEYS.includes('fitness') && m.DATA_KEYS.length === 13],
+  ['un journal de séance ne retire pas l’historique', (() => {
+    const disk = { ...fixture, fitness: { logs: [{ id: 'wo_1' }], vendorField: 'keep' } };
+    const plan = m.planMigration(disk.schemaMeta ?? null, Object.keys(disk));
+    const signed = m.diskAfterSignOut(disk);
+    return plan.rewritePayloads === false && plan.keysUntouched.includes('fitness') && plan.keysUntouched.includes('events') && plan.keysUntouched.includes('imports') && signed.fitness === disk.fitness && signed.events === disk.events && signed.family === disk.family;
+  })()],
   ['effacement confirmé relâche la porte de version', data.includes('releaseSchemaGateAfterErase()')],
   ['l’export visible porte le condensé', readFileSync(new URL('../src/app/(tabs)/family.tsx', import.meta.url), 'utf8').includes('exportSnapshot')],
 ];

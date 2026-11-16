@@ -31,6 +31,8 @@ import {
 } from './storage';
 import { signOut as signedOutState } from './gate';
 import { rpc, supabaseConfigured, type AuthSession } from './supabase';
+import { appendWorkout, EMPTY_FITNESS, type FitnessDisk, type WorkoutLog } from './workoutEngine';
+import { normalizeLocale } from './i18n';
 
 type Setter<T> = (v: T | ((p: T) => T)) => void;
 export type Prefs = {
@@ -46,10 +48,14 @@ export type Prefs = {
   trialDeclined: boolean;
   devConfigUnlocked: boolean;
   largeText: boolean;
+  locale: 'fr' | 'en' | 'de' | 'ar';
+  colorScheme: 'system' | 'light' | 'dark';
+  haptics: boolean;
 };
 const DEFAULT_PREFS: Prefs = {
   configAck: false, onboarded: false, hijriOffset: 0, showHijri: true, filterCats: [], filterMembers: [],
   trialMode: false, trialDeclined: false, devConfigUnlocked: false, largeText: false,
+  locale: 'fr', colorScheme: 'system', haptics: true,
 };
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -69,6 +75,8 @@ type Ctx = {
   goals: Goal[]; setGoals: Setter<Goal[]>;
   activities: Activity[]; setActivities: Setter<Activity[]>;
   lists: FamilyList[]; setLists: Setter<FamilyList[]>;
+  fitness: FitnessDisk; setFitness: Setter<FitnessDisk>;
+  logWorkout: (entry: WorkoutLog) => void;
   createFamily: (name: string, myName: string, withDemo: boolean) => Promise<void>;
   createInvitation: (role: Role) => Promise<Invitation>;
   revokeInvitation: (id: string) => void;
@@ -113,20 +121,22 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [activities, setActivities, r10, s10, c10] = usePersistentState<Activity[]>('activities', [], boot);
   const [lists, setLists, r11, s11, c11] = usePersistentState<FamilyList[]>('lists', [], boot);
   const [remoteError, setRemoteError, r12, , c12] = usePersistentState<string | null>('remoteError', null, boot);
-  const ready = r1 && r2 && r3 && r4 && r5 && r6 && r7 && r8 && r9 && r10 && r11 && r12;
+  const [fitness, setFitness, r13, s13, c13] = usePersistentState<FitnessDisk>('fitness', EMPTY_FITNESS, boot);
+  const ready = r1 && r2 && r3 && r4 && r5 && r6 && r7 && r8 && r9 && r10 && r11 && r12 && r13;
   const corrupt = (
     [
       ['session', c1], ['prefs', c2], ['family', c3], ['members', c4], ['invitations', c5], ['events', c6],
-      ['rituals', c7], ['sessions', c8], ['goals', c9], ['activities', c10], ['lists', c11], ['remoteError', c12],
+      ['rituals', c7], ['sessions', c8], ['goals', c9], ['activities', c10], ['lists', c11], ['remoteError', c12], ['fitness', c13],
     ] as const
   ).flatMap(([key, raw]) => (raw == null ? [] : [{ key, raw }]));
   const emptyFor = (key: string): unknown => {
     if (key === 'prefs') return DEFAULT_PREFS;
+    if (key === 'fitness') return EMPTY_FITNESS;
     if (key === 'session' || key === 'family' || key === 'remoteError') return null;
     return [];
   };
-  const storageSlow = !ready && (s1 || s2 || s3 || s4 || s5 || s6 || s7 || s8 || s9 || s10 || s11);
-  const mergedPrefs: Prefs = { ...DEFAULT_PREFS, ...prefs };
+  const storageSlow = !ready && (s1 || s2 || s3 || s4 || s5 || s6 || s7 || s8 || s9 || s10 || s11 || s13);
+  const mergedPrefs: Prefs = { ...DEFAULT_PREFS, ...prefs, locale: normalizeLocale(prefs?.locale) };
 
   const remote = async <T,>(fn: string, args: Record<string, unknown>): Promise<T | null> => {
     try {
@@ -140,7 +150,11 @@ export function DataProvider({ children }: { children: ReactNode }) {
   };
 
   const emptyContent = () => {
-    setMembers([]); setInvitations([]); setEvents([]); setRituals([]); setSessions([]); setGoals([]); setActivities([]); setLists([]);
+    setMembers([]); setInvitations([]); setEvents([]); setRituals([]); setSessions([]); setGoals([]); setActivities([]); setLists([]); setFitness(EMPTY_FITNESS);
+  };
+  const logWorkout = (entry: WorkoutLog) => {
+    const day = entry.date;
+    setFitness((prev) => appendWorkout({ ...EMPTY_FITNESS, ...prev }, entry, day));
   };
 
   useEffect(() => {
@@ -394,6 +408,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         ready, storageSlow, reloadStorage: () => { closeSchemaGate(); setSchemaChecked(false); setBoot((n) => n + 1); },
         session, setSession, prefs: mergedPrefs, setPrefs, family, members, setMembers, me, invitations, events, setEvents,
         rituals, setRituals, sessions, setSessions, goals, setGoals, activities, setActivities, lists, setLists,
+        fitness: { ...EMPTY_FITNESS, ...fitness }, setFitness, logWorkout,
         createFamily, createInvitation, revokeInvitation, acceptInvitation, hasDemo, removeDemo, signOut, wipe, corrupt, resetError, resetCorrupt,
         keepTrialData, restartKeepingSession, deleteAccount, remoteError, writesPaused,
         unsaved, retryUnsaved: retryUnsavedWrites,

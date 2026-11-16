@@ -10,7 +10,8 @@ import { conflictsFor, occurrences } from '@/lib/events';
 import { encouragement, weekProgress } from '@/lib/goals';
 import { formatHijri } from '@/lib/hijri';
 import { SLOT_LABEL, type Slot } from '@/lib/model';
-import { Button, Card, Divider, Empty, Eyebrow, H1, H2, Muted, Notice, Row, Screen, Spacer } from '@/ui/kit';
+import { translate } from '@/lib/i18n';
+import { Button, Card, Divider, Empty, Eyebrow, H1, H2, Hero, Muted, Notice, Row, Screen, Spacer } from '@/ui/kit';
 import { theme as t } from '@/ui/theme';
 
 export default function Today() {
@@ -34,6 +35,7 @@ export default function Today() {
       <Pressable onPress={unlock} accessibilityLabel={family?.name ?? 'Famille'}>
         <Eyebrow>{family?.name}</Eyebrow>
       </Pressable>
+      <Hero kicker={translate(prefs.locale, 'train.kicker')} title={translate(prefs.locale, 'hero.title')} text={translate(prefs.locale, 'hero.text')} action={<Button variant="secondary" title={translate(prefs.locale, 'hero.cta')} icon="fitness-outline" onPress={() => router.push('/train')} />} />
       <H1>{hour < 12 ? 'Bonjour' : hour < 18 ? 'Bel après-midi' : 'Bonsoir'}{me ? `, ${me.name}` : ''}</H1>
       <Muted>{dayLabel(today)}{prefs.showHijri ? ` · ${formatHijri(new Date(), 'fr', prefs.hijriOffset)}` : ''}</Muted>
       <Spacer />
