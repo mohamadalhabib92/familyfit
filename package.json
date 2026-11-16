@@ -36,8 +36,8 @@
     "typecheck": "tsc --noEmit",
     "build:web": "expo export -p web && node scripts/pwa-postbuild.mjs",
     "icons": "python3 scripts/make-icons.py",
-    "eas-build-pre-install": "node scripts/eas-pre-install.mjs",
-    "eas-build-post-install": "node scripts/eas-post-install.mjs",
+    "eas-build-pre-install": "node scripts/eas-tv-preinstall.mjs",
+    "eas-build-post-install": "node scripts/eas-tv-preinstall.mjs --check-installed",
     "test": "node scripts/test-hijri.mjs && node scripts/test-persist.mjs && node scripts/test-gate.mjs && node scripts/test-foundations.mjs && node scripts/test-preservation.mjs && node scripts/test-workout-engine.mjs && node scripts/test-rls-local.mjs"
   },
   "private": true

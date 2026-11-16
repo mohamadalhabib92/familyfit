@@ -7,6 +7,8 @@ import { activeBlock, buildTimeline, cuesBetween, pausePlayer, requestSkipWarmup
 import { createPlayer } from '@/lib/workoutEngine';
 import { translate, type CopyKey } from '@/lib/i18n';
 import { HEALTH_DISCLAIMER } from '@/lib/health';
+import { TvFocusable, TvText } from '@/components/tv/focus';
+import { isTv } from '@/lib/platform';
 import { Button, Card, Muted, Notice } from '@/ui/kit';
 import { useReduceMotion } from '@/ui/motion';
 import { theme as t } from '@/ui/theme';
@@ -113,24 +115,57 @@ export function SessionPlayer({
           })}
         </Card>
       ) : null}
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-        {player.running ? (
-          <Button title={copy('player.pause')} variant="secondary" onPress={() => { speaker.current.stop(); setUi((ui) => ({ ...ui, player: pausePlayer(ui.player) })); }} />
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: isTv() ? 24 : 8 }}>
+        {isTv() ? (
+          <>
+            <TvFocusable
+              preferred
+              label={player.running ? copy('player.pause') : copy('train.start')}
+              onPress={() => {
+                if (player.running) {
+                  speaker.current.stop();
+                  setUi((ui) => ({ ...ui, player: pausePlayer(ui.player) }));
+                  return;
+                }
+                setUi((ui) => {
+                  const next = startPlayer(ui.player);
+                  const text = cuesBetween(timeline.cues, next.elapsedSec - 0.001, next.elapsedSec).at(-1);
+                  const spoken = text ? mind.line({ cue: text, locale, coachId, band }) : ui.line;
+                  if (spoken && next.elapsedSec === 0) speaker.current.speak(spoken, coach, locale);
+                  return { player: next, line: spoken || ui.line, note: '' };
+                });
+              }}
+            >
+              <TvText size={32} weight="800" color="#1D2522">{player.running ? copy('player.pause') : player.elapsedSec > 0 ? copy('player.resume') : copy('train.start')}</TvText>
+            </TvFocusable>
+            <TvFocusable label={copy('player.skip')} onPress={() => {
+              const refused = requestSkipWarmup(player);
+              setUi((ui) => ({ ...ui, player: refused.player, note: copy('player.skipNo') }));
+            }}>
+              <TvText size={28} weight="800" color="#1D2522">{copy('player.skip')}</TvText>
+            </TvFocusable>
+          </>
         ) : (
-          <Button title={player.elapsedSec > 0 ? copy('player.resume') : copy('train.start')} onPress={() => {
-            setUi((ui) => {
-              const next = startPlayer(ui.player);
-              const text = cuesBetween(timeline.cues, next.elapsedSec - 0.001, next.elapsedSec).at(-1);
-              const spoken = text ? mind.line({ cue: text, locale, coachId, band }) : ui.line;
-              if (spoken && next.elapsedSec === 0) speaker.current.speak(spoken, coach, locale);
-              return { player: next, line: spoken || ui.line, note: '' };
-            });
-          }} />
+          <>
+            {player.running ? (
+              <Button title={copy('player.pause')} variant="secondary" onPress={() => { speaker.current.stop(); setUi((ui) => ({ ...ui, player: pausePlayer(ui.player) })); }} />
+            ) : (
+              <Button title={player.elapsedSec > 0 ? copy('player.resume') : copy('train.start')} onPress={() => {
+                setUi((ui) => {
+                  const next = startPlayer(ui.player);
+                  const text = cuesBetween(timeline.cues, next.elapsedSec - 0.001, next.elapsedSec).at(-1);
+                  const spoken = text ? mind.line({ cue: text, locale, coachId, band }) : ui.line;
+                  if (spoken && next.elapsedSec === 0) speaker.current.speak(spoken, coach, locale);
+                  return { player: next, line: spoken || ui.line, note: '' };
+                });
+              }} />
+            )}
+            <Button title={copy('player.skip')} variant="ghost" onPress={() => {
+              const refused = requestSkipWarmup(player);
+              setUi((ui) => ({ ...ui, player: refused.player, note: copy('player.skipNo') }));
+            }} />
+          </>
         )}
-        <Button title={copy('player.skip')} variant="ghost" onPress={() => {
-          const refused = requestSkipWarmup(player);
-          setUi((ui) => ({ ...ui, player: refused.player, note: copy('player.skipNo') }));
-        }} />
       </View>
       {note ? <Notice tone="warning" title={note} /> : null}
       {player.done ? <Notice tone="success" title={copy('player.done')} text={HEALTH_DISCLAIMER} /> : null}

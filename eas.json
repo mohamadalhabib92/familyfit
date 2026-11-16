@@ -30,17 +30,31 @@
       }
     },
     "production-tv": {
-      "extends": "production",
       "autoIncrement": false,
       "env": {
         "EXPO_TV": "1",
+        "EXPO_NO_CAPABILITY_SYNC": "1",
+        "NPM_CONFIG_LEGACY_PEER_DEPS": "true",
         "RCT_USE_PREBUILT_RNCORE": "0",
-        "EXPO_NO_CAPABILITY_SYNC": "1"
+        "EXPO_USE_PRECOMPILED_MODULES": "0"
+      },
+      "ios": {
+        "credentialsSource": "remote",
+        "simulator": false
       }
     }
   },
   "submit": {
     "production": {
+      "ios": {
+        "ascAppId": "6809472954",
+        "appleTeamId": "Y9XF9RY2BU",
+        "ascApiKeyPath": "$EXPO_ASC_API_KEY_PATH",
+        "ascApiKeyId": "$EXPO_ASC_KEY_ID",
+        "ascApiKeyIssuerId": "$EXPO_ASC_ISSUER_ID"
+      }
+    },
+    "production-tv": {
       "ios": {
         "ascAppId": "6809472954",
         "appleTeamId": "Y9XF9RY2BU",

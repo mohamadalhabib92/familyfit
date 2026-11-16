@@ -22,7 +22,7 @@ FamilyFit est l’app sportive de la famille : téléphone iOS, téléphone Andr
 - **Jeu sans score médical.** Défis de minutes, séries, badges, tableau de la semaine dans la famille. Pas de poids, pas de calories, pas de classement public.
 - **Prudence.** Échauffement impossible à sauter. Intensité douce et sans saut pour les plus jeunes. Version chaise pour les seniors. Un enfant ne lance une séance guidée que si un parent l’a autorisée. Phrase affichée : ce n’est pas un avis médical.
 - **L’appareil d’abord.** Le journal tient dans AsyncStorage, clé `@familyfit/fitness`, à côté des clés déjà là (`family`, `events`, `sessions`…). La synchro Supabase est un SQL dans le dépôt, avec RLS, et n’est pas appliquée.
-- **Salon.** Profil large, coach grand, focus pour la télécommande Siri. Le binaire TV est un profil EAS à part.
+- **Salon.** Profil large, coach grand, focus pour la télécommande Siri. Le binaire TV est le profil EAS `production-tv`, le même projet Expo et le même bundle que l’iPhone. Le numéro de build iPhone reste celui du fichier `app.json`. Le binaire TV porte `CFBundleVersion` 2.
 
 ## Où brancher un coach IA plus tard
 
@@ -32,5 +32,5 @@ FamilyFit est l’app sportive de la famille : téléphone iOS, téléphone Andr
 
 - Appliquer `supabase/migrations/20261115120000_fitness.sql` sur le projet Supabase, ou non. Rien n’est exécuté depuis ici.
 - Activer la capacité HealthKit dans Apple Developer / App Store Connect, puis poser `EXPO_HEALTHKIT=1` pour écrire l’entitlement. Sans cela, le binaire téléphone actuel continue de se signer et la santé répond « indisponible ».
-- Créer un **second projet EAS** pour les identifiants tvOS. Le profil `production-tv` ne change pas le `projectId` du téléphone. Un build Apple TV ne se soumet pas depuis ce dépôt tant que ce projet et le compte développeur TV ne sont pas prêts.
+- Ajouter la plateforme tvOS à l’app App Store Connect déjà liée au bundle iPhone, puis lancer `eas build -p ios --profile production-tv` sur ce même projet Expo. Pas de second projet EAS.
 - Pas de soumission App Store et pas de merge : `main` déploie le web.
