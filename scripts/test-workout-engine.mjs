@@ -21,7 +21,7 @@ const eas = read('eas.json');
 const appJson = JSON.parse(read('app.json'));
 const focus = read('src/components/tv/focus.tsx');
 const checks = [
-  ['profil production-tv isolé du téléphone', eas.includes('"production-tv"') && eas.includes('"EXPO_TV": "1"') && eas.includes('"RCT_USE_PREBUILT_RNCORE": "0"') && eas.includes('"EXPO_USE_PRECOMPILED_MODULES": "0"') && eas.includes('"autoIncrement": false') && !eas.includes('"extends": "production"')],
+  ['profil production-tv isolé du téléphone', eas.includes('"production-tv"') && eas.includes('"channel": "production-tv"') && eas.includes('"EXPO_TV": "1"') && eas.includes('"RCT_USE_PREBUILT_RNCORE": "0"') && eas.includes('"EXPO_USE_PRECOMPILED_MODULES": "0"') && eas.includes('"autoIncrement": false') && !eas.includes('"extends": "production"')],
   ['iPhone : react-native 0.88 et buildNumber 2', JSON.parse(read('package.json')).dependencies['react-native'] === '0.88.0' && appJson.expo.ios.buildNumber === '2'],
   ['TV : react-native-tvos 0.87-stable, swap seulement sur EAS', read('scripts/tv-build.mjs').includes('npm:react-native-tvos@0.87-stable') && read('scripts/tv-build.mjs').includes("env.EAS_BUILD === 'true'")],
   ['pre-install téléphone ne touche pas le lockfile', (() => {
@@ -43,20 +43,26 @@ const checks = [
   ['focus 10 pieds', focus.includes('scale: focused ? 1.08') && focus.includes('TVFocusGuideView') && focus.includes('hasTVPreferredFocus') && focus.includes('horizontal: 90') && focus.includes('vertical: 60') && focus.includes('#F6C453')],
   ['verre : flou, repli plein, boutons en relief', read('src/ui/glass.tsx').includes('0.90') && read('src/ui/effects.tsx').includes('reduceTransparency') && read('src/ui/kit.tsx').includes('raisedShadow')],
   ['catalogue tvOS aux tailles Apple', ['icon-home-front.png', 'icon-home-back.png', 'icon-store-front.png', 'icon-store-back.png', 'top-shelf.png', 'top-shelf-wide.png'].every((name) => existsSync(join(root, 'assets/tv', name)))],
-  ['config TV : build 2, même projet et même bundle, iPhone reste à 1', (() => {
+  ['config TV : build 2, projet familyfit-tv, même bundle, iPhone inchangé', (() => {
     const r = spawnSync(process.execPath, ['-e', `
       const app = require('./app.json');
+      delete process.env.FAMILYFIT_TV_EAS_PROJECT_ID;
       process.env.EXPO_TV = '1';
       const tv = require('./app.config.js')({ config: JSON.parse(JSON.stringify(app.expo)) });
+      process.env.FAMILYFIT_TV_EAS_PROJECT_ID = 'override-id';
+      delete require.cache[require.resolve('./app.config.js')];
+      const tvOverride = require('./app.config.js')({ config: JSON.parse(JSON.stringify(app.expo)) });
       process.env.EXPO_TV = '';
+      delete process.env.FAMILYFIT_TV_EAS_PROJECT_ID;
       delete require.cache[require.resolve('./app.config.js')];
       const phone = require('./app.config.js')({ config: JSON.parse(JSON.stringify(app.expo)) });
       if (tv.ios.buildNumber !== '2' || tv.ios.infoPlist.CFBundleVersion !== '2') process.exit(2);
-      if (tv.extra.eas.projectId !== '3104d765-4dcb-492e-ab04-ade0c86471d9') process.exit(3);
-      if (tv.ios.bundleIdentifier !== 'com.vibecode.familyfit-lpshhx' || tv.slug !== 'familyfit') process.exit(4);
+      if (tv.extra.eas.projectId !== 'c563620f-7c9e-4354-a3e1-2c43b8bcb31f') process.exit(3);
+      if (tv.ios.bundleIdentifier !== 'com.vibecode.familyfit-lpshhx' || tv.slug !== 'familyfit-tv') process.exit(4);
+      if (tvOverride.extra.eas.projectId !== 'override-id' || tvOverride.slug !== 'familyfit-tv') process.exit(7);
       if (phone.ios.buildNumber !== '2' || app.expo.ios.buildNumber !== '2') process.exit(5);
-      if (phone.extra.eas.projectId !== '3104d765-4dcb-492e-ab04-ade0c86471d9') process.exit(6);
-    `], { cwd: root, env: { ...process.env, EXPO_TV: '' }, encoding: 'utf8' });
+      if (phone.slug !== 'familyfit' || phone.extra.eas.projectId !== '3104d765-4dcb-492e-ab04-ade0c86471d9') process.exit(6);
+    `], { cwd: root, env: { ...process.env, EXPO_TV: '', FAMILYFIT_TV_EAS_PROJECT_ID: '' }, encoding: 'utf8' });
     if (r.status !== 0) console.error(r.stdout, r.stderr);
     return r.status === 0;
   })()],

@@ -31,6 +31,7 @@
     },
     "production-tv": {
       "autoIncrement": false,
+      "channel": "production-tv",
       "env": {
         "EXPO_TV": "1",
         "EXPO_NO_CAPABILITY_SYNC": "1",
