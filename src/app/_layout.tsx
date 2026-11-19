@@ -13,13 +13,16 @@ import { WRITE_FAILURE_MESSAGE } from '@/lib/preservation';
 import { AppErrorBoundary } from '@/ui/ErrorBoundary';
 import { Button, FontScaleProvider, LoadingState } from '@/ui/kit';
 import { theme as t } from '@/ui/theme';
+import { VisualEffectsProvider } from '@/ui/effects';
 import { ThemeProvider, useColorMode } from '@/ui/ThemeProvider';
 
 function Shell({ children }: { children: ReactNode }) {
   const { prefs } = useData();
   return (
-    <ThemeProvider scheme={prefs.colorScheme} haptics={prefs.haptics}>
-      <FontScaleProvider scale={prefs.largeText ? 1.5 : 1}>{children}</FontScaleProvider>
+    <ThemeProvider scheme={prefs.colorScheme} finish={prefs.finish} haptics={prefs.haptics}>
+      <VisualEffectsProvider>
+        <FontScaleProvider scale={prefs.largeText ? 1.5 : 1}>{children}</FontScaleProvider>
+      </VisualEffectsProvider>
     </ThemeProvider>
   );
 }

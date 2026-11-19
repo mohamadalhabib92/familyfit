@@ -1,7 +1,7 @@
 import { Redirect, Tabs } from 'expo-router';
 import { translate } from '@/lib/i18n';
 import { isTv } from '@/lib/platform';
-import { View } from 'react-native';
+import { Text, View } from 'react-native';
 import { TrialBanner } from '@/components/TrialBanner';
 import { useData } from '@/lib/data';
 import { routeAfterReady } from '@/lib/gate';
@@ -34,8 +34,13 @@ export default function TabsLayout() {
       <Tabs
         screenOptions={{
           headerStyle: { backgroundColor: t.bg }, headerTintColor: t.text, headerShadowVisible: false,
-          tabBarStyle: { backgroundColor: t.surface, borderTopColor: t.border, minHeight: 60 },
-          tabBarActiveTintColor: t.primary, tabBarInactiveTintColor: t.muted, tabBarLabelStyle: { fontSize: 12, fontWeight: '600' },
+          tabBarStyle: { backgroundColor: t.surface, borderTopColor: t.border, minHeight: 64 },
+          tabBarActiveTintColor: t.primary, tabBarInactiveTintColor: t.muted,
+          tabBarLabel: ({ color, children }) => (
+            <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65} style={{ color: typeof color === 'string' ? color : t.muted, fontSize: 11, fontWeight: '600', textAlign: 'center' }}>
+              {children}
+            </Text>
+          ),
           sceneStyle: { backgroundColor: t.bg },
         }}
       >

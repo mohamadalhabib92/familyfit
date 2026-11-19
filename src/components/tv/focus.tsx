@@ -93,7 +93,7 @@ export function TvFocusable({
       hasTVPreferredFocus={preferred}
       onFocus={() => {
         setFocused(true);
-        node.current?.measureInWindow((_x, y) => scrollTo?.(y));
+        if (typeof node.current?.measureInWindow === 'function') node.current.measureInWindow((_x, y) => scrollTo?.(y));
       }}
       onBlur={() => setFocused(false)}
       onPress={onPress}
@@ -104,11 +104,11 @@ export function TvFocusable({
           paddingHorizontal: 22,
           paddingVertical: 16,
           justifyContent: 'center',
-          opacity: focused ? 1 : 0.62,
+          opacity: 1,
           transform: [{ scale: focused ? 1.08 : 1 }],
-          backgroundColor: focused ? '#F4E7C8' : t.surface,
+          backgroundColor: focused ? '#FFF6E4' : '#E7E0D4',
           borderWidth: focused ? 6 : 2,
-          borderColor: focused ? '#F6C453' : t.border,
+          borderColor: focused ? '#F6C453' : '#8A8172',
           shadowColor: '#F6C453',
           shadowOpacity: focused ? 0.95 : 0,
           shadowRadius: focused ? 28 : 0,
@@ -117,6 +117,7 @@ export function TvFocusable({
         style,
       ] as PressableProps['style']}
     >
+      <View pointerEvents="none" style={{ position: 'absolute', top: 1, left: 16, right: 16, height: 6, borderRadius: 3, backgroundColor: focused ? 'rgba(255,255,255,0.55)' : 'rgba(255,255,255,0.18)' }} />
       {children}
     </Pressable>
   );
