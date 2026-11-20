@@ -71,5 +71,8 @@ function withAppleTv(config) {
   config.ios.infoPlist = info;
   config.extra = { ...(config.extra || {}), tv: true };
   config.extra.eas = { ...(config.extra.eas || {}), projectId: process.env.FAMILYFIT_TV_EAS_PROJECT_ID || 'c563620f-7c9e-4354-a3e1-2c43b8bcb31f' };
+  // Le schéma Expo 58 n’a plus `splash` à la racine (seulement web.splash).
+  // On le retire du profil TV. Le téléphone garde celui de app.json.
+  delete config.splash;
   return config;
 }

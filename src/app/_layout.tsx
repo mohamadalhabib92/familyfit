@@ -12,6 +12,7 @@ import { exportSnapshot } from '@/lib/storage';
 import { WRITE_FAILURE_MESSAGE } from '@/lib/preservation';
 import { AppErrorBoundary } from '@/ui/ErrorBoundary';
 import { Button, FontScaleProvider, LoadingState } from '@/ui/kit';
+import { isTv } from '@/lib/platform';
 import { theme as t } from '@/ui/theme';
 import { VisualEffectsProvider } from '@/ui/effects';
 import { ThemeProvider, useColorMode } from '@/ui/ThemeProvider';
@@ -30,11 +31,12 @@ function Shell({ children }: { children: ReactNode }) {
 function WritesPausedBanner() {
   const { writesPaused } = useData();
   const [note, setNote] = useState<string | null>(null);
+  const tv = isTv();
   if (!writesPaused) return null;
   return (
-    <View style={{ backgroundColor: t.warningBg, paddingHorizontal: 16, paddingVertical: 12, gap: 8 }}>
-      <Text accessibilityRole="header" style={{ color: t.text, fontWeight: '700' }}>Écritures en pause</Text>
-      <Text style={{ color: t.text, fontSize: 14, lineHeight: 20 }}>
+    <View style={{ backgroundColor: t.warningBg, paddingHorizontal: tv ? 28 : 16, paddingVertical: tv ? 18 : 12, gap: tv ? 12 : 8 }}>
+      <Text accessibilityRole="header" style={[{ color: t.text, fontWeight: '700' }, tv && { fontSize: 28, lineHeight: 34 }]}>Écritures en pause</Text>
+      <Text style={{ color: t.text, fontSize: tv ? 22 : 14, lineHeight: tv ? 30 : 20 }}>
         Ces données viennent d’une version plus récente, ou leur métadonnée est illisible. FamilyFit ne les réécrit pas. L’export est un instantané, pas une restauration. La suppression confirmée reste dans Famille.
       </Text>
       <Button
@@ -47,7 +49,7 @@ function WritesPausedBanner() {
           });
         }}
       />
-      {note ? <Text style={{ color: t.text, fontSize: 13 }}>{note}</Text> : null}
+      {note ? <Text style={{ color: t.text, fontSize: tv ? 20 : 13 }}>{note}</Text> : null}
     </View>
   );
 }
@@ -55,12 +57,13 @@ function WritesPausedBanner() {
 function UnsavedBanner() {
   const { unsaved, retryUnsaved } = useData();
   const [note, setNote] = useState<string | null>(null);
+  const tv = isTv();
   if (!unsaved.length) return null;
   const keys = unsaved.map((row) => row.key).join(', ');
   return (
-    <View accessibilityRole="alert" accessibilityLiveRegion="assertive" style={{ backgroundColor: t.dangerBg, paddingHorizontal: 16, paddingVertical: 12, gap: 8 }}>
-      <Text accessibilityRole="header" style={{ color: t.text, fontWeight: '700' }}>Modifications non enregistrées</Text>
-      <Text style={{ color: t.text, fontSize: 14, lineHeight: 20 }}>
+    <View accessibilityRole="alert" accessibilityLiveRegion="assertive" style={{ backgroundColor: t.dangerBg, paddingHorizontal: tv ? 28 : 16, paddingVertical: tv ? 18 : 12, gap: tv ? 12 : 8 }}>
+      <Text accessibilityRole="header" style={[{ color: t.text, fontWeight: '700' }, tv && { fontSize: 28, lineHeight: 34 }]}>Modifications non enregistrées</Text>
+      <Text style={{ color: t.text, fontSize: tv ? 22 : 14, lineHeight: tv ? 30 : 20 }}>
         {unsaved[0]?.error ?? WRITE_FAILURE_MESSAGE} Clés : {keys}. L’écran garde vos changements. L’appareil garde l’ancienne copie. Rien n’a été remis à vide.
       </Text>
       <Button small title="Réessayer l’enregistrement" onPress={() => { void retryUnsaved().then(() => setNote(null)); }} />
@@ -75,7 +78,7 @@ function UnsavedBanner() {
           });
         }}
       />
-      {note ? <Text style={{ color: t.text, fontSize: 13 }}>{note}</Text> : null}
+      {note ? <Text style={{ color: t.text, fontSize: tv ? 20 : 13 }}>{note}</Text> : null}
     </View>
   );
 }

@@ -40,7 +40,7 @@ const checks = [
     return head.includes('#if !os(tvOS)') && !head.includes('#if !os(tvOS)\n    } else if') && pod.includes(":tvos => '16.4'") && pod.includes("s.tvos.exclude_files = 'LinkPreview/**/*', 'Toolbar/**/*'");
   })()],
   ['modules absents de tvOS exclus', ['familyfit-health', 'expo-haptics', 'expo-notifications', 'expo-speech'].every((name) => read('scripts/tv-native.cjs').includes(name))],
-  ['focus 10 pieds', focus.includes('scale: focused ? 1.08') && focus.includes('TVFocusGuideView') && focus.includes('hasTVPreferredFocus') && focus.includes('horizontal: 90') && focus.includes('vertical: 60') && focus.includes('#F6C453')],
+  ['focus 10 pieds', focus.includes('scale: focused ? 1.08') && focus.includes('TVFocusGuideView') && focus.includes('hasTVPreferredFocus') && read('src/lib/tvSurface.ts').includes('horizontal: 90') && read('src/lib/tvSurface.ts').includes('vertical: 60') && focus.includes('#F6C453') && !focus.includes('measureInWindow') && !focus.includes('1080')],
   ['verre : flou, repli plein, boutons en relief', read('src/ui/glass.tsx').includes('0.90') && read('src/ui/effects.tsx').includes('reduceTransparency') && read('src/ui/kit.tsx').includes('raisedShadow')],
   ['catalogue tvOS aux tailles Apple', ['icon-home-front.png', 'icon-home-back.png', 'icon-store-front.png', 'icon-store-back.png', 'top-shelf.png', 'top-shelf-wide.png'].every((name) => existsSync(join(root, 'assets/tv', name)))],
   ['config TV : build 2, projet familyfit-tv, même bundle, iPhone inchangé', (() => {
@@ -62,6 +62,8 @@ const checks = [
       if (tvOverride.extra.eas.projectId !== 'override-id' || tvOverride.slug !== 'familyfit-tv') process.exit(7);
       if (phone.ios.buildNumber !== '2' || app.expo.ios.buildNumber !== '2') process.exit(5);
       if (phone.slug !== 'familyfit' || phone.extra.eas.projectId !== '3104d765-4dcb-492e-ab04-ade0c86471d9') process.exit(6);
+      if (tv.splash) process.exit(8);
+      if (!phone.splash || phone.splash.image !== './assets/splash-icon.png') process.exit(9);
     `], { cwd: root, env: { ...process.env, EXPO_TV: '', FAMILYFIT_TV_EAS_PROJECT_ID: '' }, encoding: 'utf8' });
     if (r.status !== 0) console.error(r.stdout, r.stderr);
     return r.status === 0;

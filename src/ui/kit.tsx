@@ -16,8 +16,8 @@ import {
   type ViewStyle,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import * as Haptics from 'expo-haptics';
 import { isTv, useUiScale } from '@/lib/platform';
+import { shouldRequireNative } from '@/lib/tvNativeGuard';
 import { inkOn } from './contrast';
 import { theme as t } from './theme';
 import { useVisualEffects } from './effects';
@@ -68,7 +68,7 @@ export function Screen({ children, scroll = true, padded = true }: { children: R
   const pad = Math.round((isTv() ? 36 : 20) * ui);
   const glass = useGlassLook();
   const inner = (
-    <View style={[styles.inner, { maxWidth: isTv() ? 1280 : 920 }, padded && { padding: pad }, { paddingBottom: 48 + insets.bottom }]}>{children}</View>
+    <View style={[styles.inner, { maxWidth: isTv() ? '100%' : 920 }, padded && { padding: pad }, { paddingBottom: 48 + insets.bottom }]}>{children}</View>
   );
   return (
     <View style={[styles.screen, { backgroundColor: t.bg }]}>
@@ -193,7 +193,7 @@ export function Button({
   return (
     <Pressable
       onPress={off ? undefined : () => {
-        if (hapticsOn && motion && variant === 'primary' && !fx.tv) void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined);
+        if (hapticsOn && motion && variant === 'primary' && !fx.tv) tapPrimary();
         onPress?.();
       }}
       accessibilityRole="button"
@@ -376,16 +376,29 @@ export function Hero({ kicker, title, text, action }: { kicker: string; title: s
   );
 }
 
+function tapPrimary() {
+  if (!shouldRequireNative('expo-haptics', (Platform as { isTV?: boolean }).isTV === true)) return;
+  try {
+    const Haptics = require('expo-haptics') as typeof import('expo-haptics');
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined);
+  } catch {
+    // Module absent : le bouton reste utilisable.
+  }
+}
+
 export function Notice({ tone = 'info', title, text, icon }: { tone?: 'info' | 'warning' | 'danger' | 'success'; title: string; text?: string; icon?: IconName }) {
   const map = { info: [t.infoBg, t.info], warning: [t.warningBg, t.warning], danger: [t.dangerBg, t.danger], success: [t.successBg, t.success] } as const;
   const [bg, fg] = map[tone];
   const ic: IconName = icon ?? ({ info: 'information-circle', warning: 'warning', danger: 'alert-circle', success: 'checkmark-circle' } as const)[tone];
+  const tv = isTv();
+  const titleSize = tv ? 26 : 14;
+  const bodySize = tv ? 22 : 13;
   return (
-    <View style={[styles.notice, { backgroundColor: bg }]} accessibilityRole="alert">
-      <Ionicons name={ic} size={20} color={fg} style={{ marginTop: 1 }} />
+    <View style={[styles.notice, { backgroundColor: bg, padding: tv ? 20 : 12, gap: tv ? 16 : 10 }]} accessibilityRole="alert">
+      <Ionicons name={ic} size={tv ? 32 : 20} color={fg} style={{ marginTop: 1 }} />
       <View style={{ flex: 1 }}>
-        <Text style={{ color: fg, fontWeight: '700', fontSize: 14 }}>{title}</Text>
-        {text ? <Text style={{ color: t.text, fontSize: 13, marginTop: 2, lineHeight: 19 }}>{text}</Text> : null}
+        <Text style={{ color: fg, fontWeight: '700', fontSize: titleSize, lineHeight: Math.round(titleSize * 1.25) }}>{title}</Text>
+        {text ? <Text style={{ color: t.text, fontSize: bodySize, marginTop: tv ? 6 : 2, lineHeight: Math.round(bodySize * 1.35) }}>{text}</Text> : null}
       </View>
     </View>
   );
