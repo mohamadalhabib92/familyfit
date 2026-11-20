@@ -16,7 +16,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.vibecode.familyfit-lpshhx",
-      "buildNumber": "1",
+      "buildNumber": "2",
       "config": {
         "usesNonExemptEncryption": false
       },
@@ -80,6 +80,7 @@
     "plugins": [
       "expo-router",
       "expo-notifications",
+      "expo-video",
       "@react-native-tvos/config-tv",
       "./plugins/withFamilyFitHealth"
     ],

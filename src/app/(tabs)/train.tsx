@@ -80,6 +80,12 @@ export default function Train() {
           </Card>
         ))}
       </View>
+      <Card>
+        <H2>{copy('moves.title')}</H2>
+        <Muted>{copy('moves.lead')}</Muted>
+        <Spacer h={8} />
+        <Button title={copy('moves.open')} icon="body-outline" onPress={() => router.push('/moves')} />
+      </Card>
       <H2>{copy('train.level')}</H2>
       {selected.map((m) => (
         <Muted key={m.id}>{displayName(m, me)} · {copy(`age.${defaultAgeBand(m)}` as 'age.adult')}</Muted>

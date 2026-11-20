@@ -16,11 +16,13 @@ import {
   type ViewStyle,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import * as Haptics from 'expo-haptics';
 import { isTv, useUiScale } from '@/lib/platform';
+import { shouldRequireNative } from '@/lib/tvNativeGuard';
 import { inkOn } from './contrast';
 import { theme as t } from './theme';
-import { useHapticsEnabled } from './ThemeProvider';
+import { useVisualEffects } from './effects';
+import { glassWash, GlassLayers, raisedShadow, useGlassLook } from './glass';
+import { isDark, useHapticsEnabled } from './ThemeProvider';
 
 const FontScaleContext = createContext(1);
 export function FontScaleProvider({ scale, children }: { scale: number; children: ReactNode }) {
@@ -64,11 +66,13 @@ export function Screen({ children, scroll = true, padded = true }: { children: R
   const insets = useSafeAreaInsets();
   const ui = useUiScale();
   const pad = Math.round((isTv() ? 36 : 20) * ui);
+  const glass = useGlassLook();
   const inner = (
-    <View style={[styles.inner, { maxWidth: isTv() ? 1280 : 920 }, padded && { padding: pad }, { paddingBottom: 48 + insets.bottom }]}>{children}</View>
+    <View style={[styles.inner, { maxWidth: isTv() ? '100%' : 920 }, padded && { padding: pad }, { paddingBottom: 48 + insets.bottom }]}>{children}</View>
   );
   return (
     <View style={[styles.screen, { backgroundColor: t.bg }]}>
+      {glass ? <View pointerEvents="none" style={{ position: 'absolute', width: 280, height: 280, borderRadius: 140, backgroundColor: glassWash(), top: -80, right: -90 }} /> : null}
       {scroll ? (
         <ScrollView contentInsetAdjustmentBehavior="automatic" keyboardShouldPersistTaps="handled">
           {inner}
@@ -118,7 +122,19 @@ export function Eyebrow({ children, style }: { children: ReactNode; style?: Styl
 
 export function Card({ children, style, onPress, accessibilityLabel }: { children: ReactNode; style?: StyleProp<ViewStyle>; onPress?: () => void; accessibilityLabel?: string }) {
   const reduce = useReduceMotion();
+  const glass = useGlassLook();
   const face: ViewStyle = { backgroundColor: t.surface, borderColor: t.border, borderRadius: t.radii.md };
+  if (glass) {
+    const inner = <View style={{ padding: 18 }}>{children}</View>;
+    if (onPress) {
+      return (
+        <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={accessibilityLabel} style={({ pressed, focused }: { pressed: boolean; focused?: boolean }) => [{ marginBottom: 12, borderRadius: t.radii.md }, pressed && !reduce && { transform: [{ scale: 0.985 }] }, focused && { borderWidth: 3, borderColor: t.accentText }, style]}>
+          <GlassLayers radius={t.radii.md}>{inner}</GlassLayers>
+        </Pressable>
+      );
+    }
+    return <GlassLayers radius={t.radii.md} style={[{ marginBottom: 12 }, style]}>{inner}</GlassLayers>;
+  }
   if (onPress) {
     return (
       <Pressable
@@ -168,13 +184,16 @@ export function Button({
   const s = useTypeScale();
   const reduce = useReduceMotion();
   const hapticsOn = useHapticsEnabled();
+  const fx = useVisualEffects();
+  const raised = variant !== 'ghost';
   const bg = { primary: t.primary, secondary: t.surfaceAlt, ghost: 'transparent', danger: t.danger }[variant];
   const fg = { primary: t.onPrimary, secondary: t.text, ghost: t.primary, danger: t.onDanger }[variant];
   const off = disabled || loading;
+  const motion = fx.motion && !reduce;
   return (
     <Pressable
       onPress={off ? undefined : () => {
-        if (hapticsOn && !reduce && variant === 'primary') void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined);
+        if (hapticsOn && motion && variant === 'primary' && !fx.tv) tapPrimary();
         onPress?.();
       }}
       accessibilityRole="button"
@@ -184,15 +203,25 @@ export function Button({
       style={({ pressed, focused }: { pressed: boolean; focused?: boolean }) => [
         styles.btn,
         small && styles.btnSmall,
-        { backgroundColor: bg, borderRadius: t.radii.md, minHeight: Math.max(small ? 44 : 52, 44 * s) },
+        { backgroundColor: bg, borderRadius: t.radii.md, minHeight: Math.max(small ? 44 : 52, 44 * s), overflow: 'hidden' },
         variant === 'ghost' && { borderWidth: 1, borderColor: t.border },
-        pressed && !off && { opacity: 0.88 },
-        pressed && !off && !reduce && { transform: [{ scale: 0.985 }] },
-        focused && { borderWidth: 3, borderColor: t.accentText },
+        raised && raisedShadow(!!pressed && !off && !focused, motion),
+        !raised && pressed && !off && motion && { opacity: 0.88, transform: [{ scale: 0.985 }] },
+        !raised && pressed && !off && !motion && { opacity: 0.88 },
+        focused && {
+          borderWidth: fx.tv ? 6 : 3,
+          borderTopWidth: fx.tv ? 6 : 3,
+          borderBottomWidth: fx.tv ? 6 : 3,
+          borderLeftWidth: fx.tv ? 6 : 3,
+          borderRightWidth: fx.tv ? 6 : 3,
+          borderColor: isDark() ? '#F6C453' : t.accentText,
+        },
         off && { opacity: 0.45 },
         style,
       ]}
     >
+      {raised ? <View pointerEvents="none" style={{ position: 'absolute', top: 1, left: 14, right: 14, height: 7, borderRadius: 4, backgroundColor: 'rgba(255,255,255,0.30)' }} /> : null}
+      {raised ? <View pointerEvents="none" style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 8, backgroundColor: 'rgba(0,0,0,0.10)' }} /> : null}
       {loading ? (
         <ActivityIndicator color={fg} />
       ) : (
@@ -347,16 +376,29 @@ export function Hero({ kicker, title, text, action }: { kicker: string; title: s
   );
 }
 
+function tapPrimary() {
+  if (!shouldRequireNative('expo-haptics', (Platform as { isTV?: boolean }).isTV === true)) return;
+  try {
+    const Haptics = require('expo-haptics') as typeof import('expo-haptics');
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined);
+  } catch {
+    // Module absent : le bouton reste utilisable.
+  }
+}
+
 export function Notice({ tone = 'info', title, text, icon }: { tone?: 'info' | 'warning' | 'danger' | 'success'; title: string; text?: string; icon?: IconName }) {
   const map = { info: [t.infoBg, t.info], warning: [t.warningBg, t.warning], danger: [t.dangerBg, t.danger], success: [t.successBg, t.success] } as const;
   const [bg, fg] = map[tone];
   const ic: IconName = icon ?? ({ info: 'information-circle', warning: 'warning', danger: 'alert-circle', success: 'checkmark-circle' } as const)[tone];
+  const tv = isTv();
+  const titleSize = tv ? 26 : 14;
+  const bodySize = tv ? 22 : 13;
   return (
-    <View style={[styles.notice, { backgroundColor: bg }]} accessibilityRole="alert">
-      <Ionicons name={ic} size={20} color={fg} style={{ marginTop: 1 }} />
+    <View style={[styles.notice, { backgroundColor: bg, padding: tv ? 20 : 12, gap: tv ? 16 : 10 }]} accessibilityRole="alert">
+      <Ionicons name={ic} size={tv ? 32 : 20} color={fg} style={{ marginTop: 1 }} />
       <View style={{ flex: 1 }}>
-        <Text style={{ color: fg, fontWeight: '700', fontSize: 14 }}>{title}</Text>
-        {text ? <Text style={{ color: t.text, fontSize: 13, marginTop: 2, lineHeight: 19 }}>{text}</Text> : null}
+        <Text style={{ color: fg, fontWeight: '700', fontSize: titleSize, lineHeight: Math.round(titleSize * 1.25) }}>{title}</Text>
+        {text ? <Text style={{ color: t.text, fontSize: bodySize, marginTop: tv ? 6 : 2, lineHeight: Math.round(bodySize * 1.35) }}>{text}</Text> : null}
       </View>
     </View>
   );

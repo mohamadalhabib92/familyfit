@@ -50,12 +50,14 @@ export type Prefs = {
   largeText: boolean;
   locale: 'fr' | 'en' | 'de' | 'ar';
   colorScheme: 'system' | 'light' | 'dark';
+  /** Classique, verre clair, ou verre or. Absent sur un ancien disque : classique. */
+  finish: 'classic' | 'verre' | 'verre-or';
   haptics: boolean;
 };
 const DEFAULT_PREFS: Prefs = {
   configAck: false, onboarded: false, hijriOffset: 0, showHijri: true, filterCats: [], filterMembers: [],
   trialMode: false, trialDeclined: false, devConfigUnlocked: false, largeText: false,
-  locale: 'fr', colorScheme: 'system', haptics: true,
+  locale: 'fr', colorScheme: 'system', finish: 'classic', haptics: true,
 };
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -136,7 +138,12 @@ export function DataProvider({ children }: { children: ReactNode }) {
     return [];
   };
   const storageSlow = !ready && (s1 || s2 || s3 || s4 || s5 || s6 || s7 || s8 || s9 || s10 || s11 || s13);
-  const mergedPrefs: Prefs = { ...DEFAULT_PREFS, ...prefs, locale: normalizeLocale(prefs?.locale) };
+  const mergedPrefs: Prefs = {
+    ...DEFAULT_PREFS,
+    ...prefs,
+    locale: normalizeLocale(prefs?.locale),
+    finish: prefs?.finish === 'verre' || prefs?.finish === 'verre-or' ? prefs.finish : 'classic',
+  };
 
   const remote = async <T,>(fn: string, args: Record<string, unknown>): Promise<T | null> => {
     try {

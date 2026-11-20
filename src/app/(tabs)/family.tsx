@@ -103,7 +103,8 @@ export default function FamilyTab() {
       <Spacer />
       <H2>Réglages</H2>
       <Segmented label={translate(prefs.locale, 'settings.language')} options={LOCALES.map((locale) => ({ label: locale.toUpperCase(), value: locale }))} value={prefs.locale} onChange={(v) => setPrefs((p) => ({ ...p, locale: v }))} />
-      <Segmented label={translate(prefs.locale, 'settings.appearance')} options={(['system', 'light', 'dark'] as const).map((value) => ({ label: translate(prefs.locale, value === 'system' ? 'settings.system' : value === 'light' ? 'settings.light' : 'settings.dark'), value }))} value={prefs.colorScheme} onChange={(v) => setPrefs((p) => ({ ...p, colorScheme: v }))} />
+      <Segmented label={translate(prefs.locale, 'settings.appearance')} options={(['system', 'light', 'dark'] as const).map((value) => ({ label: translate(prefs.locale, value === 'system' ? 'settings.system' : value === 'light' ? 'settings.light' : 'settings.dark'), value }))} value={prefs.colorScheme} onChange={(v) => setPrefs((p) => ({ ...p, colorScheme: v, finish: 'classic' }))} />
+      <Segmented label={translate(prefs.locale, 'settings.finish')} options={(['classic', 'verre', 'verre-or'] as const).map((value) => ({ label: translate(prefs.locale, value === 'classic' ? 'settings.classic' : value === 'verre' ? 'settings.verre' : 'settings.verreOr'), value }))} value={prefs.finish} onChange={(v) => setPrefs((p) => ({ ...p, finish: v }))} />
       <Toggle label={translate(prefs.locale, 'settings.haptics')} value={prefs.haptics} onChange={(v) => setPrefs((p) => ({ ...p, haptics: v }))} />
       <Toggle label="Afficher la date hégirienne" value={prefs.showHijri} onChange={(v) => setPrefs((p) => ({ ...p, showHijri: v }))} />
       {prefs.showHijri ? (

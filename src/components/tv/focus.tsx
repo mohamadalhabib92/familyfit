@@ -1,18 +1,14 @@
-import { createContext, useCallback, useContext, useRef, useState, type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Pressable, ScrollView, View, type PressableProps, type StyleProp, type ViewStyle } from 'react-native';
+import { TV_SAFE } from '@/lib/tvSurface';
 import { theme as t } from '@/ui/theme';
 
-/** Marges de sécurité 10 pieds pour un écran 1920×1080. */
-export const TV_SAFE = { horizontal: 90, vertical: 60 };
+export { TV_SAFE };
 
 type GuideProps = { children?: ReactNode; style?: StyleProp<ViewStyle>; autoFocus?: boolean };
 
 const RN = require('react-native') as { TVFocusGuideView?: (props: GuideProps) => ReactNode };
 const TVFocusGuideView = RN.TVFocusGuideView ?? View;
-
-type ScrollTo = (windowY: number) => void;
-const ScrollContext = createContext<ScrollTo | null>(null);
-type Measurable = { measureInWindow: (cb: (x: number, y: number, w: number, h: number) => void) => void };
 
 export function TvScreen({ children }: { children: ReactNode }) {
   return (
@@ -22,40 +18,27 @@ export function TvScreen({ children }: { children: ReactNode }) {
   );
 }
 
+/** Défilement natif tvOS. Le focus engine amène l’élément visible, sans mesure forcée. */
 export function TvScroll({ children }: { children: ReactNode }) {
-  const scroller = useRef<{ scrollTo: (opts: { y: number; animated?: boolean }) => void } | null>(null);
-  const offset = useRef(0);
-  const scrollTo = useCallback<ScrollTo>((windowY) => {
-    if (windowY >= TV_SAFE.vertical && windowY <= 1080 - TV_SAFE.vertical - 120) return;
-    scroller.current?.scrollTo({ y: Math.max(0, offset.current + windowY - 220), animated: true });
-  }, []);
   return (
-    <ScrollContext.Provider value={scrollTo}>
-      <ScrollView
-        ref={(el) => { scroller.current = el as unknown as { scrollTo: (opts: { y: number; animated?: boolean }) => void } | null; }}
-        onScroll={(e) => { offset.current = e.nativeEvent.contentOffset.y; }}
-        scrollEventThrottle={16}
-        style={{ flex: 1, backgroundColor: t.bg }}
-        contentContainerStyle={{
-          paddingHorizontal: TV_SAFE.horizontal,
-          paddingTop: TV_SAFE.vertical,
-          paddingBottom: TV_SAFE.vertical + 24,
-        }}
-      >
-        {children}
-      </ScrollView>
-    </ScrollContext.Provider>
+    <ScrollView
+      style={{ flex: 1, backgroundColor: t.bg }}
+      contentContainerStyle={{
+        flexGrow: 1,
+        paddingHorizontal: TV_SAFE.horizontal,
+        paddingTop: TV_SAFE.vertical,
+        paddingBottom: TV_SAFE.vertical + 24,
+      }}
+    >
+      {children}
+    </ScrollView>
   );
 }
 
 export function TvTitle({ children }: { children: ReactNode }) {
   return (
     <View accessibilityRole="header">
-      {typeof children === 'string' ? (
-        <Pressable accessible={false} style={{ marginBottom: 8 }}>
-          <TvText size={56} weight="800">{children}</TvText>
-        </Pressable>
-      ) : children}
+      {typeof children === 'string' ? <TvText size={56} weight="800">{children}</TvText> : children}
     </View>
   );
 }
@@ -67,33 +50,34 @@ export function TvText({ children, size = 28, weight = '600', color = t.text }: 
 
 /**
  * Un seul habillage focusable. Focus : fond clair, bord épais, échelle 1,08, halo.
- * Hors focus : plus sombre. Le premier élément peut prendre le focus au chargement.
+ * Hors focus : plus sombre. `preferred` ne s’applique qu’une fois, puis le relâche.
  */
 export function TvFocusable({
   children,
   label,
   onPress,
   preferred,
+  selected,
   style,
 }: {
   children: ReactNode;
   label: string;
   onPress?: () => void;
   preferred?: boolean;
+  selected?: boolean;
   style?: StyleProp<ViewStyle>;
 }) {
   const [focused, setFocused] = useState(false);
-  const node = useRef<Measurable | null>(null);
-  const scrollTo = useContext(ScrollContext);
+  const [grab, setGrab] = useState(!!preferred);
   return (
     <Pressable
-      ref={(el) => { node.current = el as unknown as Measurable | null; }}
       accessibilityRole="button"
       accessibilityLabel={label}
-      hasTVPreferredFocus={preferred}
+      accessibilityState={{ selected: !!selected }}
+      hasTVPreferredFocus={grab}
       onFocus={() => {
+        setGrab(false);
         setFocused(true);
-        node.current?.measureInWindow((_x, y) => scrollTo?.(y));
       }}
       onBlur={() => setFocused(false)}
       onPress={onPress}
@@ -104,11 +88,11 @@ export function TvFocusable({
           paddingHorizontal: 22,
           paddingVertical: 16,
           justifyContent: 'center',
-          opacity: focused ? 1 : 0.62,
+          opacity: 1,
           transform: [{ scale: focused ? 1.08 : 1 }],
-          backgroundColor: focused ? '#F4E7C8' : t.surface,
-          borderWidth: focused ? 6 : 2,
-          borderColor: focused ? '#F6C453' : t.border,
+          backgroundColor: focused ? '#FFF6E4' : selected ? '#F3EBD6' : '#E7E0D4',
+          borderWidth: focused ? 6 : selected ? 4 : 2,
+          borderColor: focused ? '#F6C453' : selected ? '#2F4B43' : '#8A8172',
           shadowColor: '#F6C453',
           shadowOpacity: focused ? 0.95 : 0,
           shadowRadius: focused ? 28 : 0,
@@ -117,6 +101,7 @@ export function TvFocusable({
         style,
       ] as PressableProps['style']}
     >
+      <View pointerEvents="none" style={{ position: 'absolute', top: 1, left: 16, right: 16, height: 6, borderRadius: 3, backgroundColor: focused ? 'rgba(255,255,255,0.55)' : 'rgba(255,255,255,0.18)' }} />
       {children}
     </Pressable>
   );

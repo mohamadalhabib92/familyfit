@@ -1,14 +1,15 @@
 import { useEffect, useRef, useState } from 'react';
-import { Text, View } from 'react-native';
+import { Text, useWindowDimensions, View } from 'react-native';
 import { CoachAvatar } from '@/components/CoachAvatar';
 import { coachById, SCRIPTED_COACH, type CoachBrain } from '@/lib/coaches';
 import { deviceSpeaker, silentSpeaker, type Speaker } from '@/lib/speechVoice';
-import { activeBlock, buildTimeline, cuesBetween, pausePlayer, requestSkipWarmup, startPlayer, tick, variantFor, type AgeBand, type Block, type CoachId, type Locale, type Player } from '@/lib/workoutEngine';
+import { activeBlock, buildTimeline, cuesBetween, pausePlayer, requestSkipWarmup, startPlayer, tick, variantFor, type AgeBand, type Block, type CoachId, type Locale } from '@/lib/workoutEngine';
 import { createPlayer } from '@/lib/workoutEngine';
 import { translate, type CopyKey } from '@/lib/i18n';
 import { HEALTH_DISCLAIMER } from '@/lib/health';
 import { TvFocusable, TvText } from '@/components/tv/focus';
 import { isTv } from '@/lib/platform';
+import { workoutColumns } from '@/lib/tvSurface';
 import { Button, Card, Muted, Notice } from '@/ui/kit';
 import { useReduceMotion } from '@/ui/motion';
 import { theme as t } from '@/ui/theme';
@@ -22,6 +23,8 @@ export function SessionPlayer({
   participants,
   onComplete,
   brain,
+  sessionKey = 'phone',
+  onRunningChange,
 }: {
   blocks: Block[];
   coachId: CoachId;
@@ -31,25 +34,62 @@ export function SessionPlayer({
   participants: { id: string; name: string; band: AgeBand }[];
   onComplete: (durationSec: number) => void;
   brain?: CoachBrain | null;
+  /** Change seulement quand la routine change et que la séance n’est pas en cours. */
+  sessionKey?: string;
+  onRunningChange?: (running: boolean) => void;
 }) {
+  const tv = isTv();
+  const window = useWindowDimensions();
+  const frame = tv ? workoutColumns({ width: window.width, height: window.height }) : null;
   const coach = coachById(coachId);
   const mind = brain ?? SCRIPTED_COACH;
   const speaker = useRef<Speaker>(voice ? deviceSpeaker() : silentSpeaker());
   const reduce = useReduceMotion();
   const [{ player, line, note }, setUi] = useState(() => ({ player: createPlayer(), line: '', note: '' }));
+  const uiRef = useRef({ player: createPlayer(), line: '', note: '' });
+  uiRef.current = { player, line, note };
   const timeline = buildTimeline(blocks);
   const warm = blocks.filter((b) => b.phase === 'warmup').reduce((s, b) => s + b.workSec + b.restSec, 0);
   const saved = useRef(false);
+  const seenKey = useRef<string | null>(null);
   const copy = (key: CopyKey) => translate(locale, key);
+  const coachSize = frame?.coachSize ?? (tv ? 160 : 96);
+  const timerSize = frame?.timerSize ?? (tv ? 72 : 40);
 
-  const speakRange = (from: number, to: number, current: Player) => {
-    const due = cuesBetween(timeline.cues, from, to);
-    const last = due[due.length - 1];
-    if (!last) return current;
-    const text = mind.line({ cue: last, locale, coachId, band });
-    if (text && !reduce) speaker.current.speak(text, coach, locale);
-    return current;
-  };
+  useEffect(() => {
+    if (seenKey.current === null) {
+      seenKey.current = sessionKey;
+      return;
+    }
+    if (seenKey.current === sessionKey || uiRef.current.player.running) return;
+    seenKey.current = sessionKey;
+    saved.current = false;
+    speaker.current.stop();
+    const fresh = { player: createPlayer(), line: '', note: '' };
+    uiRef.current = fresh;
+    setUi(fresh);
+  }, [sessionKey]);
+
+  useEffect(() => {
+    onRunningChange?.(player.running);
+  }, [player.running, onRunningChange]);
+
+  useEffect(() => {
+    if (!tv || !player.running) return undefined;
+    let release = () => {};
+    try {
+      const keep = require('expo-keep-awake') as {
+        activateKeepAwakeAsync?: (tag?: string) => Promise<void>;
+        deactivateKeepAwake?: (tag?: string) => void | Promise<void>;
+      };
+      const tag = 'familyfit-tv-workout';
+      void keep.activateKeepAwakeAsync?.(tag)?.catch(() => undefined);
+      release = () => {
+        try { void Promise.resolve(keep.deactivateKeepAwake?.(tag)).catch(() => undefined); } catch { /* écran déjà libre */ }
+      };
+    } catch { /* module absent : la séance continue */ }
+    return release;
+  }, [tv, player.running]);
 
   useEffect(() => {
     speaker.current = voice && !reduce ? deviceSpeaker() : silentSpeaker();
@@ -63,13 +103,14 @@ export function SessionPlayer({
       const now = Date.now();
       const delta = (now - last) / 1000;
       last = now;
-      setUi((ui) => {
-        const step = tick(ui.player, delta, timeline.durationSec, warm);
-        const spoken = speakRange(step.from, step.to, step.player);
-        const cue = cuesBetween(timeline.cues, step.from, step.to).at(-1);
-        const text = cue ? mind.line({ cue, locale, coachId, band }) : ui.line;
-        return { player: spoken, line: text || ui.line, note: ui.note };
-      });
+      const ui = uiRef.current;
+      const step = tick(ui.player, delta, timeline.durationSec, warm);
+      const cue = cuesBetween(timeline.cues, step.from, step.to).at(-1);
+      const text = cue ? mind.line({ cue, locale, coachId, band }) : ui.line;
+      if (text && text !== ui.line && !reduce) speaker.current.speak(text, coach, locale);
+      const next = { player: step.player, line: text || ui.line, note: ui.note };
+      uiRef.current = next;
+      setUi(next);
     }, 250);
     return () => clearInterval(id);
   }, [player.running, timeline.durationSec, warm, locale, coachId, band, mind]);
@@ -91,15 +132,15 @@ export function SessionPlayer({
     <View style={{ gap: 12 }}>
       <Card>
         <View style={{ flexDirection: 'row', gap: 16, alignItems: 'center' }}>
-          <CoachAvatar coachId={coachId} size={96} />
+          <CoachAvatar coachId={coachId} size={coachSize} />
           <View style={{ flex: 1, gap: 4 }}>
-            <Text style={{ color: t.muted, fontWeight: '700', letterSpacing: 1 }}>{coach.name}</Text>
-            <Text accessibilityRole="timer" style={{ color: t.text, fontSize: 40, fontWeight: '700', letterSpacing: -1 }}>{`${mm}:${String(ss).padStart(2, '0')}`}</Text>
-            <Text style={{ color: t.text, fontSize: 18, fontWeight: '700' }}>{variant ? variant.name[locale] : copy('player.done')}</Text>
+            <Text style={{ color: t.muted, fontWeight: '700', letterSpacing: 1, fontSize: tv ? 22 : 14 }}>{coach.name}</Text>
+            <Text accessibilityRole="timer" style={{ color: t.text, fontSize: timerSize, fontWeight: '700', letterSpacing: -1 }}>{`${mm}:${String(ss).padStart(2, '0')}`}</Text>
+            <Text style={{ color: t.text, fontSize: tv ? 32 : 18, fontWeight: '700' }}>{variant ? variant.name[locale] : copy('player.done')}</Text>
             <Muted>{resting ? copy('player.rest') : copy('player.work')}{here ? ` · ${here.remaining}s` : ''}</Muted>
           </View>
         </View>
-        <Text accessibilityLiveRegion="polite" style={{ color: t.text, fontSize: 16, lineHeight: 23, marginTop: 12 }}>{line || variant?.steps[locale]}</Text>
+        <Text accessibilityLiveRegion="polite" style={{ color: t.text, fontSize: tv ? 28 : 16, lineHeight: tv ? 36 : 23, marginTop: 12 }}>{line || variant?.steps[locale]}</Text>
         {variant ? <Muted style={{ marginTop: 8 }}>{variant.contraindication[locale]}</Muted> : null}
       </Card>
       {participants.length > 1 && here ? (

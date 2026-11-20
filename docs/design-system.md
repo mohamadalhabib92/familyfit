@@ -44,6 +44,10 @@ Impact léger sur le bouton principal, si le réglage Famille est allumé et si 
 - Tablette (largeur ≥ 900) : les coachs et les compteurs passent côte à côte. L’échelle de type est 1,05.
 - Apple TV : échelle 1,45, marge plus large, largeur max 1280, anneau de focus sur les cartes et les boutons (`focused`). L’écran `tv` est le salon : profils larges, coach 220 pt, phrases pour la télécommande. Pas d’onglets.
 
+## Verre
+
+Famille → Fini : Classique (inchangé), Verre (clair dépoli), Verre or (sombre, liseré `#D08C60`). Le voile du verre est à 90 % d’opacité : le texte reste sur une surface lisible, le flou est derrière. « Réduire la transparence » retire le flou et revient aux cartes pleines. « Réduire les animations » retire l’enfoncement du bouton. Les boutons partagés ont une arête claire, une ombre, un dégradé bas, et s’enfoncent au toucher. Sur Apple TV le focus reste un bord doré épais et une échelle 1,08.
+
 ## Voix et écriture
 
 Les séances et le chrome des onglets existent en FR, EN, DE et AR. L’agenda historique reste en français. L’arabe aligne le texte des séances ; l’app entière ne force pas le RTL, pour ne pas déplacer l’agenda déjà là.
