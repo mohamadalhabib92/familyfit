@@ -8,7 +8,7 @@ import { useData } from '@/lib/data';
 import { BODY_PARTS, rosterCoachId, type BodyPartId, type RosterCoachId } from '@/lib/coachLibrary';
 import { translate, type CopyKey } from '@/lib/i18n';
 import { isTv } from '@/lib/platform';
-import { claimsPreferredFocus, profileGrid } from '@/lib/tvSurface';
+import { profileGrid } from '@/lib/tvSurface';
 import { Card, Muted } from '@/ui/kit';
 import { theme as t } from '@/ui/theme';
 
@@ -31,13 +31,24 @@ export default function MovePicker() {
   return (
     <MovesFrame title={copy('moves.title')} subtitle={copy('moves.lead')} backLabel={copy('moves.back')}>
       <CoachPicker selected={rosterCoachId(coachId, 'coach-homme')} onSelect={setCoachId} label={copy('moves.coach')} />
+      {tv ? (
+        <TvFocusable preferred label={copy('seance.title')} onPress={() => router.push({ pathname: '/moves/seance', params: { coach: coachId } })}>
+          <TvText size={32} weight="800" color="#1D2522">{copy('seance.title')}</TvText>
+          <TvText size={20} color="#3D4A44">{copy('seance.lead')}</TvText>
+        </TvFocusable>
+      ) : (
+        <Card onPress={() => router.push({ pathname: '/moves/seance', params: { coach: coachId } })} accessibilityLabel={copy('seance.title')}>
+          <Text style={{ color: t.text, fontWeight: '700', fontSize: 18 }}>{copy('seance.title')}</Text>
+          <Muted>{copy('seance.lead')}</Muted>
+        </Card>
+      )}
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: tv ? grid.gap : 12 }}>
         {BODY_PARTS.map((part, index) => {
           if (tv) {
             return (
               <TvFocusable
                 key={part.id}
-                preferred={claimsPreferredFocus('profile', index)}
+                preferred={false}
                 label={part.title}
                 onPress={() => open(part.id)}
                 style={{ width: grid.cardWidth, minHeight: Math.max(140, grid.cardHeight) }}

@@ -5,12 +5,15 @@
  * Rien ici n’écrit le disque famille.
  *
  * Vidéo d’un geste :
- * 1. Déposer le fichier dans assets/coach-videos/
- *    (convention : <exercice>-<coach>.mp4 ; les deux premières sont
- *    coach-homme-squat-v2.mp4 et coach-femme-planche-v2.mp4).
- * 2. Renseigner `video.asset` (chemin dépôt) ou `video.url` (https).
- * 3. Ajouter le `require` correspondant dans src/components/moves/media.ts.
- * Sans vidéo pour le coach affiché, l’écran montre sa photo et les étapes.
+ * 1. Déposer le mp4 dans assets/coach-videos/.
+ *    Nom : <exercice>-<coach>.mp4, et si deux tempos :
+ *    <exercice>-<coach>-lent.mp4 et <exercice>-<coach>-intense.mp4.
+ *    Les deux clips déjà là gardent leur nom (coach-homme-squat-v2.mp4,
+ *    coach-femme-planche-v2.mp4) et servent de vidéo unique.
+ * 2. Le lecteur cherche d’abord videoSlow / videoIntense, puis ce nom,
+ *    puis `video`, puis la photo.
+ * 3. Ajouter le `require` dans src/components/moves/media.ts, sinon le
+ *    fichier n’entre pas dans le bundle.
  */
 
 export const ROSTER_IDS = [
@@ -161,7 +164,12 @@ export type LibraryExercise = {
   coachId: RosterCoachId;
   /** Étapes affichées quand aucune vidéo ne correspond au coach montré. */
   steps: string[];
+  /** Vidéo unique, si lent / intense ne sont pas là. */
   video?: DemoVideo;
+  /** Échauffement, montée, retour au calme. */
+  videoSlow?: DemoVideo;
+  /** Phase intense. */
+  videoIntense?: DemoVideo;
 };
 
 const STOP = 'Arrêtez si une douleur apparaît. Ceci n’est pas un avis médical.';
@@ -605,6 +613,34 @@ export const EXERCISES: LibraryExercise[] = [
       'Genoux et mains au sol.',
       'Avancez un peu les mains, dos long comme papa.',
       'Comptez jusqu’à huit, puis asseyez-vous.',
+    ],
+  }),
+  ex({
+    id: 'cercles-jeu',
+    name: 'Cercles des bras',
+    bodyPart: 'enfants',
+    level: 'debutant',
+    dose: '4 cercles',
+    coachId: 'coach-papa-garcon',
+    safety: ['Un adulte reste à côté.', 'Petits cercles, épaules basses.'],
+    steps: [
+      'Papa et l’enfant tendent les bras sur les côtés.',
+      'Ils dessinent de petits cercles vers l’avant.',
+      'Puis le même nombre vers l’arrière.',
+    ],
+  }),
+  ex({
+    id: 'marche-jeu',
+    name: 'Marche sur place',
+    bodyPart: 'enfants',
+    level: 'debutant',
+    dose: '20 secondes',
+    coachId: 'coach-papa-garcon',
+    safety: ['Un adulte reste à côté.', 'Pas de saut.', 'Le pied se pose à plat.'],
+    steps: [
+      'Debout à côté de papa.',
+      'Levez un genou, posez le pied, puis l’autre.',
+      'Les bras se balancent, le regard reste devant.',
     ],
   }),
 ];

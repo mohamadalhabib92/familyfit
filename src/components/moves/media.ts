@@ -2,8 +2,10 @@ import { COACH_IMAGE_FILES, type RosterCoachId } from '@/lib/coachLibrary';
 
 /**
  * Requires statiques : Metro ne bundle pas un chemin calculé.
- * Pour une nouvelle vidéo, ajoutez la ligne `require` puis `video.asset`
- * dans `src/lib/coachLibrary.ts`.
+ * Pour une nouvelle vidéo, ajoutez la ligne `require`.
+ * Noms lus par la séance : <exercice>-<coach>.mp4,
+ * <exercice>-<coach>-lent.mp4, <exercice>-<coach>-intense.mp4.
+ * Sans ce require, le lecteur passe au clip suivant, puis à la photo.
  */
 const PHOTO_BY_FILE: Record<(typeof COACH_IMAGE_FILES)[number], number> = {
   'coach-homme.jpg': require('../../../assets/coaches/coach-homme.jpg'),

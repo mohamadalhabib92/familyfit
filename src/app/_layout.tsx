@@ -117,6 +117,8 @@ function RootNavigator() {
         <Stack.Screen name="moves/index" options={{ title: 'Mouvements' }} />
         <Stack.Screen name="moves/[part]" options={{ title: 'Mouvements' }} />
         <Stack.Screen name="moves/demo/[id]" options={{ title: 'Démonstration' }} />
+        <Stack.Screen name="moves/seance" options={{ title: 'Séance corps complet' }} />
+        <Stack.Screen name="moves/seance-play" options={{ title: 'Séance corps complet' }} />
         <Stack.Screen name="tv" options={{ title: 'Salon', headerShown: false }} />
         <Stack.Screen name="privacy" options={{ title: 'Vie privée & mineurs' }} />
       </Stack>

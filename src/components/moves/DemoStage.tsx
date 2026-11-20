@@ -10,14 +10,14 @@ import { theme as t } from '@/ui/theme';
 type Copy = { play: string; pause: string; mute: string; sound: string };
 
 /** Lecteur en boucle, son coupé au départ. Le module n’est monté que s’il y a une source. */
-export function DemoStage({ asset, url, title, copy }: { asset: string | null; url: string | null; title: string; copy: Copy }) {
+export function DemoStage({ asset, url, title, copy, height, preferPlay = true }: { asset: string | null; url: string | null; title: string; copy: Copy; height?: number; preferPlay?: boolean }) {
   const local = videoModule(asset);
   const source: VideoSource | null = local != null ? local : url ? { uri: url } : null;
   if (!source) return null;
-  return <Player key={`${asset ?? ''}|${url ?? ''}`} source={source} title={title} copy={copy} />;
+  return <Player key={`${asset ?? ''}|${url ?? ''}`} source={source} title={title} copy={copy} height={height} preferPlay={preferPlay} />;
 }
 
-function Player({ source, title, copy }: { source: VideoSource; title: string; copy: Copy }) {
+function Player({ source, title, copy, height, preferPlay }: { source: VideoSource; title: string; copy: Copy; height?: number; preferPlay: boolean }) {
   const tv = isTv();
   const window = useWindowDimensions();
   const player = useVideoPlayer(source, (p) => {
@@ -27,7 +27,7 @@ function Player({ source, title, copy }: { source: VideoSource; title: string; c
   });
   const [playing, setPlaying] = useState(true);
   const [muted, setMuted] = useState(true);
-  const height = tv ? Math.max(420, Math.round(window.height * 0.62)) : Math.min(420, Math.round(window.width * 9 / 16));
+  const videoHeight = height ?? (tv ? Math.max(420, Math.round(window.height * 0.62)) : Math.min(420, Math.round(window.width * 9 / 16)));
   const toggle = () => {
     if (playing) {
       player.pause();
@@ -49,11 +49,11 @@ function Player({ source, title, copy }: { source: VideoSource; title: string; c
         nativeControls={false}
         contentFit="contain"
         allowsPictureInPicture={false}
-        style={{ width: '100%', height, borderRadius: 20, backgroundColor: '#1D2522' }}
+        style={{ width: '100%', height: videoHeight, borderRadius: 20, backgroundColor: '#1D2522' }}
       />
       {tv ? (
         <View style={{ flexDirection: 'row', gap: 16 }}>
-          <TvFocusable preferred label={playing ? copy.pause : copy.play} onPress={toggle} style={{ flex: 1 }}>
+          <TvFocusable preferred={preferPlay} label={playing ? copy.pause : copy.play} onPress={toggle} style={{ flex: 1 }}>
             <TvText size={28} weight="800" color="#1D2522">{playing ? copy.pause : copy.play}</TvText>
           </TvFocusable>
           <TvFocusable label={muted ? copy.sound : copy.mute} onPress={toggleMute} style={{ flex: 1 }}>
