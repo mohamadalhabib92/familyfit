@@ -207,6 +207,7 @@ export const EXERCISES: LibraryExercise[] = [
       'Pliez les deux genoux un peu, le buste droit.',
       'Poussez le pied avant pour revenir, puis changez de jambe.',
     ],
+    video: { coachId: 'coach-maghreb', asset: 'assets/coach-videos/fente-coach-maghreb.mp4' },
   }),
   ex({
     id: 'pont',
@@ -278,6 +279,7 @@ export const EXERCISES: LibraryExercise[] = [
       'Décollez la tête et les omoplates en soufflant.',
       'Reposez lentement.',
     ],
+    video: { coachId: 'coach-femme', asset: 'assets/coach-videos/crunch-coach-femme.mp4' },
   }),
   ex({
     id: 'dead-bug',
@@ -320,6 +322,7 @@ export const EXERCISES: LibraryExercise[] = [
       'Pliez les coudes le long du corps, poitrine vers le sol.',
       'Poussez le sol pour revenir, sans verrouiller les coudes.',
     ],
+    video: { coachId: 'coach-femme-voilee', asset: 'assets/coach-videos/pompes-coach-femme-voilee.mp4' },
   }),
   ex({
     id: 'dips',
@@ -376,6 +379,7 @@ export const EXERCISES: LibraryExercise[] = [
       'Décollez un peu les bras et les cuisses en soufflant.',
       'Reposez tout le corps.',
     ],
+    video: { coachId: 'coach-asie', asset: 'assets/coach-videos/superman-coach-asie.mp4' },
   }),
   ex({
     id: 'bird-dog',
@@ -404,6 +408,7 @@ export const EXERCISES: LibraryExercise[] = [
       'Ramenez les coudes vers les hanches, omoplates qui se rapprochent.',
       'Rendez les bras sans arrondir le dos.',
     ],
+    video: { coachId: 'coach-afrique-ouest', asset: 'assets/coach-videos/row-coach-afrique-ouest.mp4' },
   }),
   ex({
     id: 'ange',
@@ -474,6 +479,7 @@ export const EXERCISES: LibraryExercise[] = [
       'Le pied revient, les bras aussi.',
       'Changez de pied, toujours un appui au sol.',
     ],
+    video: { coachId: 'coach-homme', asset: 'assets/coach-videos/step-jack-coach-homme.mp4' },
   }),
   ex({
     id: 'respiration',
@@ -546,6 +552,21 @@ export const EXERCISES: LibraryExercise[] = [
     ],
   }),
   ex({
+    id: 'squat-famille',
+    name: 'Squat avec papa',
+    bodyPart: 'enfants',
+    level: 'debutant',
+    dose: '6 répétitions',
+    coachId: 'coach-papa-garcon',
+    safety: ['Un adulte reste à côté.', 'Genoux dans l’axe des orteils.', 'Pas de saut.'],
+    steps: [
+      'Moussa et Élias se placent côte à côte, pieds écartés.',
+      'Ils plient les genoux ensemble, bras devant.',
+      'Ils se relèvent en poussant le sol, sans verrouiller les genoux.',
+    ],
+    video: { coachId: 'coach-papa-garcon', asset: 'assets/coach-videos/squat-coach-papa-garcon.mp4' },
+  }),
+  ex({
     id: 'grenouille',
     name: 'Squat grenouille',
     bodyPart: 'enfants',
@@ -600,6 +621,7 @@ export const EXERCISES: LibraryExercise[] = [
       'Ouvrez les bras comme une étoile en inspirant.',
       'Ramenez les bras en expirant.',
     ],
+    video: { coachId: 'coach-papa-garcon', asset: 'assets/coach-videos/etoile-coach-papa-garcon.mp4' },
   }),
   ex({
     id: 'planche-genoux',

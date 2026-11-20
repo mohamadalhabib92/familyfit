@@ -30,6 +30,14 @@ export const COACH_PHOTO: Record<RosterCoachId, number> = {
 export const COACH_VIDEO: Record<string, number> = {
   'assets/coach-videos/coach-homme-squat-v2.mp4': require('../../../assets/coach-videos/coach-homme-squat-v2.mp4'),
   'assets/coach-videos/coach-femme-planche-v2.mp4': require('../../../assets/coach-videos/coach-femme-planche-v2.mp4'),
+  'assets/coach-videos/squat-coach-papa-garcon.mp4': require('../../../assets/coach-videos/squat-coach-papa-garcon.mp4'),
+  'assets/coach-videos/fente-coach-maghreb.mp4': require('../../../assets/coach-videos/fente-coach-maghreb.mp4'),
+  'assets/coach-videos/pompes-coach-femme-voilee.mp4': require('../../../assets/coach-videos/pompes-coach-femme-voilee.mp4'),
+  'assets/coach-videos/crunch-coach-femme.mp4': require('../../../assets/coach-videos/crunch-coach-femme.mp4'),
+  'assets/coach-videos/superman-coach-asie.mp4': require('../../../assets/coach-videos/superman-coach-asie.mp4'),
+  'assets/coach-videos/step-jack-coach-homme.mp4': require('../../../assets/coach-videos/step-jack-coach-homme.mp4'),
+  'assets/coach-videos/row-coach-afrique-ouest.mp4': require('../../../assets/coach-videos/row-coach-afrique-ouest.mp4'),
+  'assets/coach-videos/etoile-coach-papa-garcon.mp4': require('../../../assets/coach-videos/etoile-coach-papa-garcon.mp4'),
 };
 
 export function videoModule(asset: string | null): number | null {

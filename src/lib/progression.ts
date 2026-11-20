@@ -134,7 +134,7 @@ function familyPool(area: BodyPartId): LibraryExercise[] {
   };
   const map: Record<string, LibraryExercise[]> = {
     mobilite: [one('etoile'), one('flamant')],
-    jambes: [one('grenouille')],
+    jambes: [one('squat-famille'), one('grenouille')],
     bras: [one('cercles-jeu')],
     abdos: [one('planche-genoux')],
     dos: [one('ours')],
@@ -335,6 +335,29 @@ export function runProgressionSelfTests(): { name: string; ok: boolean }[] {
     family.blocks.every((block) => exerciseById(block.exerciseId)?.coachId === 'coach-papa-garcon'),
   );
   check('famille avance : travail intense 30 s', family.blocks.find((block) => block.phase === 'intense')?.workSec === 30);
+  const duo = exerciseById('squat-famille');
+  check(
+    'jambes famille : squat de Moussa et Élias',
+    family.blocks.find((block) => block.area === 'jambes')?.exerciseId === 'squat-famille' && duo?.coachId === 'coach-papa-garcon' && duo?.video?.asset === 'assets/coach-videos/squat-coach-papa-garcon.mp4',
+  );
+  const duoClip = duo ? pickClip(clipCandidates(duo, 'montee', 'coach-papa-garcon'), (asset) => asset === duo.video?.asset) : null;
+  check('la séance famille joue squat-coach-papa-garcon.mp4', duoClip?.asset === 'assets/coach-videos/squat-coach-papa-garcon.mp4');
+  const clips: [string, string, RosterCoachId][] = [
+    ['fente', 'assets/coach-videos/fente-coach-maghreb.mp4', 'coach-maghreb'],
+    ['pompes', 'assets/coach-videos/pompes-coach-femme-voilee.mp4', 'coach-femme-voilee'],
+    ['crunch', 'assets/coach-videos/crunch-coach-femme.mp4', 'coach-femme'],
+    ['superman', 'assets/coach-videos/superman-coach-asie.mp4', 'coach-asie'],
+    ['step-jack', 'assets/coach-videos/step-jack-coach-homme.mp4', 'coach-homme'],
+    ['row', 'assets/coach-videos/row-coach-afrique-ouest.mp4', 'coach-afrique-ouest'],
+    ['etoile', 'assets/coach-videos/etoile-coach-papa-garcon.mp4', 'coach-papa-garcon'],
+  ];
+  check(
+    'démos branchées sur le bon coach, squat et planche d’origine gardés',
+    clips.every(([id, asset, coach]) => {
+      const item = exerciseById(id);
+      return item?.coachId === coach && item.video?.coachId === coach && item.video.asset === asset;
+    }) && exerciseById('squat')?.video?.asset === 'assets/coach-videos/coach-homme-squat-v2.mp4' && exerciseById('planche')?.video?.asset === 'assets/coach-videos/coach-femme-planche-v2.mp4',
+  );
   for (const minutes of SESSION_MINUTES) {
     for (const level of SESSION_LEVELS) {
       for (const audience of SESSION_AUDIENCES) {
