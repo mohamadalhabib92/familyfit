@@ -33,8 +33,8 @@ export default function MovePicker() {
       <CoachPicker selected={rosterCoachId(coachId, 'coach-homme')} onSelect={setCoachId} label={copy('moves.coach')} />
       {tv ? (
         <TvFocusable preferred label={copy('seance.title')} onPress={() => router.push({ pathname: '/moves/seance', params: { coach: coachId } })}>
-          <TvText size={32} weight="800" color="#1D2522">{copy('seance.title')}</TvText>
-          <TvText size={20} color="#3D4A44">{copy('seance.lead')}</TvText>
+          <TvText size={32} weight="800">{copy('seance.title')}</TvText>
+          <TvText size={20} color={t.muted}>{copy('seance.lead')}</TvText>
         </TvFocusable>
       ) : (
         <Card onPress={() => router.push({ pathname: '/moves/seance', params: { coach: coachId } })} accessibilityLabel={copy('seance.title')}>
@@ -53,8 +53,8 @@ export default function MovePicker() {
                 onPress={() => open(part.id)}
                 style={{ width: grid.cardWidth, minHeight: Math.max(140, grid.cardHeight) }}
               >
-                <TvText size={32} weight="800" color="#1D2522">{part.title}</TvText>
-                <TvText size={20} color="#3D4A44">{part.blurb}</TvText>
+                <TvText size={32} weight="800">{part.title}</TvText>
+                <TvText size={20} color={t.muted}>{part.blurb}</TvText>
               </TvFocusable>
             );
           }

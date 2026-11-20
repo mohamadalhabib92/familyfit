@@ -54,10 +54,10 @@ function Player({ source, title, copy, height, preferPlay }: { source: VideoSour
       {tv ? (
         <View style={{ flexDirection: 'row', gap: 16 }}>
           <TvFocusable preferred={preferPlay} label={playing ? copy.pause : copy.play} onPress={toggle} style={{ flex: 1 }}>
-            <TvText size={28} weight="800" color="#1D2522">{playing ? copy.pause : copy.play}</TvText>
+            <TvText size={28} weight="800">{playing ? copy.pause : copy.play}</TvText>
           </TvFocusable>
           <TvFocusable label={muted ? copy.sound : copy.mute} onPress={toggleMute} style={{ flex: 1 }}>
-            <TvText size={28} weight="800" color="#1D2522">{muted ? copy.sound : copy.mute}</TvText>
+            <TvText size={28} weight="800">{muted ? copy.sound : copy.mute}</TvText>
           </TvFocusable>
         </View>
       ) : (

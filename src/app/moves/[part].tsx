@@ -53,9 +53,9 @@ export default function ExerciseList() {
                 onPress={() => open(exercise.id)}
                 style={{ width: grid.cardWidth, minHeight: 150 }}
               >
-                <TvText size={30} weight="800" color="#1D2522">{exercise.name}</TvText>
-                <TvText size={20} color="#3D4A44">{detail}</TvText>
-                {demo.kind === 'video' ? <TvText size={18} weight="700" color="#2F4B43">{copy('moves.video')}</TvText> : null}
+                <TvText size={30} weight="800">{exercise.name}</TvText>
+                <TvText size={20} color={t.muted}>{detail}</TvText>
+                {demo.kind === 'video' ? <TvText size={18} weight="700" color={t.primary}>{copy('moves.video')}</TvText> : null}
               </TvFocusable>
             );
           }

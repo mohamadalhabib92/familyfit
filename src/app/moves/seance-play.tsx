@@ -126,7 +126,7 @@ export default function ProgressivePlayer() {
         {clock.mode === 'done' ? (
           tv ? (
             <TvFocusable preferred label={copy('moves.back')} onPress={back} style={{ flex: 1 }}>
-              <TvText size={28} weight="800" color="#1D2522">{copy('moves.back')}</TvText>
+              <TvText size={28} weight="800">{copy('moves.back')}</TvText>
             </TvFocusable>
           ) : (
             <Button title={copy('moves.back')} onPress={back} />
@@ -134,10 +134,10 @@ export default function ProgressivePlayer() {
         ) : tv ? (
           <>
             <TvFocusable preferred label={clock.running ? copy('seance.hold') : copy('seance.resume')} onPress={() => setClock((state) => ({ ...state, running: !state.running }))} style={{ flex: 1 }}>
-              <TvText size={28} weight="800" color="#1D2522">{clock.running ? copy('seance.hold') : copy('seance.resume')}</TvText>
+              <TvText size={28} weight="800">{clock.running ? copy('seance.hold') : copy('seance.resume')}</TvText>
             </TvFocusable>
             <TvFocusable label={copy('seance.next')} onPress={() => setClock((state) => advance(state, session.blocks))} style={{ flex: 1 }}>
-              <TvText size={28} weight="800" color="#1D2522">{copy('seance.next')}</TvText>
+              <TvText size={28} weight="800">{copy('seance.next')}</TvText>
             </TvFocusable>
           </>
         ) : (

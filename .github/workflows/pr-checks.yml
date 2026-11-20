@@ -1,15 +1,20 @@
-# Contrôles sur les pull requests uniquement.
-# Pas de déploiement, pas de secrets, pas d'EAS.
-name: PR checks
+# Contrôles sur chaque push et chaque pull request.
+# Pas de déploiement (main publie la PWA), pas de secrets, pas d'EAS, pas de soumission.
+name: Release checks
 
 on:
+  push:
   pull_request:
 
 permissions:
   contents: read
 
+concurrency:
+  group: release-checks-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  test:
+  check:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -20,3 +25,8 @@ jobs:
       - run: npm ci
       - run: npx tsc --noEmit
       - run: npm test
+      - name: expo export (web)
+        run: npx expo export -p web
+        env:
+          CI: '1'
+          EXPO_NO_TELEMETRY: '1'

@@ -1,4 +1,5 @@
 import { Redirect, Tabs } from 'expo-router';
+import { BlurView } from 'expo-blur';
 import { translate } from '@/lib/i18n';
 import { isTv } from '@/lib/platform';
 import { Text, View } from 'react-native';
@@ -6,11 +7,27 @@ import { TrialBanner } from '@/components/TrialBanner';
 import { useData } from '@/lib/data';
 import { routeAfterReady } from '@/lib/gate';
 import { supabaseConfigured } from '@/lib/supabase';
+import { useVisualEffects } from '@/ui/effects';
+import { glassVeil, useGlassLook } from '@/ui/glass';
 import { Ionicons, LoadingState, type IconName } from '@/ui/kit';
+import { isDark } from '@/ui/ThemeProvider';
 import { theme as t } from '@/ui/theme';
+
+function TabBarBackground() {
+  const glass = useGlassLook();
+  const fx = useVisualEffects();
+  if (!glass) return null;
+  return (
+    <View style={{ flex: 1 }}>
+      {fx.blur ? <BlurView intensity={fx.intensity} tint={isDark() ? 'dark' : 'light'} style={{ position: 'absolute', top: 0, right: 0, bottom: 0, left: 0 }} /> : null}
+      <View style={{ flex: 1, backgroundColor: glassVeil() }} />
+    </View>
+  );
+}
 
 export default function TabsLayout() {
   const { ready, storageSlow, reloadStorage, prefs, session, family } = useData();
+  const glass = useGlassLook();
   if (!ready) return <LoadingState slow={storageSlow} onRetry={reloadStorage} />;
   const dest = routeAfterReady({
     supabaseConfigured,
@@ -34,7 +51,8 @@ export default function TabsLayout() {
       <Tabs
         screenOptions={{
           headerStyle: { backgroundColor: t.bg }, headerTintColor: t.text, headerShadowVisible: false,
-          tabBarStyle: { backgroundColor: t.surface, borderTopColor: t.border, minHeight: 64 },
+          tabBarStyle: { backgroundColor: glass ? 'transparent' : t.surface, borderTopColor: t.border, minHeight: 64 },
+          tabBarBackground: () => <TabBarBackground />,
           tabBarActiveTintColor: t.primary, tabBarInactiveTintColor: t.muted,
           tabBarLabel: ({ color, children }) => (
             <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65} style={{ color: typeof color === 'string' ? color : t.muted, fontSize: 11, fontWeight: '600', textAlign: 'center' }}>

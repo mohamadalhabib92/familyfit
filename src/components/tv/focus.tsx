@@ -1,6 +1,11 @@
 import { useState, type ReactNode } from 'react';
+import { BlurView } from 'expo-blur';
 import { Pressable, ScrollView, View, type PressableProps, type StyleProp, type ViewStyle } from 'react-native';
 import { TV_SAFE } from '@/lib/tvSurface';
+import { useVisualEffects } from '@/ui/effects';
+import { glassVeil, glassWash, raisedShadow, useGlassLook } from '@/ui/glass';
+import { useReduceMotion } from '@/ui/motion';
+import { isDark } from '@/ui/ThemeProvider';
 import { theme as t } from '@/ui/theme';
 
 export { TV_SAFE };
@@ -11,8 +16,10 @@ const RN = require('react-native') as { TVFocusGuideView?: (props: GuideProps) =
 const TVFocusGuideView = RN.TVFocusGuideView ?? View;
 
 export function TvScreen({ children }: { children: ReactNode }) {
+  const glass = useGlassLook();
   return (
     <TVFocusGuideView autoFocus style={{ flex: 1, backgroundColor: t.bg }}>
+      {glass ? <View pointerEvents="none" style={{ position: 'absolute', width: 520, height: 520, borderRadius: 260, backgroundColor: glassWash(), top: -160, right: -140 }} /> : null}
       {children}
     </TVFocusGuideView>
   );
@@ -69,6 +76,11 @@ export function TvFocusable({
 }) {
   const [focused, setFocused] = useState(false);
   const [grab, setGrab] = useState(!!preferred);
+  const glass = useGlassLook();
+  const fx = useVisualEffects();
+  const reduce = useReduceMotion();
+  const dark = isDark();
+  const focusRing = '#F6C453';
   return (
     <Pressable
       accessibilityRole="button"
@@ -88,20 +100,25 @@ export function TvFocusable({
           paddingHorizontal: 22,
           paddingVertical: 16,
           justifyContent: 'center',
+          overflow: 'hidden',
           opacity: 1,
           transform: [{ scale: focused ? 1.08 : 1 }],
-          backgroundColor: focused ? '#FFF6E4' : selected ? '#F3EBD6' : '#E7E0D4',
+          backgroundColor: glass ? 'transparent' : focused ? t.surfaceAlt : t.surface,
           borderWidth: focused ? 6 : selected ? 4 : 2,
-          borderColor: focused ? '#F6C453' : selected ? '#2F4B43' : '#8A8172',
-          shadowColor: '#F6C453',
-          shadowOpacity: focused ? 0.95 : 0,
-          shadowRadius: focused ? 28 : 0,
-          shadowOffset: { width: 0, height: 0 },
+          borderColor: focused ? focusRing : selected ? t.primary : t.border,
+          shadowColor: focused ? focusRing : dark ? '#000000' : '#1D2522',
+          shadowOpacity: focused ? 0.95 : 0.2,
+          shadowRadius: focused ? 28 : 10,
+          shadowOffset: { width: 0, height: focused ? 0 : 4 },
         },
+        reduce && { transform: [{ scale: 1 }] },
+        !focused && !selected && raisedShadow(false, !reduce),
         style,
       ] as PressableProps['style']}
     >
-      <View pointerEvents="none" style={{ position: 'absolute', top: 1, left: 16, right: 16, height: 6, borderRadius: 3, backgroundColor: focused ? 'rgba(255,255,255,0.55)' : 'rgba(255,255,255,0.18)' }} />
+      {glass && fx.blur ? <BlurView intensity={fx.intensity} tint={dark ? 'dark' : 'light'} style={{ position: 'absolute', top: 0, right: 0, bottom: 0, left: 0 }} /> : null}
+      {glass ? <View pointerEvents="none" style={{ position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, backgroundColor: glassVeil() }} /> : null}
+      <View pointerEvents="none" style={{ position: 'absolute', top: 1, left: 16, right: 16, height: 6, borderRadius: 3, backgroundColor: focused ? 'rgba(255,255,255,0.55)' : dark ? 'rgba(255,255,255,0.16)' : 'rgba(255,255,255,0.45)' }} />
       {children}
     </Pressable>
   );

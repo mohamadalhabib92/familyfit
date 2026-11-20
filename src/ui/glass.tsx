@@ -12,7 +12,7 @@ export function GlassLayers({ children, style, radius = 20 }: { children: ReactN
   const fx = useVisualEffects();
   const dark = isDark();
   const gold = currentFinish() === 'verre-or';
-  const wash = dark ? 'rgba(16,22,20,0.90)' : 'rgba(246,244,239,0.90)';
+  const wash = glassVeil();
   const border = gold ? 'rgba(208,140,96,0.75)' : dark ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.85)';
   const webBlur = Platform.OS === 'web' && fx.blur ? ({ backdropFilter: `blur(${fx.intensity / 3}px)`, WebkitBackdropFilter: `blur(${fx.intensity / 3}px)` } as ViewStyle) : null;
   return (
@@ -28,10 +28,15 @@ export function useGlassLook(): boolean {
   return isGlass() && fx.blur;
 }
 
-/** Bouton posé : surbrillance haute, ombre basse, enfoncement au press. */
+/**
+ * Bouton posé : arête claire, deux ombres (contact + halo), enfoncement au press.
+ * `motion` faux (« Réduire les animations ») : pas de translation ni de scale.
+ */
 export function raisedShadow(pressed: boolean, motion: boolean): ViewStyle {
   const down = pressed && motion;
   const dark = isDark();
+  const contact = dark ? 'rgba(0,0,0,0.55)' : 'rgba(29,37,34,0.22)';
+  const halo = dark ? 'rgba(0,0,0,0.42)' : 'rgba(47,75,67,0.16)';
   return {
     borderTopWidth: 1,
     borderTopColor: dark ? 'rgba(255,255,255,0.28)' : 'rgba(255,255,255,0.72)',
@@ -42,8 +47,16 @@ export function raisedShadow(pressed: boolean, motion: boolean): ViewStyle {
     shadowRadius: down ? 3 : 12,
     shadowOffset: { width: 0, height: down ? 1 : 6 },
     elevation: down ? 1 : 8,
+    boxShadow: down
+      ? `0 1px 1px ${contact}, 0 1px 2px ${halo}`
+      : `0 2px 3px ${contact}, 0 8px 16px ${halo}`,
     transform: down ? [{ translateY: 2 }, { scale: 0.98 }] : undefined,
   };
+}
+
+/** Voile 0.90 : le texte repose sur la teinte du thème, le flou est derrière. */
+export function glassVeil(): string {
+  return isDark() ? 'rgba(16,22,20,0.90)' : 'rgba(246,244,239,0.90)';
 }
 
 export function glassWash(): string {

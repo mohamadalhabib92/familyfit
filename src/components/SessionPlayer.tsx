@@ -177,13 +177,13 @@ export function SessionPlayer({
                 });
               }}
             >
-              <TvText size={32} weight="800" color="#1D2522">{player.running ? copy('player.pause') : player.elapsedSec > 0 ? copy('player.resume') : copy('train.start')}</TvText>
+              <TvText size={32} weight="800">{player.running ? copy('player.pause') : player.elapsedSec > 0 ? copy('player.resume') : copy('train.start')}</TvText>
             </TvFocusable>
             <TvFocusable label={copy('player.skip')} onPress={() => {
               const refused = requestSkipWarmup(player);
               setUi((ui) => ({ ...ui, player: refused.player, note: copy('player.skipNo') }));
             }}>
-              <TvText size={28} weight="800" color="#1D2522">{copy('player.skip')}</TvText>
+              <TvText size={28} weight="800">{copy('player.skip')}</TvText>
             </TvFocusable>
           </>
         ) : (

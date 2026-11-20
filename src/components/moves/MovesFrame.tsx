@@ -33,7 +33,7 @@ export function MovesFrame({ title, subtitle, backLabel, children }: { title: st
       <Stack.Screen options={{ headerShown: false }} />
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ flexGrow: 1, paddingHorizontal: TV_SAFE.horizontal, paddingVertical: TV_SAFE.vertical, gap: 22 }}>
         <TvFocusable label={backLabel} onPress={back} style={{ alignSelf: 'flex-start', minWidth: 240 }}>
-          <TvText size={26} weight="800" color="#1D2522">{backLabel}</TvText>
+          <TvText size={26} weight="800">{backLabel}</TvText>
         </TvFocusable>
         <View style={{ gap: 8 }}>
           <TvText size={48} weight="800">{title}</TvText>

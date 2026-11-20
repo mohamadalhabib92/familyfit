@@ -66,15 +66,15 @@ export default function LivingRoom() {
                   onPress={() => setMemberId(m.id)}
                   style={{ width: grid.cardWidth, minHeight: grid.cardHeight }}
                 >
-                  <TvText size={36} weight="800" color="#1D2522">{displayName(m, me)}</TvText>
-                  <TvText size={22} color="#3D4A44">{copy(`age.${defaultAgeBand(m)}` as 'age.adult')}</TvText>
+                  <TvText size={36} weight="800">{displayName(m, me)}</TvText>
+                  <TvText size={22} color={t.muted}>{copy(`age.${defaultAgeBand(m)}` as 'age.adult')}</TvText>
                 </TvFocusable>
               ))}
             </View>
           ) : null}
           <TvFocusable label={copy('moves.open')} onPress={() => router.push('/moves')}>
-            <TvText size={28} weight="800" color="#1D2522">{copy('moves.open')}</TvText>
-            <TvText size={20} color="#3D4A44">{copy('moves.lead')}</TvText>
+            <TvText size={28} weight="800">{copy('moves.open')}</TvText>
+            <TvText size={20} color={t.muted}>{copy('moves.lead')}</TvText>
           </TvFocusable>
           <FinishRow locale={locale} finish={prefs.finish} preferFirst={people.length === 0} onChange={chooseFinish} />
         </ScrollView>
@@ -102,7 +102,7 @@ export default function LivingRoom() {
           <TvText size={22} color={t.muted}>{copy('tv.remote')}</TvText>
           <TvText size={34} weight="800">{routine.name[locale]}</TvText>
           <TvFocusable label={copy('tv.back')} onPress={backToProfiles}>
-            <TvText size={26} weight="800" color="#1D2522">{copy('tv.back')}</TvText>
+            <TvText size={26} weight="800">{copy('tv.back')}</TvText>
           </TvFocusable>
           {ROUTINES.map((item, index) => (
             <TvFocusable
@@ -112,8 +112,8 @@ export default function LivingRoom() {
               label={item.name[locale]}
               onPress={() => chooseRoutine(item.id)}
             >
-              <TvText size={24} weight="800" color="#1D2522">{item.name[locale]}</TvText>
-              {item.id === routine.id ? <TvText size={18} color="#3D4A44">{copy('tv.selected')}</TvText> : null}
+              <TvText size={24} weight="800">{item.name[locale]}</TvText>
+              {item.id === routine.id ? <TvText size={18} color={t.muted}>{copy('tv.selected')}</TvText> : null}
             </TvFocusable>
           ))}
           {lockNote ? <TvText size={22} color={t.warning}>{lockNote}</TvText> : null}
@@ -174,7 +174,7 @@ function FinishRow({
             onPress={() => onChange(item.value)}
             style={{ flexGrow: 1, flexBasis: 180 }}
           >
-            <TvText size={24} weight="800" color="#1D2522">{translate(locale, item.key)}</TvText>
+            <TvText size={24} weight="800">{translate(locale, item.key)}</TvText>
           </TvFocusable>
         ))}
       </View>

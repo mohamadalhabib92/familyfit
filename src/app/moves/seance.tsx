@@ -72,7 +72,7 @@ export default function ProgressiveBuilder() {
       )}
       {tv ? (
         <TvFocusable preferred label={copy('seance.start')} onPress={start}>
-          <TvText size={32} weight="800" color="#1D2522">{copy('seance.start')}</TvText>
+          <TvText size={32} weight="800">{copy('seance.start')}</TvText>
         </TvFocusable>
       ) : (
         <Button title={copy('seance.start')} icon="play" onPress={start} />
@@ -102,7 +102,7 @@ function Choice<T extends string | number>({
           if (tv) {
             return (
               <TvFocusable key={String(option.id)} selected={on} label={option.title} onPress={() => onSelect(option.id)} style={{ minWidth: 220, flexGrow: 1 }}>
-                <TvText size={28} weight="800" color="#1D2522">{option.title}</TvText>
+                <TvText size={28} weight="800">{option.title}</TvText>
               </TvFocusable>
             );
           }

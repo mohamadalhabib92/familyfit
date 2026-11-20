@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Image, Text, View } from 'react-native';
 import { COACH_PHOTO } from '@/components/moves/media';
 import type { RosterCoach } from '@/lib/coachLibrary';
+import { inkOn } from '@/ui/contrast';
 
 /** Photo du coach, ou pastille neutre si le fichier ne s’affiche pas. */
 export function CoachPhoto({ coach, width }: { coach: RosterCoach; width: number }) {
@@ -12,7 +13,7 @@ export function CoachPhoto({ coach, width }: { coach: RosterCoach; width: number
   if (!source || broken) {
     return (
       <View accessibilityRole="image" accessibilityLabel={label} style={{ width, height, borderRadius: 16, backgroundColor: coach.tint, alignItems: 'center', justifyContent: 'center' }}>
-        <Text style={{ color: '#1D2522', fontSize: Math.max(22, Math.round(width * 0.18)), fontWeight: '800' }}>{coach.nameFr.slice(0, 1)}</Text>
+        <Text style={{ color: inkOn(coach.tint), fontSize: Math.max(22, Math.round(width * 0.18)), fontWeight: '800' }}>{coach.nameFr.slice(0, 1)}</Text>
       </View>
     );
   }

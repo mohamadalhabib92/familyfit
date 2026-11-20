@@ -36,8 +36,8 @@ export function CoachPicker({
                 style={{ width: grid.cardWidth, minHeight: 220, alignItems: 'flex-start' }}
               >
                 <CoachPhoto coach={coach} width={Math.min(280, grid.cardWidth - 48)} />
-                <TvText size={26} weight="800" color="#1D2522">{coach.nameFr}</TvText>
-                <TvText size={18} color="#3D4A44">{coach.role}</TvText>
+                <TvText size={26} weight="800">{coach.nameFr}</TvText>
+                <TvText size={18} color={t.muted}>{coach.role}</TvText>
               </TvFocusable>
             );
           }
