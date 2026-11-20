@@ -80,6 +80,7 @@
     "plugins": [
       "expo-router",
       "expo-notifications",
+      "expo-video",
       "@react-native-tvos/config-tv",
       "./plugins/withFamilyFitHealth"
     ],

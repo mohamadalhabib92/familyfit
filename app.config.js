@@ -42,6 +42,7 @@ function withAppleTv(config) {
   }
   config.plugins = [
     'expo-router',
+    'expo-video',
     ['@react-native-tvos/config-tv', {
       isTV: true,
       tvosDeploymentTarget: '16.4',

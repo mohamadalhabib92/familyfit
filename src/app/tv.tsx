@@ -1,3 +1,4 @@
+import { useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ScrollView, useWindowDimensions, View } from 'react-native';
 import { SessionPlayer } from '@/components/SessionPlayer';
@@ -22,6 +23,7 @@ const FINISHES: { value: Finish; key: CopyKey }[] = [
 
 /** Salon 10 pieds. Les données famille ne sont pas réécrites ici, seulement lues, plus un journal de séance et le fini déjà dans les préférences. */
 export default function LivingRoom() {
+  const router = useRouter();
   const { members, me, prefs, setPrefs, logWorkout } = useData();
   const locale = prefs.locale;
   const copy = (key: CopyKey) => translate(locale, key);
@@ -70,6 +72,10 @@ export default function LivingRoom() {
               ))}
             </View>
           ) : null}
+          <TvFocusable label={copy('moves.open')} onPress={() => router.push('/moves')}>
+            <TvText size={28} weight="800" color="#1D2522">{copy('moves.open')}</TvText>
+            <TvText size={20} color="#3D4A44">{copy('moves.lead')}</TvText>
+          </TvFocusable>
           <FinishRow locale={locale} finish={prefs.finish} preferFirst={people.length === 0} onChange={chooseFinish} />
         </ScrollView>
       </TvScreen>
