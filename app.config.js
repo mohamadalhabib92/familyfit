@@ -32,7 +32,7 @@ const TV_DROP_INFO = [
 
 /**
  * Projet Expo distinct (slug familyfit-tv), même bundle que l’iPhone.
- * Le numéro de build TV est 2 et n’est écrit que lorsque EXPO_TV=1.
+ * Le numéro de build TV est 3 et n’est écrit que lorsque EXPO_TV=1.
  * Le buildNumber iPhone du fichier app.json n’est pas modifié.
  */
 function withAppleTv(config) {
@@ -62,12 +62,12 @@ function withAppleTv(config) {
   config.owner = config.owner || 'habib548';
   config.ios = config.ios || {};
   config.ios.bundleIdentifier = BUNDLE_ID;
-  config.ios.buildNumber = '2';
+  config.ios.buildNumber = '3';
   config.ios.appleTeamId = 'Y9XF9RY2BU';
   config.ios.entitlements = {};
   const info = { ...(config.ios.infoPlist || {}) };
   for (const key of TV_DROP_INFO) delete info[key];
-  info.CFBundleVersion = '2';
+  info.CFBundleVersion = '3';
   config.ios.infoPlist = info;
   config.extra = { ...(config.extra || {}), tv: true };
   config.extra.eas = { ...(config.extra.eas || {}), projectId: process.env.FAMILYFIT_TV_EAS_PROJECT_ID || 'c563620f-7c9e-4354-a3e1-2c43b8bcb31f' };
