@@ -151,6 +151,9 @@ export default function FamilyTab() {
           <ListItem icon="archive-outline" title="Copies mises de côté" subtitle={`${quarantineCount} donnée(s) illisible(s) conservée(s) jusqu’à un effacement confirmé.`} />
         ) : null}
         {hasDemo ? <ListItem icon="flask-outline" title="Supprimer les données démo" onPress={() => confirmAsk('Supprimer les données d’exemple ?', removeDemo)} /> : null}
+        {session?.mode === 'supabase' ? null : (
+          <ListItem icon="log-in-outline" title="Connexion facultative" subtitle="Les séances marchent sans compte. La connexion sert plus tard, pour synchroniser." onPress={() => router.push('/auth')} />
+        )}
         <ListItem icon="log-out-outline" title="Se déconnecter" subtitle={session?.contact || (session?.trial ? 'Mode essai' : undefined)} onPress={signOut} />
         <ListItem icon="trash-outline" title="Supprimer toutes les données" subtitle="Cet appareil seulement" onPress={() => confirmAsk('Supprimer définitivement toutes les données de cet appareil ?', () => { void wipe().then((r) => setWipeMsg(r.message)); })} />
         {wipeMsg ? <Text accessibilityRole="alert" style={{ color: t.danger, marginTop: 8 }}>{wipeMsg}</Text> : null}

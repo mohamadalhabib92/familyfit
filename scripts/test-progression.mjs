@@ -16,6 +16,18 @@ const m = await import(join(dir, 'progression.mjs'));
 const res = m.runProgressionSelfTests();
 for (const r of res) console.log(r.ok ? '✓' : '✗', r.name);
 
+writeFileSync(join(dir, 'workoutEngine.mjs'), ts.transpileModule(read('src/lib/workoutEngine.ts'), opts).outputText);
+const home = read('src/lib/homePractice.ts')
+  .replaceAll("from './progression'", "from './progression.mjs'")
+  .replaceAll("from './workoutEngine'", "from './workoutEngine.mjs'")
+  .replaceAll("from './coachLibrary'", "from './coachLibrary.mjs'");
+writeFileSync(join(dir, 'homePractice.mjs'), ts.transpileModule(home, opts).outputText);
+const homeMod = await import(join(dir, 'homePractice.mjs'));
+for (const r of homeMod.runHomePracticeSelfTests()) {
+  console.log(r.ok ? '✓' : '✗', r.name);
+  res.push(r);
+}
+
 const app = JSON.parse(read('app.json'));
 const clips = [
   'squat-coach-papa-garcon.mp4',
@@ -29,7 +41,7 @@ const clips = [
 ];
 const media = read('src/components/moves/media.ts');
 const checks = [
-  ['build iPhone inchangé', app.expo.ios.buildNumber === '2'],
+  ['build iPhone 20', app.expo.ios.buildNumber === '20'],
   ['huit démos sous 1 Mo, require compris', clips.every((name) => {
     const file = join(root, 'assets/coach-videos', name);
     return existsSync(file) && statSync(file).size > 1000 && statSync(file).size < 1024 * 1024 && media.includes(name);

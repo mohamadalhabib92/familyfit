@@ -1,5 +1,5 @@
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ScrollView, Text, View, useWindowDimensions } from 'react-native';
 import { IntensityBar } from '@/components/moves/IntensityBar';
 import { CueCard } from '@/components/moves/CueCard';
@@ -8,9 +8,11 @@ import { videoModule } from '@/components/moves/media';
 import { TvFocusable, TvScreen, TvText } from '@/components/tv/focus';
 import { useTvMenu } from '@/components/tv/useTvMenu';
 import { useData } from '@/lib/data';
+import { todayISO } from '@/lib/dates';
 import { exerciseById, rosterById, rosterCoachId, BODY_PARTS } from '@/lib/coachLibrary';
 import { translate, type CopyKey } from '@/lib/i18n';
 import { isTv } from '@/lib/platform';
+import { uid } from '@/lib/storage';
 import {
   buildProgressiveSession, clipCandidates, elapsedBefore, isSessionLevel, isSessionMinutes, pickClip,
   type IntensityPhase, type SessionBlock, type Tempo,
@@ -40,7 +42,7 @@ function advance(state: Clock, blocks: SessionBlock[]): Clock {
 export default function ProgressivePlayer() {
   const router = useRouter();
   const params = useLocalSearchParams<{ minutes?: string; level?: string; audience?: string; coach?: string }>();
-  const { prefs } = useData();
+  const { prefs, me, logWorkout } = useData();
   const copy = (key: CopyKey) => translate(prefs.locale, key);
   const tv = isTv();
   const window = useWindowDimensions();
@@ -53,6 +55,23 @@ export default function ProgressivePlayer() {
     [minutes, level, audience, coachId],
   );
   const [clock, setClock] = useState<Clock>({ index: 0, mode: 'work', left: session.blocks[0]?.workSec ?? 0, running: true });
+  const logged = useRef(false);
+  useEffect(() => {
+    if (clock.mode !== 'done' || logged.current || !session.blocks.length) return;
+    logged.current = true;
+    logWorkout({
+      id: uid('wo_'),
+      routineId: `seance-${audience}-${minutes}`,
+      // Le journal ne connaît que Lina, Noor, Pico et Sami. Le nom de la séance porte l’audience.
+      coachId: 'lina',
+      memberIds: me ? [me.id] : [],
+      date: todayISO(),
+      completedAt: new Date().toISOString(),
+      durationSec: session.totalSec,
+      warmupCompleted: true,
+      together: audience === 'famille' && Boolean(me),
+    });
+  }, [audience, clock.mode, logWorkout, me, minutes, session.blocks.length, session.totalSec]);
   const back = () => {
     if (router.canGoBack()) router.back();
     else router.replace('/moves');
@@ -108,17 +127,17 @@ export default function ProgressivePlayer() {
         <View style={{ gap: 8 }}>
           {tv ? <TvText size={40} weight="800">{exercise.name}</TvText> : <H1>{exercise.name}</H1>}
           {tv ? <TvText size={24} color={t.muted}>{`${area} · ${coach.nameFr}`}</TvText> : <Muted>{`${area} · ${coach.nameFr}`}</Muted>}
+          {tv ? <TvText size={28} weight="800">{exercise.dose}</TvText> : <Text style={{ color: t.text, fontSize: 22, fontWeight: '800' }}>{exercise.dose}</Text>}
           {tv ? <TvText size={72} weight="800">{String(clock.left)}</TvText> : <Text style={{ color: t.text, fontSize: 56, fontWeight: '800' }}>{clock.left}</Text>}
           {tv ? <TvText size={28}>{clock.mode === 'rest' ? copy('seance.rest') : copy('seance.work')}</TvText> : <Muted>{clock.mode === 'rest' ? copy('seance.rest') : copy('seance.work')}</Muted>}
-          {clock.mode === 'work' && clip ? (
+          {tv ? <TvText size={22} color={t.muted}>{copy('home.reps')}</TvText> : <Muted>{copy('home.reps')}</Muted>}
+          {clock.mode === 'work' && clip && (videoModule(clip.asset) != null || clip.url) ? (
             <DemoStage asset={clip.asset} url={clip.url} title={exercise.name} copy={playerCopy} height={videoHeight} preferPlay={false} />
-          ) : clock.mode === 'work' ? (
+          ) : (
             <View style={{ gap: 8 }}>
-              {tv ? <TvText size={22} color={t.muted}>{copy('moves.noVideo')}</TvText> : <Muted>{copy('moves.noVideo')}</Muted>}
+              {clock.mode === 'work' ? (tv ? <TvText size={22} color={t.muted}>{copy('moves.noVideo')}</TvText> : <Muted>{copy('moves.noVideo')}</Muted>) : <Muted>{exercise.safety[0]}</Muted>}
               <CueCard coach={coach} steps={exercise.steps} width={tv ? 640 : Math.min(560, window.width - 48)} />
             </View>
-          ) : (
-            <Muted>{exercise.safety[0]}</Muted>
           )}
         </View>
       )}

@@ -105,7 +105,7 @@ function RootNavigator() {
       <Stack screenOptions={{ headerStyle: { backgroundColor: t.bg }, headerTintColor: t.text, headerTitleStyle: { fontWeight: '700' }, headerShadowVisible: false, contentStyle: { backgroundColor: t.bg } }}>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="config" options={{ title: 'Diagnostic' }} />
-        <Stack.Screen name="auth" options={{ title: 'Connexion', headerBackVisible: false }} />
+        <Stack.Screen name="auth" options={{ title: 'Connexion' }} />
         <Stack.Screen name="onboarding" options={{ title: 'Votre famille', headerBackVisible: false, gestureEnabled: false }} />
         <Stack.Screen name="join/[code]" options={{ title: 'Rejoindre une famille' }} />
         <Stack.Screen name="event/[id]" options={{ title: 'Événement' }} />

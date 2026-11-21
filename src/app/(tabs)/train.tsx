@@ -1,8 +1,8 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Text, View } from 'react-native';
-import { CoachAvatar } from '@/components/CoachAvatar';
-import { COACHES } from '@/lib/coaches';
+import { BodyPartGrid, CoachTeam, KidsSessionCard, openFilmedCoach, TodaySessionCard } from '@/components/PracticeBlocks';
+import { todayPlan, todayPlayParams } from '@/lib/homePractice';
 import { useData } from '@/lib/data';
 import { todayISO } from '@/lib/dates';
 import { displayName } from '@/lib/model';
@@ -43,6 +43,14 @@ export default function Train() {
       <H1>{copy('train.title')}</H1>
       <Muted>{copy('train.lead')}</Muted>
       <Spacer />
+      <TodaySessionCard />
+      <CoachTeam
+        selectedIllustrated={coachId}
+        onIllustrated={setCoachId}
+        onFilmed={(id) => openFilmedCoach(router, id)}
+      />
+      <BodyPartGrid />
+      <KidsSessionCard />
       <Notice tone="info" title={HEALTH_DISCLAIMER} />
       <H2>{copy('train.who')}</H2>
       <Row wrap>
@@ -65,27 +73,6 @@ export default function Train() {
       {members.some((m) => m.isMinor && !guidedAllowed(m)) ? <Muted>{copy('train.blocked')}</Muted> : null}
       {!selected.length ? <Muted>{copy('train.none')}</Muted> : null}
       <Spacer />
-      <H2>{copy('train.coach')}</H2>
-      <View style={{ flexDirection: wide ? 'row' : 'column', gap: 12 }}>
-        {COACHES.map((c) => (
-          <Card key={c.id} onPress={() => setCoachId(c.id)} accessibilityLabel={c.name} style={{ flex: 1, borderWidth: coachId === c.id ? 2 : undefined, borderColor: coachId === c.id ? t.primary : t.border }}>
-            <Row>
-              <CoachAvatar coachId={c.id} size={72} />
-              <View style={{ flex: 1 }}>
-                <Text style={{ color: t.text, fontWeight: '700', fontSize: 18 }}>{c.name}</Text>
-                <Muted>{c.title[locale]}</Muted>
-                <Muted style={{ fontSize: 13 }}>{c.bio[locale]}</Muted>
-              </View>
-            </Row>
-          </Card>
-        ))}
-      </View>
-      <Card>
-        <H2>{copy('moves.title')}</H2>
-        <Muted>{copy('moves.lead')}</Muted>
-        <Spacer h={8} />
-        <Button title={copy('moves.open')} icon="body-outline" onPress={() => router.push('/moves')} />
-      </Card>
       <H2>{copy('train.level')}</H2>
       {selected.map((m) => (
         <Muted key={m.id}>{displayName(m, me)} · {copy(`age.${defaultAgeBand(m)}` as 'age.adult')}</Muted>
@@ -96,7 +83,14 @@ export default function Train() {
           <Text style={{ color: t.text, fontWeight: '700', fontSize: 18 }}>{r.name[locale]}</Text>
           <Muted>{r.blurb[locale]}</Muted>
           <Spacer h={8} />
-          <Button title={copy('train.start')} icon="play" disabled={!selected.length} onPress={() => open(r.id)} />
+          <Button
+            title={selected.length ? copy('train.start') : copy('seance.start')}
+            icon="play"
+            onPress={() => {
+              if (selected.length) open(r.id);
+              else router.push({ pathname: '/moves/seance-play', params: todayPlayParams(todayPlan(today)) });
+            }}
+          />
         </Card>
       ))}
       <View style={{ flexDirection: wide ? 'row' : 'column', gap: 12 }}>

@@ -1,12 +1,13 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Text, View, useWindowDimensions } from 'react-native';
+import { CoachPhoto } from '@/components/moves/CoachPhoto';
 import { CoachPicker } from '@/components/moves/CoachPicker';
 import { MovesFrame } from '@/components/moves/MovesFrame';
 import { TvFocusable, TvText } from '@/components/tv/focus';
 import { useData } from '@/lib/data';
 import {
-  bodyPartById, exercisesFor, resolveDemo, rosterCoachId, LEVEL_LABEL,
+  bodyPartById, exercisesFor, resolveDemo, rosterById, rosterCoachId, LEVEL_LABEL,
   type BodyPartId, type RosterCoachId,
 } from '@/lib/coachLibrary';
 import { translate, type CopyKey } from '@/lib/i18n';
@@ -23,6 +24,9 @@ export default function ExerciseList() {
   const copy = (key: CopyKey) => translate(prefs.locale, key);
   const fallback: RosterCoachId = part?.id === 'enfants' ? 'coach-papa-garcon' : 'coach-homme';
   const [coachId, setCoachId] = useState<RosterCoachId>(rosterCoachId(coach, fallback));
+  useEffect(() => {
+    setCoachId(rosterCoachId(coach, part?.id === 'enfants' ? 'coach-papa-garcon' : 'coach-homme'));
+  }, [coach, part?.id]);
   const tv = isTv();
   const window = useWindowDimensions();
   if (!part) {
@@ -43,7 +47,9 @@ export default function ExerciseList() {
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: tv ? grid.gap : 12 }}>
         {rows.map((exercise, index) => {
           const demo = resolveDemo(exercise, coachId);
+          const shown = rosterById(demo.coachId);
           const detail = `${LEVEL_LABEL[exercise.level]} · ${exercise.dose}`;
+          const photo = tv ? Math.min(240, grid.cardWidth - 36) : 128;
           if (tv) {
             return (
               <TvFocusable
@@ -53,6 +59,7 @@ export default function ExerciseList() {
                 onPress={() => open(exercise.id)}
                 style={{ width: grid.cardWidth, minHeight: 150 }}
               >
+                <CoachPhoto coach={shown} width={photo} />
                 <TvText size={30} weight="800">{exercise.name}</TvText>
                 <TvText size={20} color={t.muted}>{detail}</TvText>
                 {demo.kind === 'video' ? <TvText size={18} weight="700" color={t.primary}>{copy('moves.video')}</TvText> : null}
@@ -61,9 +68,10 @@ export default function ExerciseList() {
           }
           return (
             <Card key={exercise.id} onPress={() => open(exercise.id)} accessibilityLabel={exercise.name}>
+              <CoachPhoto coach={shown} width={photo} />
               <Text style={{ color: t.text, fontWeight: '700', fontSize: 18 }}>{exercise.name}</Text>
               <Muted>{detail}</Muted>
-              {demo.kind === 'video' ? <Muted>{copy('moves.video')}</Muted> : null}
+              {demo.kind === 'video' ? <Muted>{copy('moves.video')}</Muted> : <Muted>{copy('moves.noVideo')}</Muted>}
             </Card>
           );
         })}

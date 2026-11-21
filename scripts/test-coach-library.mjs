@@ -33,7 +33,8 @@ const checks = [
   ['écrans zone, liste, démo', ['src/app/moves/index.tsx', 'src/app/moves/[part].tsx', 'src/app/moves/demo/[id].tsx'].every((rel) => existsSync(join(root, rel)))],
   ['lecteur expo-video en boucle, muet', read('src/components/moves/DemoStage.tsx').includes("from 'expo-video'") && read('src/components/moves/DemoStage.tsx').includes('p.loop = true') && read('src/components/moves/DemoStage.tsx').includes('p.muted = true')],
   ['focus TV sur les cartes', read('src/app/moves/index.tsx').includes('TvFocusable') && read('src/components/tv/focus.tsx').includes('hasTVPreferredFocus')],
-  ['build iPhone inchangé', JSON.parse(read('app.json')).expo.ios.buildNumber === '2'],
+  ['build iPhone 20', JSON.parse(read('app.json')).expo.ios.buildNumber === '20'],
+  ['accueil : séance, coachs, zones, enfants', ['TodaySessionCard', 'CoachTeam', 'BodyPartGrid', 'KidsSessionCard'].every((name) => read('src/app/(tabs)/index.tsx').includes(name)) && read('src/lib/gate.ts').includes("return 'app'")],
 ];
 for (const [name, ok] of checks) {
   console.log(ok ? '✓' : '✗', name);

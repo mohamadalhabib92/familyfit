@@ -22,7 +22,7 @@ const appJson = JSON.parse(read('app.json'));
 const focus = read('src/components/tv/focus.tsx');
 const checks = [
   ['profil production-tv isolé du téléphone', eas.includes('"production-tv"') && eas.includes('"channel": "production-tv"') && eas.includes('"EXPO_TV": "1"') && eas.includes('"RCT_USE_PREBUILT_RNCORE": "0"') && eas.includes('"EXPO_USE_PRECOMPILED_MODULES": "0"') && eas.includes('"autoIncrement": false') && !eas.includes('"extends": "production"')],
-  ['iPhone : react-native 0.88 et buildNumber 2', JSON.parse(read('package.json')).dependencies['react-native'] === '0.88.0' && appJson.expo.ios.buildNumber === '2'],
+  ['iPhone : react-native 0.88 et buildNumber 20', JSON.parse(read('package.json')).dependencies['react-native'] === '0.88.0' && appJson.expo.ios.buildNumber === '20'],
   ['TV : react-native-tvos 0.87-stable, swap seulement sur EAS', read('scripts/tv-build.mjs').includes('npm:react-native-tvos@0.87-stable') && read('scripts/tv-build.mjs').includes("env.EAS_BUILD === 'true'")],
   ['pre-install téléphone ne touche pas le lockfile', (() => {
     const dir = mkdtempSync(join(tmpdir(), 'tvhook-'));
@@ -61,7 +61,7 @@ const checks = [
       if (tv.extra.eas.projectId !== 'c563620f-7c9e-4354-a3e1-2c43b8bcb31f') process.exit(3);
       if (tv.ios.bundleIdentifier !== 'com.vibecode.familyfit-lpshhx' || tv.slug !== 'familyfit-tv') process.exit(4);
       if (tvOverride.extra.eas.projectId !== 'override-id' || tvOverride.slug !== 'familyfit-tv') process.exit(7);
-      if (phone.ios.buildNumber !== '2' || app.expo.ios.buildNumber !== '2') process.exit(5);
+      if (phone.ios.buildNumber !== '20' || app.expo.ios.buildNumber !== '20') process.exit(5);
       if (phone.slug !== 'familyfit' || phone.extra.eas.projectId !== '3104d765-4dcb-492e-ab04-ade0c86471d9') process.exit(6);
       if (tv.splash) process.exit(8);
       if (!phone.splash || phone.splash.image !== './assets/splash-icon.png') process.exit(9);

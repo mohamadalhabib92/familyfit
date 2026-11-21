@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useWindowDimensions, View } from 'react-native';
+import { Text, useWindowDimensions, View } from 'react-native';
 import { useVideoPlayer, VideoView, type VideoSource } from 'expo-video';
 import { videoModule } from '@/components/moves/media';
 import { TvFocusable, TvText } from '@/components/tv/focus';
@@ -13,7 +13,13 @@ type Copy = { play: string; pause: string; mute: string; sound: string };
 export function DemoStage({ asset, url, title, copy, height, preferPlay = true }: { asset: string | null; url: string | null; title: string; copy: Copy; height?: number; preferPlay?: boolean }) {
   const local = videoModule(asset);
   const source: VideoSource | null = local != null ? local : url ? { uri: url } : null;
-  if (!source) return null;
+  if (!source) {
+    return (
+      <View accessibilityLabel={title} style={{ width: '100%', height: height ?? 220, borderRadius: 20, backgroundColor: t.surfaceAlt, alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+        <Text style={{ color: t.text, fontWeight: '800', fontSize: 18, textAlign: 'center' }}>{title}</Text>
+      </View>
+    );
+  }
   return <Player key={`${asset ?? ''}|${url ?? ''}`} source={source} title={title} copy={copy} height={height} preferPlay={preferPlay} />;
 }
 

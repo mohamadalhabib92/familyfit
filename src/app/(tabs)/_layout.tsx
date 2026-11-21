@@ -63,10 +63,10 @@ export default function TabsLayout() {
         }}
       >
         <Tabs.Screen name="index" options={{ title: copy('tab.today'), tabBarIcon: icon('sunny-outline') }} />
+        <Tabs.Screen name="train" options={{ title: copy('tab.train'), tabBarIcon: icon('fitness-outline') }} />
         <Tabs.Screen name="agenda" options={{ title: copy('tab.agenda'), tabBarIcon: icon('calendar-outline') }} />
         <Tabs.Screen name="rituals" options={{ title: copy('tab.rituals'), tabBarIcon: icon('repeat-outline') }} />
         <Tabs.Screen name="wellness" options={{ title: copy('tab.wellness'), tabBarIcon: icon('leaf-outline') }} />
-        <Tabs.Screen name="train" options={{ title: copy('tab.train'), tabBarIcon: icon('fitness-outline') }} />
         <Tabs.Screen name="family" options={{ title: copy('tab.family'), tabBarIcon: icon('people-outline') }} />
       </Tabs>
     </View>

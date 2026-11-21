@@ -1,5 +1,5 @@
-import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
 import { Text, View, useWindowDimensions } from 'react-native';
 import { CoachPicker } from '@/components/moves/CoachPicker';
 import { MovesFrame } from '@/components/moves/MovesFrame';
@@ -14,9 +14,13 @@ import { theme as t } from '@/ui/theme';
 
 export default function MovePicker() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ coach?: string }>();
   const { prefs } = useData();
   const copy = (key: CopyKey) => translate(prefs.locale, key);
-  const [coachId, setCoachId] = useState<RosterCoachId>('coach-homme');
+  const [coachId, setCoachId] = useState<RosterCoachId>(rosterCoachId(params.coach, 'coach-homme'));
+  useEffect(() => {
+    if (params.coach) setCoachId(rosterCoachId(params.coach, 'coach-homme'));
+  }, [params.coach]);
   const tv = isTv();
   const window = useWindowDimensions();
   const grid = profileGrid(window, BODY_PARTS.length);
