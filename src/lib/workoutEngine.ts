@@ -448,6 +448,19 @@ export function catalogStrings(): string[] {
   return out;
 }
 
+/** Affichage : 5.100999999999939 devient 5. Jamais un flottant à l’écran. */
+export function wholeSeconds(value: number): number {
+  if (!Number.isFinite(value)) return 0;
+  return Math.max(0, Math.round(value));
+}
+
+export function formatClock(totalSec: number): string {
+  const s = wholeSeconds(totalSec);
+  const mm = Math.floor(s / 60);
+  const ss = s % 60;
+  return `${mm}:${String(ss).padStart(2, '0')}`;
+}
+
 export function activeBlock(blocks: Block[], elapsed: number): { block: Block; index: number; into: number; remaining: number } | null {
   let t = 0;
   for (let index = 0; index < blocks.length; index++) {
@@ -505,6 +518,7 @@ export function runWorkoutSelfTests(): { name: string; ok: boolean }[] {
   check('fin d’échauffement avant le corps de séance', warm > 0 && warm < durationSec);
   let player = startPlayer(createPlayer());
   let step = tick(player, 1, durationSec, warm);
+  check('secondes affichées entières', wholeSeconds(5.100999999999939) === 5 && wholeSeconds(0.4) === 0 && wholeSeconds(-3) === 0 && wholeSeconds(Number.NaN) === 0 && formatClock(29.6) === '0:30');
   check('une seconde ne termine pas l’échauffement', step.player.elapsedSec === 1 && step.player.warmupCompleted === false && step.from === 0 && step.to === 1);
   step = tick(step.player, warm, durationSec, warm);
   check('le lecteur marque l’échauffement quand son temps est atteint', step.player.warmupCompleted === true && step.player.elapsedSec >= warm);

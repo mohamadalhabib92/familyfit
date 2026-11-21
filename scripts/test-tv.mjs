@@ -58,17 +58,20 @@ const speech = read('src/lib/speechVoice.ts');
 const reminders = read('src/lib/reminders.ts');
 const kit = read('src/ui/kit.tsx');
 const tv = read('src/app/tv.tsx');
+const home = read('src/components/tv/LivingHome.tsx');
+const salon = read('src/components/tv/LivingSession.tsx');
+const settings = read('src/components/tv/LivingSettings.tsx');
 const player = read('src/components/SessionPlayer.tsx');
 const focus = read('src/components/tv/focus.tsx');
 const menuHook = read('src/components/tv/useTvMenu.ts');
 ok('pas d’import eager expo-speech', !speech.includes("from 'expo-speech'") && speech.includes("shouldRequireNative('expo-speech'"));
 ok('pas d’import eager expo-notifications', !reminders.includes("from 'expo-notifications'") && reminders.includes("shouldRequireNative('expo-notifications'"));
 ok('pas d’import eager expo-haptics', !kit.includes("from 'expo-haptics'") && kit.includes("shouldRequireNative('expo-haptics'"));
-ok('le salon n’a plus de largeurs fixes ni de second coach', !tv.includes('width: 360') && !tv.includes('width: 420') && !tv.includes('CoachAvatar') && tv.includes('profileGrid') && tv.includes('workoutColumns'));
-ok('le fini s’écrit dans les préférences existantes', tv.includes('setPrefs') && tv.includes('finish'));
+ok('le salon remplit l’écran, sans colonne de 360', !tv.includes('width: 360') && !tv.includes('width: 420') && !home.includes('width: 360') && !salon.includes('width: 420') && home.includes('profileGrid') && salon.includes('workoutColumns') && tv.includes('LivingHome') && tv.includes('LivingSession'));
+ok('le fini est dans les réglages, pas pendant le geste', settings.includes('setPrefs') && settings.includes('finish') && !salon.includes('setPrefs') && !salon.includes('player.skip'));
 ok('Menu : enable, BackHandler, et useTVEventHandler seulement s’il existe', menuHook.includes('enableTVMenuKey') && menuHook.includes('hardwareBackPress') && menuHook.includes("typeof rn.useTVEventHandler === 'function'"));
 ok('écran allumé pendant la séance TV', player.includes('expo-keep-awake') && player.includes('activateKeepAwakeAsync') && player.includes('familyfit-tv-workout'));
-ok('le lecteur ne se remonte plus avec la routine', !tv.includes('key={`${member.id}:${routine.id}`}') && tv.includes('sessionKey=') && tv.includes('canSwitchRoutine'));
+ok('pas de remontage par clé de routine, secondes entières, pas de bouton mort', !tv.includes('key={`${member.id}:${routine.id}`}') && player.includes('wholeSeconds') && !player.includes('player.skip') && salon.includes('formatClock') && salon.includes('DemoStage'));
 ok('plus de scroll forcé vers 1080', !focus.includes('measureInWindow') && !focus.includes('1080'));
 
 const config = spawnSync(process.execPath, ['-e', `

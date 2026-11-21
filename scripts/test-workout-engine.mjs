@@ -43,8 +43,8 @@ const checks = [
   ['focus 10 pieds', focus.includes('scale: focused ? 1.08') && focus.includes('TVFocusGuideView') && focus.includes('hasTVPreferredFocus') && read('src/lib/tvSurface.ts').includes('horizontal: 90') && read('src/lib/tvSurface.ts').includes('vertical: 60') && focus.includes('#F6C453') && !focus.includes('measureInWindow') && !focus.includes('1080')],
   ['verre : flou, repli plein, boutons en relief', read('src/ui/glass.tsx').includes('0.90') && read('src/ui/effects.tsx').includes('reduceTransparency') && read('src/ui/kit.tsx').includes('raisedShadow')],
   ['catalogue tvOS aux tailles Apple', ['icon-home-front.png', 'icon-home-back.png', 'icon-store-front.png', 'icon-store-back.png', 'top-shelf.png', 'top-shelf-wide.png'].every((name) => existsSync(join(root, 'assets/tv', name)))],
-  ['tampon natif TV = 3, sans autoIncrement', read('plugins/with-tv-pods.js').includes("const TV_BUNDLE_VERSION = '3'") && read('scripts/tv-build.mjs').includes("export const TV_BUNDLE_VERSION = '3'") && eas.includes('"autoIncrement": false')],
-  ['config TV : build 3, projet familyfit-tv, même bundle, iPhone inchangé', (() => {
+  ['tampon natif TV = 5, sans autoIncrement', read('plugins/with-tv-pods.js').includes("const TV_BUNDLE_VERSION = '5'") && read('scripts/tv-build.mjs').includes("export const TV_BUNDLE_VERSION = '5'") && eas.includes('"autoIncrement": false')],
+  ['config TV : build 5, projet familyfit-tv, même bundle, iPhone inchangé', (() => {
     const r = spawnSync(process.execPath, ['-e', `
       const app = require('./app.json');
       delete process.env.FAMILYFIT_TV_EAS_PROJECT_ID;
@@ -57,7 +57,7 @@ const checks = [
       delete process.env.FAMILYFIT_TV_EAS_PROJECT_ID;
       delete require.cache[require.resolve('./app.config.js')];
       const phone = require('./app.config.js')({ config: JSON.parse(JSON.stringify(app.expo)) });
-      if (tv.ios.buildNumber !== '3' || tv.ios.infoPlist.CFBundleVersion !== '3') process.exit(2);
+      if (tv.ios.buildNumber !== '5' || tv.ios.infoPlist.CFBundleVersion !== '5') process.exit(2);
       if (tv.extra.eas.projectId !== 'c563620f-7c9e-4354-a3e1-2c43b8bcb31f') process.exit(3);
       if (tv.ios.bundleIdentifier !== 'com.vibecode.familyfit-lpshhx' || tv.slug !== 'familyfit-tv') process.exit(4);
       if (tvOverride.extra.eas.projectId !== 'override-id' || tvOverride.slug !== 'familyfit-tv') process.exit(7);

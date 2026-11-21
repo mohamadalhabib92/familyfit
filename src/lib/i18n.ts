@@ -133,6 +133,8 @@ const FR = {
   'home.arc': 'Échauffement doux, effort qui monte, retour au calme.',
   'home.week': 'Cette semaine',
   'home.tune': 'Choisir durée et niveau',
+  'tv.settings': 'Réglages',
+  'tv.nextMove': 'Ensuite',
 } as const;
 
 export type CopyKey = keyof typeof FR;
@@ -222,6 +224,8 @@ const EN: Record<CopyKey, string> = {
   'home.arc': 'Gentle warm-up, rising effort, cool-down.',
   'home.week': 'This week',
   'home.tune': 'Choose length and level',
+  'tv.settings': 'Settings',
+  'tv.nextMove': 'Next',
 };
 
 const DE: Record<CopyKey, string> = {
@@ -309,6 +313,8 @@ const DE: Record<CopyKey, string> = {
   'home.arc': 'Sanftes Aufwärmen, steigende Anstrengung, Abwärmen.',
   'home.week': 'Diese Woche',
   'home.tune': 'Dauer und Niveau wählen',
+  'tv.settings': 'Einstellungen',
+  'tv.nextMove': 'Danach',
 };
 
 const AR: Record<CopyKey, string> = {
@@ -396,6 +402,8 @@ const AR: Record<CopyKey, string> = {
   'home.arc': 'إحماء لطيف، جهد يتصاعد، ثم تهدئة.',
   'home.week': 'هذا الأسبوع',
   'home.tune': 'اختيار المدة والمستوى',
+  'tv.settings': 'الإعدادات',
+  'tv.nextMove': 'التالي',
 };
 
 const TABLES: Record<Locale, Record<CopyKey, string>> = { fr: FR, en: EN, de: DE, ar: AR };

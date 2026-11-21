@@ -6,7 +6,7 @@ const xcode = require('xcode');
 
 /** Highest tvOS minimum among the pods this build links (Expo 58 is 16.4). */
 const TVOS_DEPLOYMENT_TARGET = '16.4';
-const TV_BUNDLE_VERSION = '3';
+const TV_BUNDLE_VERSION = '5';
 
 /**
  * Expo Router est le routeur, y compris sur Apple TV.

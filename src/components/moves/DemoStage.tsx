@@ -10,7 +10,7 @@ import { theme as t } from '@/ui/theme';
 type Copy = { play: string; pause: string; mute: string; sound: string };
 
 /** Lecteur en boucle, son coupé au départ. Le module n’est monté que s’il y a une source. */
-export function DemoStage({ asset, url, title, copy, height, preferPlay = true }: { asset: string | null; url: string | null; title: string; copy: Copy; height?: number; preferPlay?: boolean }) {
+export function DemoStage({ asset, url, title, copy, height, preferPlay = true, quiet = false }: { asset: string | null; url: string | null; title: string; copy: Copy; height?: number; preferPlay?: boolean; quiet?: boolean }) {
   const local = videoModule(asset);
   const source: VideoSource | null = local != null ? local : url ? { uri: url } : null;
   if (!source) {
@@ -20,10 +20,10 @@ export function DemoStage({ asset, url, title, copy, height, preferPlay = true }
       </View>
     );
   }
-  return <Player key={`${asset ?? ''}|${url ?? ''}`} source={source} title={title} copy={copy} height={height} preferPlay={preferPlay} />;
+  return <Player key={`${asset ?? ''}|${url ?? ''}`} source={source} title={title} copy={copy} height={height} preferPlay={preferPlay} quiet={quiet} />;
 }
 
-function Player({ source, title, copy, height, preferPlay }: { source: VideoSource; title: string; copy: Copy; height?: number; preferPlay: boolean }) {
+function Player({ source, title, copy, height, preferPlay, quiet }: { source: VideoSource; title: string; copy: Copy; height?: number; preferPlay: boolean; quiet: boolean }) {
   const tv = isTv();
   const window = useWindowDimensions();
   const player = useVideoPlayer(source, (p) => {
@@ -57,7 +57,7 @@ function Player({ source, title, copy, height, preferPlay }: { source: VideoSour
         allowsPictureInPicture={false}
         style={{ width: '100%', height: videoHeight, borderRadius: 20, backgroundColor: '#1D2522' }}
       />
-      {tv ? (
+      {quiet ? null : tv ? (
         <View style={{ flexDirection: 'row', gap: 16 }}>
           <TvFocusable preferred={preferPlay} label={playing ? copy.pause : copy.play} onPress={toggle} style={{ flex: 1 }}>
             <TvText size={28} weight="800">{playing ? copy.pause : copy.play}</TvText>

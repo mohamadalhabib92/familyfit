@@ -14,7 +14,7 @@ const native = require('./tv-native.cjs');
 
 export const TV_AUTOLINK_EXCLUDE = native.TV_AUTOLINK_EXCLUDE;
 export const TV_RN_CORE_FROM_SOURCE = native.TV_RN_CORE_FROM_SOURCE;
-export const TV_BUNDLE_VERSION = '3';
+export const TV_BUNDLE_VERSION = '5';
 
 export function tvBuildRequested(env = process.env) {
   return env.EXPO_TV === '1';

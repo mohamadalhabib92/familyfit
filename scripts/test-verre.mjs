@@ -25,7 +25,7 @@ const focus = read('src/components/tv/focus.tsx');
 ok('salon : verre, anneau doré, réduire les animations', focus.includes('glassVeil') && focus.includes('#F6C453') && focus.includes('useReduceMotion') && !focus.includes('#E7E0D4'));
 ok('salon plein écran, sans mesure forcée', focus.includes('flex: 1') && !focus.includes('measureInWindow') && !focus.includes('1080'));
 
-const tvFiles = ['src/app/tv.tsx', 'src/app/moves/index.tsx', 'src/components/SessionPlayer.tsx', 'src/components/moves/MovesFrame.tsx', 'src/app/moves/[part].tsx'];
+const tvFiles = ['src/app/tv.tsx', 'src/components/tv/LivingHome.tsx', 'src/components/tv/LivingSession.tsx', 'src/components/tv/LivingSettings.tsx', 'src/app/moves/index.tsx', 'src/components/SessionPlayer.tsx', 'src/components/moves/MovesFrame.tsx', 'src/app/moves/[part].tsx'];
 ok('encre TV sur les jetons du thème', tvFiles.every((file) => !read(file).includes('color="#1D2522"')));
 
 const theme = read('src/ui/theme.ts');
