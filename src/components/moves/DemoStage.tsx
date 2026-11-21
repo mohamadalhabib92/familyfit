@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Text, useWindowDimensions, View } from 'react-native';
 import { useVideoPlayer, VideoView, type VideoSource } from 'expo-video';
 import { videoModule } from '@/components/moves/media';
@@ -10,7 +10,7 @@ import { theme as t } from '@/ui/theme';
 type Copy = { play: string; pause: string; mute: string; sound: string };
 
 /** Lecteur en boucle, son coupé au départ. Le module n’est monté que s’il y a une source. */
-export function DemoStage({ asset, url, title, copy, height, preferPlay = true, quiet = false }: { asset: string | null; url: string | null; title: string; copy: Copy; height?: number; preferPlay?: boolean; quiet?: boolean }) {
+export function DemoStage({ asset, url, title, copy, height, preferPlay = true, quiet = false, syncMs = null, hold = false }: { asset: string | null; url: string | null; title: string; copy: Copy; height?: number; preferPlay?: boolean; quiet?: boolean; syncMs?: number | null; hold?: boolean }) {
   const local = videoModule(asset);
   const source: VideoSource | null = local != null ? local : url ? { uri: url } : null;
   if (!source) {
@@ -20,10 +20,10 @@ export function DemoStage({ asset, url, title, copy, height, preferPlay = true, 
       </View>
     );
   }
-  return <Player key={`${asset ?? ''}|${url ?? ''}`} source={source} title={title} copy={copy} height={height} preferPlay={preferPlay} quiet={quiet} />;
+  return <Player key={`${asset ?? ''}|${url ?? ''}`} source={source} title={title} copy={copy} height={height} preferPlay={preferPlay} quiet={quiet} syncMs={syncMs} hold={hold} />;
 }
 
-function Player({ source, title, copy, height, preferPlay, quiet }: { source: VideoSource; title: string; copy: Copy; height?: number; preferPlay: boolean; quiet: boolean }) {
+function Player({ source, title, copy, height, preferPlay, quiet, syncMs, hold }: { source: VideoSource; title: string; copy: Copy; height?: number; preferPlay: boolean; quiet: boolean; syncMs: number | null; hold: boolean }) {
   const tv = isTv();
   const window = useWindowDimensions();
   const player = useVideoPlayer(source, (p) => {
@@ -33,6 +33,21 @@ function Player({ source, title, copy, height, preferPlay, quiet }: { source: Vi
   });
   const [playing, setPlaying] = useState(true);
   const [muted, setMuted] = useState(true);
+  const lastSeek = useRef(0);
+  useEffect(() => {
+    if (!quiet) return;
+    if (hold) player.pause();
+    else player.play();
+  }, [hold, player, quiet]);
+  useEffect(() => {
+    if (!quiet || syncMs == null) return;
+    const here = player.currentTime * 1000;
+    const now = Date.now();
+    if (Math.abs(here - syncMs) > 100 && now - lastSeek.current > 250) {
+      lastSeek.current = now;
+      player.currentTime = syncMs / 1000;
+    }
+  }, [player, quiet, syncMs]);
   const videoHeight = height ?? (tv ? Math.max(420, Math.round(window.height * 0.62)) : Math.min(420, Math.round(window.width * 9 / 16)));
   const toggle = () => {
     if (playing) {

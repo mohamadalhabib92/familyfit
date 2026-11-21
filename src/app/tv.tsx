@@ -38,10 +38,10 @@ export default function LivingRoom() {
         <LivingSession
           params={plan}
           onBack={backHome}
-          onComplete={(durationSec) => {
+          onComplete={(durationSec, info) => {
             logWorkout({
               id: uid('wo_'),
-              routineId: `seance-${plan.audience}-${plan.minutes}`,
+              routineId: info?.routineId ?? `seance-${plan.audience}-${plan.minutes}`,
               coachId: 'lina',
               memberIds: me ? [me.id] : [],
               date: todayISO(),

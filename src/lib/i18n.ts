@@ -135,6 +135,9 @@ const FR = {
   'home.tune': 'Choisir durée et niveau',
   'tv.settings': 'Réglages',
   'tv.nextMove': 'Ensuite',
+  'tv.reps': 'Répétitions',
+  'tv.easier': 'Plus facile',
+  'tv.summary': 'Résumé',
 } as const;
 
 export type CopyKey = keyof typeof FR;
@@ -226,6 +229,9 @@ const EN: Record<CopyKey, string> = {
   'home.tune': 'Choose length and level',
   'tv.settings': 'Settings',
   'tv.nextMove': 'Next',
+  'tv.reps': 'Reps',
+  'tv.easier': 'Easier',
+  'tv.summary': 'Summary',
 };
 
 const DE: Record<CopyKey, string> = {
@@ -315,6 +321,9 @@ const DE: Record<CopyKey, string> = {
   'home.tune': 'Dauer und Niveau wählen',
   'tv.settings': 'Einstellungen',
   'tv.nextMove': 'Danach',
+  'tv.reps': 'Wiederholungen',
+  'tv.easier': 'Leichter',
+  'tv.summary': 'Überblick',
 };
 
 const AR: Record<CopyKey, string> = {
@@ -404,6 +413,9 @@ const AR: Record<CopyKey, string> = {
   'home.tune': 'اختيار المدة والمستوى',
   'tv.settings': 'الإعدادات',
   'tv.nextMove': 'التالي',
+  'tv.reps': 'تكرارات',
+  'tv.easier': 'أسهل',
+  'tv.summary': 'ملخص',
 };
 
 const TABLES: Record<Locale, Record<CopyKey, string>> = { fr: FR, en: EN, de: DE, ar: AR };

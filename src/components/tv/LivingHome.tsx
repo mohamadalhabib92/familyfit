@@ -9,6 +9,7 @@ import { todayISO } from '@/lib/dates';
 import { BODY_PARTS, ROSTER, rosterById, type RosterCoachId } from '@/lib/coachLibrary';
 import { COACHES } from '@/lib/coaches';
 import { timingCaption, todayPlan, todayPlayParams, type PlayParams } from '@/lib/homePractice';
+import { chooseToday, type Level, type ProgramMinutes } from '@/lib/training/engine';
 import { translate, type CopyKey } from '@/lib/i18n';
 import { profileGrid, TV_SAFE, tvSafeSize } from '@/lib/tvSurface';
 import { theme as t } from '@/ui/theme';
@@ -22,11 +23,20 @@ export function LivingHome({
   onSettings: () => void;
 }) {
   const router = useRouter();
-  const { prefs } = useData();
+  const { prefs, fitness } = useData();
   const copy = (key: CopyKey) => translate(prefs.locale, key);
   const window = useWindowDimensions();
   const safe = tvSafeSize(window);
   const plan = todayPlan(todayISO());
+  const level: Level = plan.level === 'avance' ? 'avance' : plan.level === 'debutant' ? 'debutant' : 'intermediaire';
+  const minutes = (plan.minutes === 10 || plan.minutes === 15 || plan.minutes === 20 || plan.minutes === 30 || plan.minutes === 45 ? plan.minutes : 20) as ProgramMinutes;
+  const todayWorkout = chooseToday({
+    today: todayISO(),
+    logs: fitness.logs.map((log) => ({ routineId: log.routineId, date: log.date })),
+    audience: plan.kids ? 'famille' : 'adulte',
+    level,
+    minutes,
+  });
   const levelKey: CopyKey = plan.level === 'debutant' ? 'seance.debutant' : plan.level === 'avance' ? 'seance.avance' : 'seance.intermediaire';
   const title = plan.kids ? copy('home.kids') : copy('seance.title');
   const phases: Record<IntensityPhase, string> = {
@@ -57,6 +67,7 @@ export function LivingHome({
           <View style={{ gap: 8 }}>
             <TvText size={26} color={t.muted}>{copy('home.session')}</TvText>
             <TvText size={Math.min(64, Math.round(safe.width / 28))} weight="800">{title}</TvText>
+            <TvText size={28} weight="800">{todayWorkout.title[prefs.locale === 'en' ? 'en' : 'fr']} · {todayWorkout.week}</TvText>
             <TvText size={28} color={t.muted}>{plan.minutes} {copy('seance.min')} · {copy(levelKey)} · {copy('home.offline')}</TvText>
             <TvText size={24} color={t.text}>{copy('home.arc')}</TvText>
             <TvText size={24} weight="800">{timingCaption(plan)}</TvText>
