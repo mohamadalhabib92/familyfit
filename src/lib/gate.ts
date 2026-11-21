@@ -53,6 +53,12 @@ export function finishOnboarding(state: LocalState): { state: LocalState; href: 
   return { state: next, href: '/' };
 }
 
+/** Identifiant à poser sur un événement. Vide ou absent : on n’écrit pas. */
+export function eventFamilyId(family: { id?: string | null } | null | undefined): string | null {
+  const id = family?.id?.trim();
+  return id ? id : null;
+}
+
 /** /onboarding?replace=1 sans session et sans Supabase renvoie à la connexion. */
 export function onboardingReplaceTarget(state: { supabaseConfigured: boolean; session: unknown }, replace: boolean): '/auth' | null {
   if (!state.session && !state.supabaseConfigured && replace) return '/auth';
@@ -105,5 +111,7 @@ export function runGateSelfTests(): { name: string; ok: boolean }[] {
     'session et famille prêtes : app',
     routeAfterReady({ supabaseConfigured: false, hasSession: true, hasFamily: true, onboarded: true, trialDeclined: true }) === 'app',
   );
+  check('événement : identifiant de famille gardé', eventFamilyId({ id: 'fam_1' }) === 'fam_1');
+  check('événement : famille absente ou identifiant vide', eventFamilyId(null) === null && eventFamilyId({ id: '  ' }) === null && eventFamilyId(undefined) === null);
   return out;
 }

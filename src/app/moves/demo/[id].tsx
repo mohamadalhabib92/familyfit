@@ -38,7 +38,7 @@ export default function ExerciseDemo() {
   const playable = demo.kind === 'video' && (bundled != null || !!demo.url);
   const shown = rosterById(demo.coachId);
   const stageWidth = tv ? Math.max(480, workoutColumns(window).rightWidth - 24) : Math.min(640, window.width - 48);
-  const playerCopy = { play: copy('moves.play'), pause: copy('moves.pause'), mute: copy('moves.mute'), sound: copy('moves.sound') };
+  const playerCopy = { play: copy('moves.play'), pause: copy('moves.pause'), mute: copy('moves.mute'), sound: copy('moves.sound'), unavailable: copy('moves.videoFailed') };
   const stage = playable && demo.kind === 'video'
     ? <DemoStage asset={demo.asset} url={demo.url} title={exercise.name} copy={playerCopy} />
     : (

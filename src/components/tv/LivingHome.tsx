@@ -1,5 +1,6 @@
 import { useRouter } from 'expo-router';
 import { ScrollView, View, useWindowDimensions } from 'react-native';
+import { OfflineNote } from '@/components/OfflineNote';
 import { CoachAvatar } from '@/components/CoachAvatar';
 import { CoachPhoto } from '@/components/moves/CoachPhoto';
 import { IntensityBar } from '@/components/moves/IntensityBar';
@@ -69,6 +70,7 @@ export function LivingHome({
             <TvText size={Math.min(64, Math.round(safe.width / 28))} weight="800">{title}</TvText>
             <TvText size={28} weight="800">{todayWorkout.title[prefs.locale === 'en' ? 'en' : 'fr']} · {todayWorkout.week}</TvText>
             <TvText size={28} color={t.muted}>{plan.minutes} {copy('seance.min')} · {copy(levelKey)} · {copy('home.offline')}</TvText>
+            <OfflineNote tv />
             <TvText size={24} color={t.text}>{copy('home.arc')}</TvText>
             <TvText size={24} weight="800">{timingCaption(plan)}</TvText>
           </View>

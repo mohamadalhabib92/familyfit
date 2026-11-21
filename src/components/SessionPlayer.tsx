@@ -6,7 +6,6 @@ import { deviceSpeaker, silentSpeaker, type Speaker } from '@/lib/speechVoice';
 import { activeBlock, buildTimeline, cuesBetween, formatClock, pausePlayer, startPlayer, tick, variantFor, wholeSeconds, type AgeBand, type Block, type CoachId, type Locale } from '@/lib/workoutEngine';
 import { createPlayer } from '@/lib/workoutEngine';
 import { translate, type CopyKey } from '@/lib/i18n';
-import { HEALTH_DISCLAIMER } from '@/lib/health';
 import { TvFocusable, TvText } from '@/components/tv/focus';
 import { isTv } from '@/lib/platform';
 import { workoutColumns } from '@/lib/tvSurface';
@@ -195,7 +194,7 @@ export function SessionPlayer({
         )}
       </View>
       {note ? <Notice tone="warning" title={note} /> : null}
-      {player.done ? <Notice tone="success" title={copy('player.done')} text={HEALTH_DISCLAIMER} /> : null}
+      {player.done ? <Notice tone="success" title={copy('player.done')} text={copy('health.disclaimer')} /> : null}
     </View>
   );
 }

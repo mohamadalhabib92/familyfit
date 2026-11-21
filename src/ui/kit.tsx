@@ -297,25 +297,27 @@ export function Badge({ label, tone = 'neutral' }: { label: string; tone?: 'neut
     info: [t.infoBg, t.info],
   } as const;
   const [bg, fg] = map[tone];
+  const s = useFontScale();
   return (
     <View style={[styles.badge, { backgroundColor: bg }]}>
-      <Text style={{ color: fg, fontSize: 12, fontWeight: '700', letterSpacing: 0.3 }}>{label}</Text>
+      <Text style={{ color: fg, fontSize: 12 * s, fontWeight: '700', letterSpacing: 0.3 }}>{label}</Text>
     </View>
   );
 }
 
 export function Field({ label, hint, error, style, ...props }: TextInputProps & { label: string; hint?: string; error?: string | null }) {
   const minH = useMinTarget(48);
+  const s = useFontScale();
   return (
     <View style={{ marginBottom: t.space.md }}>
-      <Text style={[styles.label, { color: t.muted }]}>{label}</Text>
+      <Text style={[styles.label, { color: t.muted, fontSize: 13 * s }]}>{label}</Text>
       <TextInput
         placeholderTextColor={t.muted}
         accessibilityLabel={label}
-        style={[styles.input, { color: t.text, backgroundColor: t.surface, borderColor: t.border, borderRadius: t.radii.sm, minHeight: minH }, props.multiline && { minHeight: Math.max(88, minH), textAlignVertical: 'top', paddingTop: 12 }, error ? { borderColor: t.danger } : null, style]}
+        style={[styles.input, { color: t.text, backgroundColor: t.surface, borderColor: t.border, borderRadius: t.radii.sm, minHeight: minH, fontSize: 16 * s }, props.multiline && { minHeight: Math.max(88, minH), textAlignVertical: 'top', paddingTop: 12 }, error ? { borderColor: t.danger } : null, style]}
         {...props}
       />
-      {error ? <Text style={{ color: t.danger, marginTop: 4, fontSize: 13 }}>{error}</Text> : hint ? <Muted style={{ marginTop: 4, fontSize: 13 }}>{hint}</Muted> : null}
+      {error ? <Text accessibilityRole="alert" accessibilityLiveRegion="polite" style={{ color: t.danger, marginTop: 4, fontSize: 13 * s, lineHeight: 18 * s }}>{error}</Text> : hint ? <Muted style={{ marginTop: 4, fontSize: 13 }}>{hint}</Muted> : null}
     </View>
   );
 }
@@ -323,9 +325,10 @@ export function Field({ label, hint, error, style, ...props }: TextInputProps & 
 /** Sélecteur segmenté (ex. TVA Oui / Non). */
 export function Segmented<T extends string | number>({ options, value, onChange, label }: { options: { label: string; value: T }[]; value: T; onChange: (v: T) => void; label?: string }) {
   const minH = useMinTarget(44);
+  const s = useFontScale();
   return (
     <View style={{ marginBottom: t.space.md }}>
-      {label ? <Text style={[styles.label, { color: t.muted }]}>{label}</Text> : null}
+      {label ? <Text style={[styles.label, { color: t.muted, fontSize: 13 * s }]}>{label}</Text> : null}
       <View style={[styles.segment, { backgroundColor: t.surfaceAlt, borderRadius: t.radii.md }]} accessibilityRole="radiogroup" accessibilityLabel={label}>
         {options.map((o) => {
           const on = o.value === value;
@@ -338,7 +341,7 @@ export function Segmented<T extends string | number>({ options, value, onChange,
               accessibilityState={{ checked: on }}
               style={[styles.segItem, { minHeight: minH }, on && { backgroundColor: t.surface, borderWidth: 1, borderColor: t.primary, borderTopColor: isDark() ? 'rgba(255,255,255,0.28)' : 'rgba(255,255,255,0.72)', ...shadow(1) }]}
             >
-              <Text style={{ color: on ? t.text : t.muted, fontWeight: on ? '700' : '500', fontSize: 14 }}>{o.label}</Text>
+              <Text style={{ color: on ? t.text : t.muted, fontWeight: on ? '700' : '500', fontSize: 14 * s }}>{o.label}</Text>
             </Pressable>
           );
         })}
@@ -370,12 +373,13 @@ export function Toggle({ label, value, onChange, hint }: { label: string; value:
 
 export function Empty({ icon = 'sparkles-outline', title, text, action }: { icon?: IconName; title: string; text?: string; action?: ReactNode }) {
   const glass = useGlassLook();
+  const s = useFontScale();
   const body = (
     <>
       <View style={[styles.emptyIcon, { backgroundColor: t.surfaceAlt }]}>
         <Ionicons name={icon} size={28} color={t.accent} />
       </View>
-      <Text accessibilityRole="header" style={[styles.h2, { color: t.text, textAlign: 'center', marginBottom: 6 }]}>{title}</Text>
+      <Text accessibilityRole="header" style={[styles.h2, { color: t.text, textAlign: 'center', marginBottom: 6, fontSize: t.type.title.size * s, lineHeight: t.type.title.line * s }]}>{title}</Text>
       {text ? <Muted style={{ textAlign: 'center', marginBottom: 14, maxWidth: 420 }}>{text}</Muted> : null}
       {action}
     </>
@@ -392,13 +396,14 @@ export function Empty({ icon = 'sparkles-outline', title, text, action }: { icon
 
 /** Bandeau d’entrée : une promesse, une action, pas une publicité. */
 export function Hero({ kicker, title, text, action }: { kicker: string; title: string; text: string; action?: ReactNode }) {
+  const s = useFontScale();
   return (
     <View style={{ backgroundColor: t.primary, borderRadius: t.radii.lg, padding: t.space.xl, marginBottom: t.space.lg, gap: t.space.sm, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.35)', ...raisedShadow(false, false) }}>
       <View pointerEvents="none" style={{ position: 'absolute', top: 1, left: 18, right: 18, height: 8, borderRadius: 4, backgroundColor: 'rgba(255,255,255,0.22)' }} />
       <View pointerEvents="none" style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 10, backgroundColor: 'rgba(0,0,0,0.12)' }} />
-      <Text style={{ color: t.onPrimary, fontSize: 12, fontWeight: '700', letterSpacing: 1.4, textTransform: 'uppercase', opacity: 0.8 }}>{kicker}</Text>
-      <Text accessibilityRole="header" style={{ color: t.onPrimary, fontSize: 28, lineHeight: 34, fontWeight: '700', letterSpacing: -0.6 }}>{title}</Text>
-      <Text style={{ color: t.onPrimary, fontSize: 16, lineHeight: 23, opacity: 0.92 }}>{text}</Text>
+      <Text style={{ color: t.onPrimary, fontSize: 12 * s, fontWeight: '700', letterSpacing: 1.4, textTransform: 'uppercase', opacity: 0.8 }}>{kicker}</Text>
+      <Text accessibilityRole="header" style={{ color: t.onPrimary, fontSize: 28 * s, lineHeight: 34 * s, fontWeight: '700', letterSpacing: -0.6 }}>{title}</Text>
+      <Text style={{ color: t.onPrimary, fontSize: 16 * s, lineHeight: 23 * s, opacity: 0.92 }}>{text}</Text>
       {action}
     </View>
   );
@@ -419,10 +424,11 @@ export function Notice({ tone = 'info', title, text, icon }: { tone?: 'info' | '
   const [bg, fg] = map[tone];
   const ic: IconName = icon ?? ({ info: 'information-circle', warning: 'warning', danger: 'alert-circle', success: 'checkmark-circle' } as const)[tone];
   const tv = isTv();
-  const titleSize = tv ? 26 : 14;
-  const bodySize = tv ? 22 : 13;
+  const s = useFontScale();
+  const titleSize = (tv ? 26 : 14) * s;
+  const bodySize = (tv ? 22 : 13) * s;
   return (
-    <View style={[styles.notice, { backgroundColor: bg, padding: tv ? 20 : 12, gap: tv ? 16 : 10 }]} accessibilityRole="alert">
+    <View style={[styles.notice, { backgroundColor: bg, padding: tv ? 20 : 12, gap: tv ? 16 : 10, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.45)', borderBottomWidth: 2, borderBottomColor: 'rgba(0,0,0,0.12)' }]} accessibilityRole="alert">
       <Ionicons name={ic} size={tv ? 32 : 20} color={fg} style={{ marginTop: 1 }} />
       <View style={{ flex: 1 }}>
         <Text style={{ color: fg, fontWeight: '700', fontSize: titleSize, lineHeight: Math.round(titleSize * 1.25) }}>{title}</Text>
@@ -439,7 +445,7 @@ export function ListItem({ title, subtitle, right, icon, onPress }: { title: str
       onPress={onPress}
       disabled={!onPress}
       accessibilityRole={onPress ? 'button' : undefined}
-      accessibilityLabel={onPress ? title : undefined}
+      accessibilityLabel={onPress ? (subtitle ? `${title}. ${subtitle}` : title) : undefined}
       style={({ pressed }) => [styles.li, { minHeight: minH }, pressed && { backgroundColor: t.surfaceAlt }]}
     >
       {icon ? (
@@ -448,14 +454,8 @@ export function ListItem({ title, subtitle, right, icon, onPress }: { title: str
         </View>
       ) : null}
       <View style={{ flex: 1 }}>
-        <Text style={[styles.body, { color: t.text, fontWeight: '600' }]} numberOfLines={1}>
-          {title}
-        </Text>
-        {subtitle ? (
-          <Muted style={{ fontSize: 13 }} >
-            {subtitle}
-          </Muted>
-        ) : null}
+        <Body numberOfLines={2} style={{ fontWeight: '600' }}>{title}</Body>
+        {subtitle ? <Muted style={{ marginTop: 2 }}>{subtitle}</Muted> : null}
       </View>
       {right}
       {onPress ? <Ionicons name="chevron-forward" size={18} color={t.muted} /> : null}
@@ -468,10 +468,11 @@ export function Divider() {
 }
 
 export function Stat({ label, value, sub }: { label: string; value: string; sub?: string }) {
+  const s = useFontScale();
   return (
-    <View style={[styles.card, { flex: 1, minWidth: 140, marginBottom: 0 }]}>
+    <View accessibilityLabel={`${label} ${value}${sub ? `, ${sub}` : ''}`} style={[styles.card, { flex: 1, minWidth: 140, marginBottom: 0 }]}>
       <Muted style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: 0.8 }}>{label}</Muted>
-      <Text style={{ color: t.text, fontSize: 22, fontWeight: '700', marginTop: 4 }}>{value}</Text>
+      <Text style={{ color: t.text, fontSize: 22 * s, fontWeight: '700', marginTop: 4 }}>{value}</Text>
       {sub ? <Muted style={{ fontSize: 12, marginTop: 2 }}>{sub}</Muted> : null}
     </View>
   );
@@ -498,13 +499,14 @@ export function shadow(level = 1): ViewStyle {
 }
 
 export function LoadingState({ slow, onRetry }: { slow?: boolean; onRetry?: () => void }) {
+  const s = useFontScale();
   return (
-    <View style={{ flex: 1, backgroundColor: t.bg, alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+    <View accessibilityLiveRegion="polite" style={{ flex: 1, backgroundColor: t.bg, alignItems: 'center', justifyContent: 'center', padding: 24 }}>
       <ActivityIndicator color={t.primary} accessibilityLabel="Chargement" />
-      <Text style={{ color: t.text, fontSize: 16, fontWeight: '600', marginTop: 16, textAlign: 'center' }}>Chargement de FamilyFit</Text>
+      <Text style={{ color: t.text, fontSize: 16 * s, fontWeight: '600', marginTop: 16, textAlign: 'center' }}>Chargement de FamilyFit</Text>
       {slow ? (
         <>
-          <Text style={{ color: t.muted, fontSize: 15, lineHeight: 21, textAlign: 'center', marginTop: 8 }}>
+          <Text style={{ color: t.muted, fontSize: 15 * s, lineHeight: 21 * s, textAlign: 'center', marginTop: 8 }}>
             Cela prend plus de temps que prévu. Vos données ne sont pas effacées, et rien n’est enregistré tant que la lecture n’a pas réussi.
           </Text>
           {onRetry ? <Button title="Réessayer" onPress={onRetry} style={{ marginTop: 16 }} /> : null}

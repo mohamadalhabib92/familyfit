@@ -118,6 +118,7 @@ export function TvFocusable({
     >
       {glass && fx.blur ? <BlurView intensity={fx.intensity} tint={dark ? 'dark' : 'light'} style={{ position: 'absolute', top: 0, right: 0, bottom: 0, left: 0 }} /> : null}
       {glass ? <View pointerEvents="none" style={{ position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, backgroundColor: glassVeil() }} /> : null}
+      {focused ? <View pointerEvents="none" style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 10, backgroundColor: focusRing }} /> : null}
       <View pointerEvents="none" style={{ position: 'absolute', top: 1, left: 16, right: 16, height: 6, borderRadius: 3, backgroundColor: focused ? 'rgba(255,255,255,0.55)' : dark ? 'rgba(255,255,255,0.16)' : 'rgba(255,255,255,0.45)' }} />
       {children}
     </Pressable>

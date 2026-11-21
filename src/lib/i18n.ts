@@ -1,3 +1,4 @@
+import { HEALTH_DISCLAIMER } from './health';
 import type { Locale } from './workoutEngine';
 
 const FR = {
@@ -88,6 +89,7 @@ const FR = {
   'moves.sound': 'Activer le son',
   'moves.safety': 'Repères de sécurité',
   'moves.noVideo': 'Pas de vidéo pour ce coach. Les étapes défilent sur sa photo.',
+  'moves.videoFailed': 'La vidéo ne part pas. Le geste reste décrit à l’écran.',
   'moves.back': 'Retour',
   'moves.video': 'Vidéo',
   'moves.kidsNote': 'Le petit coach, garçon métis de 6 ans, fait les gestes avec son papa, le coach d’Afrique de l’Ouest.',
@@ -138,6 +140,8 @@ const FR = {
   'tv.reps': 'Répétitions',
   'tv.easier': 'Plus facile',
   'tv.summary': 'Résumé',
+  'net.offline': 'Hors ligne. Les séances déjà sur l’appareil continuent.',
+  'health.disclaimer': HEALTH_DISCLAIMER,
 } as const;
 
 export type CopyKey = keyof typeof FR;
@@ -182,6 +186,7 @@ const EN: Record<CopyKey, string> = {
   'moves.sound': 'Sound on',
   'moves.safety': 'Safety cues',
   'moves.noVideo': 'No video for this coach. The steps play over their photo.',
+  'moves.videoFailed': 'This video will not play. The move stays described on screen.',
   'moves.back': 'Back',
   'moves.video': 'Video',
   'moves.kidsNote': 'The little coach, a 6-year-old mixed-race boy, does the moves with his dad, the West African coach.',
@@ -232,6 +237,8 @@ const EN: Record<CopyKey, string> = {
   'tv.reps': 'Reps',
   'tv.easier': 'Easier',
   'tv.summary': 'Summary',
+  'net.offline': 'Offline. Sessions already on this device keep going.',
+  'health.disclaimer': 'Light activity, with no diagnosis and no promised result. Ask a health professional.',
 };
 
 const DE: Record<CopyKey, string> = {
@@ -274,6 +281,7 @@ const DE: Record<CopyKey, string> = {
   'moves.sound': 'Ton an',
   'moves.safety': 'Sicherheit',
   'moves.noVideo': 'Kein Video für diesen Coach. Die Schritte laufen über dem Foto.',
+  'moves.videoFailed': 'Das Video startet nicht. Die Bewegung bleibt auf dem Bildschirm beschrieben.',
   'moves.back': 'Zurück',
   'moves.video': 'Video',
   'moves.kidsNote': 'Der kleine Coach, ein sechsjähriger gemischter Junge, macht die Bewegungen mit seinem Papa, dem westafrikanischen Coach.',
@@ -324,6 +332,8 @@ const DE: Record<CopyKey, string> = {
   'tv.reps': 'Wiederholungen',
   'tv.easier': 'Leichter',
   'tv.summary': 'Überblick',
+  'net.offline': 'Offline. Einheiten, die schon auf dem Gerät sind, gehen weiter.',
+  'health.disclaimer': 'Leichte Aktivität, ohne Diagnose und ohne versprochenes Ergebnis. Fragen Sie eine Gesundheitsfachperson.',
 };
 
 const AR: Record<CopyKey, string> = {
@@ -366,6 +376,7 @@ const AR: Record<CopyKey, string> = {
   'moves.sound': 'تشغيل الصوت',
   'moves.safety': 'تنبيهات السلامة',
   'moves.noVideo': 'لا فيديو لهذا المدرّب. تتوالى الخطوات على صورته.',
+  'moves.videoFailed': 'لا يبدأ الفيديو. تبقى الحركة موصوفة على الشاشة.',
   'moves.back': 'رجوع',
   'moves.video': 'فيديو',
   'moves.kidsNote': 'المدرّب الصغير، طفل خلاسي في السادسة، يؤدّي الحركات مع أبيه، مدرّب غرب أفريقيا.',
@@ -416,6 +427,8 @@ const AR: Record<CopyKey, string> = {
   'tv.reps': 'تكرارات',
   'tv.easier': 'أسهل',
   'tv.summary': 'ملخص',
+  'net.offline': 'دون اتصال. الحصص الموجودة على الجهاز تستمر.',
+  'health.disclaimer': 'نشاط خفيف، بلا تشخيص وبلا وعد بنتيجة. استشر مختصًا في الصحة.',
 };
 
 const TABLES: Record<Locale, Record<CopyKey, string>> = { fr: FR, en: EN, de: DE, ar: AR };

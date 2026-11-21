@@ -275,12 +275,49 @@ export function clipCandidates(exercise: LibraryExercise, phase: IntensityPhase,
   return list;
 }
 
-export function pickClip(candidates: ClipRef[], hasAsset: (asset: string) => boolean): ClipRef | null {
+/**
+ * En ligne, une URL distante peut servir. Hors ligne, on la saute
+ * et on continue vers un clip déjà dans le bundle. Sans clip, null :
+ * l’écran montre la photo et les étapes, pas une plaque noire.
+ */
+export function pickClip(candidates: ClipRef[], hasAsset: (asset: string) => boolean, options?: { online?: boolean }): ClipRef | null {
+  const online = options?.online !== false;
   for (const clip of candidates) {
     if (clip.asset && hasAsset(clip.asset)) return { asset: clip.asset, url: null };
-    if (clip.url) return { asset: null, url: clip.url };
+    if (clip.url && online) return { asset: null, url: clip.url };
   }
   return null;
+}
+
+export type PlayClock = { index: number; mode: 'work' | 'rest' | 'done'; left: number; running: boolean };
+
+/** Pas de bloc, ou un travail à 0 s : on ne lance pas un minuteur qui finirait par s’enregistrer. */
+export function initialPlayClock(blocks: { workSec: number }[]): PlayClock {
+  const first = blocks[0];
+  if (!first || first.workSec <= 0) return { index: 0, mode: 'done', left: 0, running: false };
+  return { index: 0, mode: 'work', left: first.workSec, running: true };
+}
+
+export function advancePlayClock(state: PlayClock, blocks: { workSec: number; restSec: number }[]): PlayClock {
+  const block = blocks[state.index];
+  if (!block) return { ...state, mode: 'done', running: false, left: 0 };
+  if (state.mode === 'work' && block.restSec > 0) return { ...state, mode: 'rest', left: block.restSec };
+  const next = state.index + 1;
+  const following = blocks[next];
+  if (!following) return { ...state, mode: 'done', running: false, left: 0 };
+  return { ...state, index: next, mode: 'work', left: following.workSec };
+}
+
+export function tickPlayClock(state: PlayClock, blocks: { workSec: number; restSec: number }[]): PlayClock {
+  if (!state.running || state.mode === 'done') return state;
+  if (!blocks.length) return { ...state, mode: 'done', running: false, left: 0 };
+  if (state.left > 1) return { ...state, left: state.left - 1 };
+  return advancePlayClock(state, blocks);
+}
+
+/** Une séance sans bloc ne s’écrit pas dans le journal. */
+export function shouldRecordWorkout(blockCount: number, mode: PlayClock['mode']): boolean {
+  return blockCount > 0 && mode === 'done';
 }
 
 export function elapsedBefore(blocks: SessionBlock[], index: number): number {
@@ -397,5 +434,22 @@ export function runProgressionSelfTests(): { name: string; ok: boolean }[] {
     check('squat présent', false);
   }
   check('noms de fichiers lent et intense', videoFileName('planche', 'coach-femme', 'lent') === 'planche-coach-femme-lent.mp4' && videoFileName('planche', 'coach-femme', 'intense') === 'planche-coach-femme-intense.mp4' && videoFileName('grenouille', 'coach-papa-garcon') === 'grenouille-coach-papa-garcon.mp4');
+  const offlineOnly = pickClip(
+    [{ asset: null, url: 'https://example.com/only.mp4' }, { asset: 'assets/coach-videos/coach-homme-squat-v2.mp4', url: null }],
+    (asset) => asset.endsWith('coach-homme-squat-v2.mp4'),
+    { online: false },
+  );
+  check('hors ligne : on saute l’URL et on garde le clip local', offlineOnly?.asset === 'assets/coach-videos/coach-homme-squat-v2.mp4');
+  check('hors ligne sans fichier local : pas de clip', pickClip([{ asset: null, url: 'https://example.com/only.mp4' }], () => false, { online: false }) === null);
+  check('en ligne, l’URL distante reste possible', pickClip([{ asset: null, url: 'https://example.com/only.mp4' }], () => false)?.url === 'https://example.com/only.mp4');
+  const started = initialPlayClock(adult.blocks);
+  check('le minuteur part sur le premier travail', started.mode === 'work' && started.running && started.left === adult.blocks[0]?.workSec);
+  const afterWork = tickPlayClock({ ...started, left: 1 }, adult.blocks);
+  check('la fin d’un travail ouvre le repos', afterWork.mode === 'rest' && afterWork.left === adult.blocks[0]?.restSec);
+  check('une seconde avant la fin ne change pas de bloc', tickPlayClock({ ...started, left: 2 }, adult.blocks).left === 1);
+  check('séance vide : pas de journal', initialPlayClock([]).mode === 'done' && !shouldRecordWorkout(0, 'done'));
+  check('séance en cours : pas de journal', !shouldRecordWorkout(adult.blocks.length, 'work'));
+  check('séance terminée : journal', shouldRecordWorkout(adult.blocks.length, 'done'));
+  check('pause : le tick ne termine pas la séance', tickPlayClock({ ...started, running: false }, adult.blocks).running === false && tickPlayClock({ ...started, running: false }, adult.blocks).mode === 'work');
   return out;
 }

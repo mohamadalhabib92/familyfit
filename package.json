@@ -29,6 +29,8 @@
   "devDependencies": {
     "@react-native-tvos/config-tv": "^0.1.7",
     "@types/react": "~19.3.0",
+    "eslint": "^9.0.0",
+    "eslint-config-expo": "~58.0.4",
     "typescript": "~6.0.3"
   },
   "scripts": {
@@ -41,7 +43,8 @@
     "icons": "python3 scripts/make-icons.py",
     "eas-build-pre-install": "node scripts/eas-tv-preinstall.mjs",
     "eas-build-post-install": "node scripts/eas-tv-preinstall.mjs --check-installed",
-    "test": "node scripts/test-hijri.mjs && node scripts/test-persist.mjs && node scripts/test-gate.mjs && node scripts/test-foundations.mjs && node scripts/test-preservation.mjs && node scripts/test-workout-engine.mjs && node scripts/test-tv.mjs && node scripts/test-rls-local.mjs && node scripts/test-coach-library.mjs && node scripts/test-progression.mjs && node scripts/test-verre.mjs && node scripts/test-training.mjs"
+    "test": "node scripts/test-hijri.mjs && node scripts/test-persist.mjs && node scripts/test-gate.mjs && node scripts/test-foundations.mjs && node scripts/test-preservation.mjs && node scripts/test-workout-engine.mjs && node scripts/test-tv.mjs && node scripts/test-rls-local.mjs && node scripts/test-coach-library.mjs && node scripts/test-progression.mjs && node scripts/test-verre.mjs && node scripts/test-training.mjs && node scripts/test-polish.mjs",
+    "lint": "expo lint"
   },
   "private": true
 }

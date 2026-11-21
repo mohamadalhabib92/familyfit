@@ -79,7 +79,7 @@ type Ctx = {
   lists: FamilyList[]; setLists: Setter<FamilyList[]>;
   fitness: FitnessDisk; setFitness: Setter<FitnessDisk>;
   logWorkout: (entry: WorkoutLog) => void;
-  createFamily: (name: string, myName: string, withDemo: boolean) => Promise<void>;
+  createFamily: (name: string, myName: string, withDemo: boolean) => Promise<boolean>;
   createInvitation: (role: Role) => Promise<Invitation>;
   revokeInvitation: (id: string) => void;
   acceptInvitation: (code: string, name: string, isMinor: boolean) => Promise<{ ok: boolean; message: string }>;
@@ -228,7 +228,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   }, [ready, schemaChecked, writesPaused, session, family, mergedPrefs.trialDeclined]);
 
   const createFamily: Ctx['createFamily'] = async (name, myName, withDemo) => {
-    if (!ready) return;
+    if (!ready) return false;
     const remoteId = await remote<string>('create_family', { p_name: name, p_display_name: myName });
     const mark = paletteAt(0);
     const fam: Family = { id: typeof remoteId === 'string' && remoteId ? remoteId : uid('fam_'), name, createdAt: new Date().toISOString() };
@@ -242,6 +242,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     }
     setInvitations([]);
     setPrefs((p) => ({ ...DEFAULT_PREFS, ...p, trialMode: false, trialDeclined: true }));
+    return true;
   };
 
   const createInvitation: Ctx['createInvitation'] = async (role) => {

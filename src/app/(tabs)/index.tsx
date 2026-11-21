@@ -11,6 +11,7 @@ import { encouragement, weekProgress } from '@/lib/goals';
 import { formatHijri } from '@/lib/hijri';
 import { SLOT_LABEL, type Slot } from '@/lib/model';
 import { BodyPartGrid, CoachTeam, KidsSessionCard, openFilmedCoach, TodaySessionCard, WeekProgress } from '@/components/PracticeBlocks';
+import { OfflineNote } from '@/components/OfflineNote';
 import { Button, Card, Divider, Empty, Eyebrow, H1, H2, Muted, Notice, Row, Screen, Spacer } from '@/ui/kit';
 import { theme as t } from '@/ui/theme';
 
@@ -32,6 +33,7 @@ export default function Today() {
   return (
     <Screen>
       {remoteError ? <Notice tone="warning" title={remoteError} /> : null}
+      <OfflineNote />
       <Pressable onPress={unlock} accessibilityLabel={family?.name ?? 'FamilyFit'}>
         <Eyebrow>{family?.name || 'FamilyFit'}</Eyebrow>
       </Pressable>

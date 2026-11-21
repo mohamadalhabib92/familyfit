@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ScrollView, View, useWindowDimensions } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
+import { OfflineNote } from '@/components/OfflineNote';
 import { CueCard } from '@/components/moves/CueCard';
 import { DemoStage } from '@/components/moves/DemoStage';
 import { IntensityBar } from '@/components/moves/IntensityBar';
@@ -108,7 +109,7 @@ export function LivingSession({ params, onBack, onComplete }: { params: PlayPara
   const fill = workout.minutes > 0 ? Math.min(1, mediaMs / (workout.minutes * 60_000)) : 0;
   const phaseKey: IntensityPhase = view.segment?.phase === 'warmup' ? 'echauffement' : view.segment?.phase === 'cooldown' ? 'retour' : fill < 0.55 ? 'montee' : 'intense';
   const videoHeight = Math.max(420, safe.height - 8);
-  const playerCopy = { play: copy('moves.play'), pause: copy('moves.pause'), mute: copy('moves.mute'), sound: copy('moves.sound') };
+  const playerCopy = { play: copy('moves.play'), pause: copy('moves.pause'), mute: copy('moves.mute'), sound: copy('moves.sound'), unavailable: copy('moves.videoFailed') };
   const asset = view.segment?.video.asset ?? null;
   const previous = workout.segments[Math.max(0, workout.segments.findIndex((item) => item.id === view.segment?.id) - 1)];
   const showUnder = view.segment?.role === 'transition' ? previous?.video.asset ?? null : null;
@@ -137,7 +138,8 @@ export function LivingSession({ params, onBack, onComplete }: { params: PlayPara
 
   return (
     <View style={{ flex: 1, flexDirection: 'row', gap: frame.gap, paddingHorizontal: TV_SAFE.horizontal, paddingVertical: TV_SAFE.vertical }}>
-      <ScrollView style={{ width: frame.leftWidth }} contentContainerStyle={{ flexGrow: 1, justifyContent: 'space-between', gap: 16 }}>
+        <ScrollView style={{ width: frame.leftWidth }} contentContainerStyle={{ flexGrow: 1, justifyContent: 'space-between', gap: 16 }}>
+        <OfflineNote tv />
         {view.done ? (
           <View style={{ gap: 12 }}>
             <TvText size={48} weight="800">{copy('seance.done')}</TvText>
@@ -148,11 +150,12 @@ export function LivingSession({ params, onBack, onComplete }: { params: PlayPara
               <TvText key={item.id} size={22} color={t.text}>{item.name[locale]}</TvText>
             ))}
             <TvText size={26} weight="800">{streak} {copy('train.days')}</TvText>
+            <TvText size={22} color={t.text}>{copy('health.disclaimer')}</TvText>
           </View>
         ) : (
           <View style={{ gap: 10 }}>
             <TvText size={22} color={t.muted}>{phases[phaseKey]} · {view.exercise?.zone}</TvText>
-            <RoundTimer seconds={Math.ceil(view.remainingMs / 1000)} progress={view.progress} size={Math.min(220, frame.leftWidth - 24)} />
+            <RoundTimer seconds={Math.ceil(view.remainingMs / 1000)} progress={view.progress} size={Math.min(220, frame.leftWidth - 24)} label={`${phases[phaseKey]}, ${formatClock(Math.ceil(view.remainingMs / 1000))}`} />
             <TvText size={36} weight="800">{title}</TvText>
             {view.segment?.role === 'work' ? (
               <TvText size={32} weight="800">{copy('tv.reps')} {view.reps.current}/{view.reps.target}</TvText>
@@ -202,12 +205,12 @@ export function LivingSession({ params, onBack, onComplete }: { params: PlayPara
   );
 }
 
-function RoundTimer({ seconds, progress, size }: { seconds: number; progress: number; size: number }) {
+function RoundTimer({ seconds, progress, size, label }: { seconds: number; progress: number; size: number; label: string }) {
   const radius = (size - 16) / 2;
   const circ = 2 * Math.PI * radius;
   const dash = circ * Math.max(0, Math.min(1, 1 - progress));
   return (
-    <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+    <View accessibilityRole="timer" accessibilityLabel={label} style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
       <View style={{ position: 'absolute', left: 0, top: 0 }}>
       <Svg width={size} height={size}>
         <Circle cx={size / 2} cy={size / 2} r={radius} stroke={t.border} strokeWidth={12} fill="none" />
