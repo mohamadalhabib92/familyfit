@@ -40,6 +40,6 @@ npx eas-cli@latest build --platform ios --profile production-tv
 npx eas-cli@latest submit --platform ios --profile production-tv --latest
 ```
 
-Le profil `production-tv` pose `EXPO_TV=1`. `app.config.js` prépare alors le salon (slug `familyfit-tv`, même bundle que l’iPhone, build `3`, sans splash téléphone). `autoIncrement` est faux : le numéro TV ne suit pas celui de l’iPhone. Le projet EAS TV est distinct ; il se règle côté propriétaire, pas dans ce fichier.
+Le profil `production-tv` pose `EXPO_TV=1`. `app.config.js` prépare alors le salon (slug `familyfit-tv`, projet EAS `c563620f-7c9e-4354-a3e1-2c43b8bcb31f`, même bundle que l’iPhone, sans splash téléphone). `cli.appVersionSource` est `remote` : EAS ignore `ios.buildNumber` du fichier et injecte le compteur du projet TV. Le dernier compteur était 4 (TestFlight 3 puis 4). `autoIncrement` est vrai sur ce profil seulement, donc le prochain build est 5. Le plugin ne descend jamais sous 5 et ne rabaisse pas un compteur déjà plus haut. Le téléphone reste le projet `familyfit`, build 20.
 
 Les deux soumissions visent la fiche App Store Connect déjà liée. Elles n’installent pas l’app : TestFlight reste une étape manuelle après le submit.

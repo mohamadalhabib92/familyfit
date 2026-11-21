@@ -100,7 +100,7 @@ function insertTvosDeploymentPostInstall(src) {
   return src.slice(0, insertAt) + block + src.slice(insertAt);
 }
 
-function setTargetTvSettings(pbxproj, targetName) {
+function setTargetTvSettings(pbxproj, targetName, version = TV_BUNDLE_VERSION) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'familyfit-tv-'));
   const file = path.join(dir, 'project.pbxproj');
   fs.writeFileSync(file, pbxproj);
@@ -136,15 +136,26 @@ function setTargetTvSettings(pbxproj, targetName) {
     config.buildSettings.TVOS_DEPLOYMENT_TARGET = TVOS_DEPLOYMENT_TARGET;
     config.buildSettings.ASSETCATALOG_COMPILER_APPICON_NAME = 'TVAppIcon';
     config.buildSettings.ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = 'YES';
-    config.buildSettings.CURRENT_PROJECT_VERSION = TV_BUNDLE_VERSION;
-    config.buildSettings.INFOPLIST_KEY_CFBundleVersion = TV_BUNDLE_VERSION;
+    config.buildSettings.CURRENT_PROJECT_VERSION = version;
+    config.buildSettings.INFOPLIST_KEY_CFBundleVersion = version;
     updated += 1;
   }
   if (updated === 0) throw new Error(`tvOS deployment: target ${targetName} has no build configurations`);
   return project.writeSync();
 }
 
-function stampInfoPlist(platformProjectRoot, projectName) {
+/**
+ * EAS `appVersionSource: remote` ignores app.config until autoIncrement
+ * advances the server counter. The failed TV job reused remote 4.
+ * Never stamp below 5, and never lower a newer remote number.
+ */
+function resolvedTvBuildNumber(config) {
+  const raw = config && config.ios && config.ios.buildNumber;
+  const parsed = typeof raw === 'string' && /^\d+$/.test(raw) ? Number(raw) : 0;
+  return String(Math.max(parsed, Number(TV_BUNDLE_VERSION)));
+}
+
+function stampInfoPlist(platformProjectRoot, projectName, version = TV_BUNDLE_VERSION) {
   const plistPath = path.join(platformProjectRoot, projectName || 'FamilyFit', 'Info.plist');
   if (!fs.existsSync(plistPath)) return;
   let xml = fs.readFileSync(plistPath, 'utf8');
@@ -152,13 +163,13 @@ function stampInfoPlist(platformProjectRoot, projectName) {
     xml = xml.replace(new RegExp(`<key>${key}</key>\\s*<(string|true|false|integer|real|dict|array)>[\\s\\S]*?</\\1>\\s*`, 'g'), '');
   }
   if (xml.includes('<key>CFBundleVersion</key>')) {
-    xml = xml.replace(/(<key>CFBundleVersion<\/key>\s*<string>)[^<]*(<\/string>)/, `$1${TV_BUNDLE_VERSION}$2`);
+    xml = xml.replace(/(<key>CFBundleVersion<\/key>\s*<string>)[^<]*(<\/string>)/, `$1${version}$2`);
   } else {
-    xml = xml.replace('</dict>\n</plist>', `<key>CFBundleVersion</key>\n    <string>${TV_BUNDLE_VERSION}</string>\n  </dict>\n</plist>`);
+    xml = xml.replace('</dict>\n</plist>', `<key>CFBundleVersion</key>\n    <string>${version}</string>\n  </dict>\n</plist>`);
   }
   fs.writeFileSync(plistPath, xml);
-  if (!fs.readFileSync(plistPath, 'utf8').includes(`<string>${TV_BUNDLE_VERSION}</string>`)) {
-    throw new Error(`tvOS Info.plist did not receive CFBundleVersion ${TV_BUNDLE_VERSION}`);
+  if (!fs.readFileSync(plistPath, 'utf8').includes(`<string>${version}</string>`)) {
+    throw new Error(`tvOS Info.plist did not receive CFBundleVersion ${version}`);
   }
 }
 
@@ -168,16 +179,18 @@ function patchPodfile(platformProjectRoot) {
   fs.writeFileSync(file, patchPodfileSource(fs.readFileSync(file, 'utf8')));
 }
 
-function patchAppTarget(platformProjectRoot, projectName) {
+function patchAppTarget(platformProjectRoot, projectName, version = TV_BUNDLE_VERSION) {
   const name = projectName || 'FamilyFit';
   const file = path.join(platformProjectRoot, `${name}.xcodeproj`, 'project.pbxproj');
   if (!fs.existsSync(file)) return;
-  fs.writeFileSync(file, setTargetTvSettings(fs.readFileSync(file, 'utf8'), name));
+  fs.writeFileSync(file, setTargetTvSettings(fs.readFileSync(file, 'utf8'), name, version));
 }
 
 function withTvPods(config) {
   config = withInfoPlist(config, (cfg) => {
-    cfg.modResults.CFBundleVersion = TV_BUNDLE_VERSION;
+    const version = resolvedTvBuildNumber(cfg);
+    cfg.ios = { ...(cfg.ios || {}), buildNumber: version };
+    cfg.modResults.CFBundleVersion = version;
     for (const key of DROP) delete cfg.modResults[key];
     return cfg;
   });
@@ -201,9 +214,10 @@ function withTvPods(config) {
     'ios',
     (cfg) => {
       const name = cfg.modRequest.projectName;
-      stampInfoPlist(cfg.modRequest.platformProjectRoot, name);
+      const version = resolvedTvBuildNumber(cfg);
+      stampInfoPlist(cfg.modRequest.platformProjectRoot, name, version);
       patchPodfile(cfg.modRequest.platformProjectRoot);
-      patchAppTarget(cfg.modRequest.platformProjectRoot, name);
+      patchAppTarget(cfg.modRequest.platformProjectRoot, name, version);
       return cfg;
     },
   ]);
@@ -212,5 +226,6 @@ function withTvPods(config) {
 module.exports = withTvPods;
 module.exports.TVOS_DEPLOYMENT_TARGET = TVOS_DEPLOYMENT_TARGET;
 module.exports.TV_BUNDLE_VERSION = TV_BUNDLE_VERSION;
+module.exports.resolvedTvBuildNumber = resolvedTvBuildNumber;
 module.exports.patchPodfileSource = patchPodfileSource;
 module.exports.setTargetTvSettings = setTargetTvSettings;

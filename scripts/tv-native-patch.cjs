@@ -13,6 +13,7 @@ const { TV_AUTOLINK_EXCLUDE } = require('./tv-native.cjs');
 
 const MARK_SPOTLIGHT = 'tvOS: CoreSpotlight is unavailable. Patched by scripts/tv-native-patch.cjs';
 const MARK_PHOTOS = 'tvOS: Photos is unavailable. Patched by scripts/tv-native-patch.cjs';
+const MARK_VIDEO = 'tvOS: expo-video Photos and MobileCoreServices are unavailable. Patched by scripts/tv-native-patch.cjs';
 
 const TV_HEAD_STUB = `public class ExpoHeadModule: Module {
   private var activities: [String: NSUserActivity] = [:]
@@ -265,6 +266,104 @@ function patchAssetLibrarySource(src) {
   return `${next.slice(0, endAt)}${stub}${next.slice(endAt)}`;
 }
 
+function patchVideoCachingHelpersSource(src) {
+  if (src.includes(MARK_VIDEO)) {
+    assertSwiftConditionals(src, 'CachingHelpers.swift');
+    return src;
+  }
+  if (!src.includes('import MobileCoreServices\n')) {
+    throw new Error('tv-native-patch: CachingHelpers.swift has no MobileCoreServices import');
+  }
+  const start = src.indexOf('internal func mimeTypeToExtension(mimeType: String?) -> String? {');
+  const end = src.indexOf('\ninternal extension Int {', start);
+  if (start < 0 || end < 0) throw new Error('tv-native-patch: mimeTypeToExtension anchors missing');
+  const original = src.slice(start, end).replace(/\s+$/, '\n');
+  if (!original.includes('UTTypeCreatePreferredIdentifierForTag') || !original.includes('kUTTagClassMIMEType')) {
+    throw new Error('tv-native-patch: CachingHelpers.swift MIME helper changed; refusing to guess');
+  }
+  const tvos = `internal func mimeTypeToExtension(mimeType: String?) -> String? {
+  guard let mimeType else {
+    return nil
+  }
+  return UTType(mimeType: mimeType)?.preferredFilenameExtension
+}
+`;
+  let next = src.replace(
+    'import MobileCoreServices\n',
+    `#if !os(tvOS)\nimport MobileCoreServices\n#else\nimport UniformTypeIdentifiers\n#endif\n// ${MARK_VIDEO}\n`,
+  );
+  next = next.replace(original, `#if !os(tvOS)\n${original}#else\n${tvos}#endif\n`);
+  assertSwiftConditionals(next, 'CachingHelpers.swift');
+  return next;
+}
+
+function patchVideoAssetSource(src) {
+  if (src.includes(MARK_VIDEO)) {
+    assertSwiftConditionals(src, 'VideoAsset.swift');
+    return src;
+  }
+  if (!src.includes('import MobileCoreServices\n')) {
+    throw new Error('tv-native-patch: VideoAsset.swift has no MobileCoreServices import');
+  }
+  const next = src.replace(
+    'import MobileCoreServices\n',
+    `#if !os(tvOS)\nimport MobileCoreServices\n#endif\n// ${MARK_VIDEO}\n`,
+  );
+  assertSwiftConditionals(next, 'VideoAsset.swift');
+  return next;
+}
+
+function patchVideoMediaLibrarySource(src) {
+  if (src.includes(MARK_VIDEO)) {
+    assertSwiftConditionals(src, 'URL+MediaLibraryAssets.swift');
+    return src;
+  }
+  if (!src.startsWith('import Photos\n') || !src.includes('PHAsset.fetchAssets') || !src.includes('func toUrlWithPermissions()')) {
+    throw new Error('tv-native-patch: URL+MediaLibraryAssets.swift anchors missing');
+  }
+  const next = `// ${MARK_VIDEO}
+#if !os(tvOS)
+${src.trimEnd()}
+#else
+import Foundation
+
+extension URL {
+  func toUrlWithPermissions() async throws -> URL? {
+    return self
+  }
+}
+
+internal extension URL {
+  var isPHAssetUrl: Bool {
+    return self.absoluteString.hasPrefix("ph://")
+  }
+}
+#endif
+`;
+  assertSwiftConditionals(next, 'URL+MediaLibraryAssets.swift');
+  return next;
+}
+
+function patchVideoPlayerSource(src) {
+  if (src.includes(MARK_VIDEO)) {
+    assertSwiftConditionals(src, 'VideoPlayer.swift');
+    return src;
+  }
+  const needle = '    if let url = videoSource.uri, url.isPHAssetUrl {';
+  const at = src.indexOf(needle);
+  if (at < 0) throw new Error('tv-native-patch: VideoPlayer PHAsset check missing');
+  const close = src.indexOf('\n    }\n', at);
+  if (close < 0) throw new Error('tv-native-patch: VideoPlayer PHAsset block has no end');
+  const block = src.slice(at, close + '\n    }'.length);
+  if (!block.includes('PHAsset') || !block.includes('isPHAssetUrl')) {
+    throw new Error('tv-native-patch: VideoPlayer PHAsset block changed; refusing to guess');
+  }
+  const wrapped = `// ${MARK_VIDEO}\n#if !os(tvOS)\n${block}\n#endif`;
+  const next = `${src.slice(0, at)}${wrapped}${src.slice(close + '\n    }'.length)}`;
+  assertSwiftConditionals(next, 'VideoPlayer.swift');
+  return next;
+}
+
 function patchExpoRouterPodspecSource(src) {
   let next = src;
   if (!next.includes(":tvos => '16.4'")) {
@@ -289,6 +388,10 @@ const SOURCE_PATCHES = [
   ['node_modules/expo-file-system/ios/Legacy/FileSystemHelpers.swift', patchFileSystemHelpersSource],
   ['node_modules/expo-file-system/ios/Legacy/FileSystemLegacyModule.swift', patchFileSystemLegacySource],
   ['node_modules/expo-file-system/ios/Legacy/EXFileSystemAssetLibraryHandler.m', patchAssetLibrarySource],
+  ['node_modules/expo-video/ios/Cache/CachingHelpers.swift', patchVideoCachingHelpersSource],
+  ['node_modules/expo-video/ios/VideoAsset.swift', patchVideoAssetSource],
+  ['node_modules/expo-video/ios/Utils/URL+MediaLibraryAssets.swift', patchVideoMediaLibrarySource],
+  ['node_modules/expo-video/ios/VideoPlayer.swift', patchVideoPlayerSource],
 ];
 
 function writeIfChanged(file, next) {
@@ -628,6 +731,10 @@ module.exports = {
   patchAssetLibrarySource,
   patchExpoHeadModuleSource,
   patchExpoHeadSubscriberSource,
+  patchVideoAssetSource,
+  patchVideoCachingHelpersSource,
+  patchVideoMediaLibrarySource,
+  patchVideoPlayerSource,
   patchExpoRouterPodspecSource,
   patchFileSystemHelpersSource,
   patchFileSystemLegacySource,

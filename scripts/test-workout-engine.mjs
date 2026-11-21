@@ -21,7 +21,12 @@ const eas = read('eas.json');
 const appJson = JSON.parse(read('app.json'));
 const focus = read('src/components/tv/focus.tsx');
 const checks = [
-  ['profil production-tv isolé du téléphone', eas.includes('"production-tv"') && eas.includes('"channel": "production-tv"') && eas.includes('"EXPO_TV": "1"') && eas.includes('"RCT_USE_PREBUILT_RNCORE": "0"') && eas.includes('"EXPO_USE_PRECOMPILED_MODULES": "0"') && eas.includes('"autoIncrement": false') && !eas.includes('"extends": "production"')],
+  ['profil production-tv isolé du téléphone', (() => {
+    const json = JSON.parse(eas);
+    const tv = json.build['production-tv'];
+    const phone = json.build.production;
+    return json.cli.appVersionSource === 'remote' && tv && tv.autoIncrement === true && tv.channel === 'production-tv' && tv.env.EXPO_TV === '1' && tv.env.RCT_USE_PREBUILT_RNCORE === '0' && tv.env.EXPO_USE_PRECOMPILED_MODULES === '0' && !tv.extends && phone.autoIncrement === true && phone.env.EXPO_TV == null;
+  })()],
   ['iPhone : react-native 0.88 et buildNumber 20', JSON.parse(read('package.json')).dependencies['react-native'] === '0.88.0' && appJson.expo.ios.buildNumber === '20'],
   ['TV : react-native-tvos 0.87-stable, swap seulement sur EAS', read('scripts/tv-build.mjs').includes('npm:react-native-tvos@0.87-stable') && read('scripts/tv-build.mjs').includes("env.EAS_BUILD === 'true'")],
   ['pre-install téléphone ne touche pas le lockfile', (() => {
@@ -37,13 +42,32 @@ const checks = [
     const patch = createRequire(join(root, 'scripts/tv-native-patch.cjs'))('./tv-native-patch.cjs');
     const head = patch.patchExpoHeadSubscriberSource(readFileSync(join(root, 'node_modules/expo-router/ios/ExpoHeadAppDelegateSubscriber.swift'), 'utf8'));
     const pod = patch.patchExpoRouterPodspecSource(readFileSync(join(root, 'node_modules/expo-router/ios/ExpoRouter.podspec'), 'utf8'));
-    return head.includes('#if !os(tvOS)') && !head.includes('#if !os(tvOS)\n    } else if') && pod.includes(":tvos => '16.4'") && pod.includes("s.tvos.exclude_files = 'LinkPreview/**/*', 'Toolbar/**/*'");
+    const cache = patch.patchVideoCachingHelpersSource(readFileSync(join(root, 'node_modules/expo-video/ios/Cache/CachingHelpers.swift'), 'utf8'));
+    const asset = patch.patchVideoAssetSource(readFileSync(join(root, 'node_modules/expo-video/ios/VideoAsset.swift'), 'utf8'));
+    const photos = patch.patchVideoMediaLibrarySource(readFileSync(join(root, 'node_modules/expo-video/ios/Utils/URL+MediaLibraryAssets.swift'), 'utf8'));
+    const player = patch.patchVideoPlayerSource(readFileSync(join(root, 'node_modules/expo-video/ios/VideoPlayer.swift'), 'utf8'));
+    const cacheTv = patch.compiledFor(cache, 'tvos');
+    const cacheIos = patch.compiledFor(cache, 'ios');
+    const photosTv = patch.compiledFor(photos, 'tvos');
+    const photosIos = patch.compiledFor(photos, 'ios');
+    const playerTv = patch.compiledFor(player, 'tvos');
+    const playerIos = patch.compiledFor(player, 'ios');
+    const banned = (text) => /\bimport MobileCoreServices\b/.test(text) || /\bimport Photos\b/.test(text) || /\bPHAsset\b/.test(text);
+    return head.includes('#if !os(tvOS)') && !head.includes('#if !os(tvOS)\n    } else if') && pod.includes(":tvos => '16.4'") && pod.includes("s.tvos.exclude_files = 'LinkPreview/**/*', 'Toolbar/**/*'")
+      && !banned(cacheTv) && cacheTv.includes('UniformTypeIdentifiers') && cacheTv.includes('preferredFilenameExtension')
+      && cacheIos.includes('import MobileCoreServices') && cacheIos.includes('UTTypeCreatePreferredIdentifierForTag')
+      && !banned(patch.compiledFor(asset, 'tvos')) && patch.compiledFor(asset, 'ios').includes('import MobileCoreServices')
+      && !banned(photosTv) && photosTv.includes('toUrlWithPermissions') && photosIos.includes('import Photos') && photosIos.includes('PHAsset.fetchAssets')
+      && !banned(playerTv) && playerIos.includes('PHAsset');
   })()],
   ['modules absents de tvOS exclus', ['familyfit-health', 'expo-haptics', 'expo-notifications', 'expo-speech'].every((name) => read('scripts/tv-native.cjs').includes(name))],
   ['focus 10 pieds', focus.includes('scale: focused ? 1.08') && focus.includes('TVFocusGuideView') && focus.includes('hasTVPreferredFocus') && read('src/lib/tvSurface.ts').includes('horizontal: 90') && read('src/lib/tvSurface.ts').includes('vertical: 60') && focus.includes('#F6C453') && !focus.includes('measureInWindow') && !focus.includes('1080')],
   ['verre : flou, repli plein, boutons en relief', read('src/ui/glass.tsx').includes('0.90') && read('src/ui/effects.tsx').includes('reduceTransparency') && read('src/ui/kit.tsx').includes('raisedShadow')],
   ['catalogue tvOS aux tailles Apple', ['icon-home-front.png', 'icon-home-back.png', 'icon-store-front.png', 'icon-store-back.png', 'top-shelf.png', 'top-shelf-wide.png'].every((name) => existsSync(join(root, 'assets/tv', name)))],
-  ['tampon natif TV = 5, sans autoIncrement', read('plugins/with-tv-pods.js').includes("const TV_BUNDLE_VERSION = '5'") && read('scripts/tv-build.mjs').includes("export const TV_BUNDLE_VERSION = '5'") && eas.includes('"autoIncrement": false')],
+  ['tampon natif TV plancher 5, au-dessus du distant 4', (() => {
+    const pods = createRequire(join(root, 'plugins/with-tv-pods.js'))('./with-tv-pods.js');
+    return pods.TV_BUNDLE_VERSION === '5' && read('scripts/tv-build.mjs').includes("export const TV_BUNDLE_VERSION = '5'") && pods.resolvedTvBuildNumber({ ios: { buildNumber: '4' } }) === '5' && pods.resolvedTvBuildNumber({ ios: { buildNumber: '5' } }) === '5' && pods.resolvedTvBuildNumber({ ios: { buildNumber: '6' } }) === '6' && pods.resolvedTvBuildNumber({}) === '5';
+  })()],
   ['config TV : build 5, projet familyfit-tv, même bundle, iPhone inchangé', (() => {
     const r = spawnSync(process.execPath, ['-e', `
       const app = require('./app.json');
