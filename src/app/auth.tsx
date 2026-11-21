@@ -135,6 +135,8 @@ export default function Auth() {
           </Row>
         </>
       )}
+      <Spacer h={12} />
+      <Button variant="secondary" title="Continuer sans compte" icon="fitness-outline" onPress={() => router.replace('/')} />
       {current ? (
         <>
           <Spacer h={12} />

@@ -1,4 +1,5 @@
 import { useRouter } from 'expo-router';
+import { useState } from 'react';
 import { Text, View } from 'react-native';
 import { useData } from '@/lib/data';
 import { confirmAsk } from '@/lib/confirm';
@@ -10,6 +11,7 @@ import { theme as t } from '@/ui/theme';
 export function TrialBanner() {
   const { prefs, session, keepTrialData, restartKeepingSession } = useData();
   const router = useRouter();
+  const [restartMsg, setRestartMsg] = useState<string | null>(null);
   if (session?.mode === 'supabase' && prefs.trialMode) {
     return (
       <View style={{ backgroundColor: t.infoBg, paddingHorizontal: 16, paddingVertical: 10, gap: 8 }}>
@@ -23,9 +25,15 @@ export function TrialBanner() {
             small
             variant="ghost"
             title="Recommencer"
-            onPress={() => confirmAsk('Effacer les données d’essai et recréer la famille ? Le compte reste connecté.', () => void restartKeepingSession().then(() => router.replace('/onboarding')))}
+            onPress={() => confirmAsk('Effacer les données d’essai et recréer la famille ? Le compte reste connecté.', () => {
+              void restartKeepingSession().then((r) => {
+                setRestartMsg(r.message);
+                if (r.ok) router.replace('/onboarding');
+              });
+            })}
           />
         </View>
+        {restartMsg ? <Text accessibilityRole="alert" style={{ color: t.text, fontSize: 13 }}>{restartMsg}</Text> : null}
       </View>
     );
   }

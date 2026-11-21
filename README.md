@@ -25,6 +25,8 @@ Application Expo (iOS / Android) **et** PWA installable (GitHub Pages, `/familyf
   - historique ;
   - rappel quotidien en notification locale.
 - **Bien-être** : objectifs hebdomadaires partagés (minutes, repas sans écran…), saisie rapide, encouragements. **Aucun conseil médical.**
+- **Bouger** : séances en famille (échauffement obligatoire, variante par âge), quatre coachs illustrés, voix de l’appareil (FR/EN/DE/AR), séries, badges, défis. Détail : `docs/vision-plan.md` et `docs/design-system.md`.
+- **Apple TV** : profil EAS `production-tv` (salon). Le projet Expo du téléphone ne change pas. Un build tvOS demande un second projet EAS, côté propriétaire.
 - **Vie privée** : écran dédié, aucune géolocalisation, données minimales, export JSON, suppression des données de l'appareil et suppression du compte (en ligne seulement si la fonction `delete_my_account` a été installée sur le projet Supabase).
 - **Hors ligne** : tout est stocké sur l’appareil (AsyncStorage / localStorage). Si une synchronisation Supabase échoue, un message s’affiche et rien n’est perdu.
 - **Accessibilité** : cibles tactiles ≥ 44 pt, libellés d’accessibilité, aucun écran blanc (indicateur de chargement, puis redirections).

@@ -1,0 +1,187 @@
+{
+  "session": {
+    "mode": "demo",
+    "contact": "alex@example.test",
+    "userId": "mem_alex",
+    "futureTokenHint": "ne-pas-perdre"
+  },
+  "prefs": {
+    "configAck": true,
+    "onboarded": true,
+    "hijriOffset": 1,
+    "showHijri": true,
+    "filterCats": [],
+    "filterMembers": [],
+    "trialMode": false,
+    "trialDeclined": true,
+    "devConfigUnlocked": false,
+    "largeText": true,
+    "localeFuture": "ar-DZ"
+  },
+  "family": {
+    "id": "fam_ba",
+    "name": "Famille Ba",
+    "createdAt": "2026-01-02T08:00:00.000Z",
+    "cityNote": "Genève"
+  },
+  "members": [
+    {
+      "id": "mem_alex",
+      "familyId": "fam_ba",
+      "name": "Alex",
+      "role": "admin",
+      "color": "#2F4B43",
+      "isMinor": false,
+      "isMe": true,
+      "nicknameFuture": "A."
+    },
+    {
+      "id": "mem_child",
+      "familyId": "fam_ba",
+      "name": "Inès",
+      "role": "member",
+      "color": "#8B4E2F",
+      "isMinor": true,
+      "parentConsentShare": false,
+      "schoolClass": "CE1"
+    },
+    {
+      "id": "demo-m3",
+      "familyId": "fam_ba",
+      "name": "Yanis (démo)",
+      "role": "member",
+      "color": "#55605A",
+      "isMinor": true,
+      "demo": true
+    }
+  ],
+  "invitations": [],
+  "events": [
+    {
+      "id": "ev_real",
+      "familyId": "fam_ba",
+      "title": "Piscine",
+      "category": "leisure",
+      "date": "2026-03-01",
+      "start": "14:00",
+      "end": "15:00",
+      "allDay": false,
+      "memberIds": ["mem_child"],
+      "recurrence": "none",
+      "notes": "maillots",
+      "importedFrom": "agenda-papier"
+    },
+    {
+      "id": "ev_demo",
+      "familyId": "fam_ba",
+      "title": "Réunion démo",
+      "category": "work",
+      "date": "2026-03-01",
+      "start": "10:00",
+      "end": "11:00",
+      "allDay": false,
+      "memberIds": ["demo-m3"],
+      "recurrence": "none",
+      "notes": "",
+      "demo": true
+    }
+  ],
+  "rituals": [
+    {
+      "id": "rit_real",
+      "familyId": "fam_ba",
+      "title": "Bouger 10 minutes",
+      "slot": "morning",
+      "items": ["Étirements", "Marche"],
+      "coachTip": "doux"
+    },
+    {
+      "id": "demo-r1",
+      "familyId": "fam_ba",
+      "title": "Réveil démo",
+      "slot": "morning",
+      "items": ["Eau"],
+      "demo": true
+    }
+  ],
+  "sessions": [
+    {
+      "id": "ses_real",
+      "familyId": "fam_ba",
+      "ritualId": "rit_real",
+      "date": "2026-03-01",
+      "slot": "morning",
+      "done": ["Étirements"],
+      "participants": ["mem_alex", "mem_child"],
+      "mood": 4,
+      "completedAt": "2026-03-01T07:10:00.000Z",
+      "energyFuture": "low"
+    },
+    {
+      "id": "ses_demo",
+      "familyId": "fam_ba",
+      "ritualId": "demo-r1",
+      "date": "2026-02-28",
+      "slot": "morning",
+      "done": ["Eau"],
+      "participants": ["demo-m3"]
+    }
+  ],
+  "goals": [
+    {
+      "id": "goal_real",
+      "familyId": "fam_ba",
+      "title": "Bouger ensemble",
+      "unit": "min",
+      "weeklyTarget": 150,
+      "memberIds": [],
+      "icon": "walk-outline",
+      "sourceFuture": "papier"
+    },
+    {
+      "id": "demo-g1",
+      "familyId": "fam_ba",
+      "title": "Soirées démo",
+      "unit": "soirées",
+      "weeklyTarget": 3,
+      "memberIds": [],
+      "icon": "moon-outline",
+      "demo": true
+    }
+  ],
+  "activities": [
+    {
+      "id": "act_real",
+      "goalId": "goal_real",
+      "memberId": "mem_alex",
+      "date": "2026-03-01",
+      "amount": 20,
+      "placeFuture": "parc"
+    },
+    {
+      "id": "act_demo",
+      "goalId": "demo-g1",
+      "memberId": "demo-m3",
+      "date": "2026-03-01",
+      "amount": 1
+    }
+  ],
+  "lists": [
+    {
+      "id": "list_real",
+      "familyId": "fam_ba",
+      "title": "Courses",
+      "items": [{ "id": "i1", "label": "Pain", "qty": "1", "done": false, "aisleFuture": "boulangerie" }],
+      "noteFuture": "marché"
+    },
+    {
+      "id": "demo-l1",
+      "familyId": "fam_ba",
+      "title": "Courses (exemple)",
+      "items": [],
+      "demo": true
+    }
+  ],
+  "remoteError": null,
+  "imports": [{ "file": "famille.ics", "bytes": 120, "kept": true }]
+}

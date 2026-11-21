@@ -32,7 +32,7 @@ export class AppErrorBoundary extends Component<Props, State> {
           accessibilityRole="button"
           accessibilityLabel="Réessayer"
           onPress={() => this.setState({ error: null })}
-          style={{ marginTop: 20, minHeight: 48, minWidth: 44, paddingHorizontal: 18, borderRadius: 14, backgroundColor: t.primary, alignItems: 'center', justifyContent: 'center' }}
+          style={{ marginTop: 20, minHeight: 48, minWidth: 44, paddingHorizontal: 18, borderRadius: 14, backgroundColor: t.primary, alignItems: 'center', justifyContent: 'center', borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.35)', borderBottomWidth: 3, borderBottomColor: 'rgba(0,0,0,0.28)', shadowColor: t.shadow, shadowOpacity: 0.22, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 8 }}
         >
           <Text style={{ color: t.onPrimary, fontWeight: '700', fontSize: 16 }}>Réessayer</Text>
         </Pressable>

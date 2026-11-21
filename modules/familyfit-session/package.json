@@ -1,0 +1,11 @@
+{
+  "name": "familyfit-session",
+  "version": "1.0.0",
+  "description": "Master clock, spoken cues and audio ducking for FamilyFit sessions.",
+  "main": "src/index.ts",
+  "peerDependencies": {
+    "expo": "*",
+    "react": "*",
+    "react-native": "*"
+  }
+}

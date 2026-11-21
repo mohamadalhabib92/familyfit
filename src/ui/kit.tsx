@@ -9,6 +9,7 @@ import {
   StyleSheet,
   Text,
   TextInput,
+  useWindowDimensions,
   View,
   type StyleProp,
   type TextInputProps,
@@ -16,8 +17,13 @@ import {
   type ViewStyle,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { isTv, useUiScale } from '@/lib/platform';
+import { shouldRequireNative } from '@/lib/tvNativeGuard';
 import { inkOn } from './contrast';
 import { theme as t } from './theme';
+import { useVisualEffects } from './effects';
+import { glassWash, GlassLayers, raisedShadow, useGlassLook } from './glass';
+import { isDark, useHapticsEnabled } from './ThemeProvider';
 
 const FontScaleContext = createContext(1);
 export function FontScaleProvider({ scale, children }: { scale: number; children: ReactNode }) {
@@ -59,11 +65,15 @@ export { Ionicons };
 /** Conteneur d'écran défilant, largeur max sur desktop (PWA). */
 export function Screen({ children, scroll = true, padded = true }: { children: ReactNode; scroll?: boolean; padded?: boolean }) {
   const insets = useSafeAreaInsets();
+  const ui = useUiScale();
+  const pad = Math.round((isTv() ? 36 : 20) * ui);
+  const glass = useGlassLook();
   const inner = (
-    <View style={[styles.inner, padded && { padding: 20 }, { paddingBottom: 40 + insets.bottom }]}>{children}</View>
+    <View style={[styles.inner, { maxWidth: isTv() ? '100%' : 920 }, padded && { padding: pad }, { paddingBottom: 48 + insets.bottom }]}>{children}</View>
   );
   return (
-    <View style={styles.screen}>
+    <View style={[styles.screen, { backgroundColor: t.bg }]}>
+      {glass ? <View pointerEvents="none" style={{ position: 'absolute', width: 280, height: 280, borderRadius: 140, backgroundColor: glassWash(), top: -80, right: -90 }} /> : null}
       {scroll ? (
         <ScrollView contentInsetAdjustmentBehavior="automatic" keyboardShouldPersistTaps="handled">
           {inner}
@@ -75,54 +85,78 @@ export function Screen({ children, scroll = true, padded = true }: { children: R
   );
 }
 
+function useTypeScale() {
+  return useFontScale() * useUiScale();
+}
+
+/** Cible tactile qui grandit avec le texte large et Dynamic Type (fontScale), jamais sous 44 pt. */
+function useMinTarget(base = 44) {
+  const { fontScale } = useWindowDimensions();
+  const scale = (Number.isFinite(fontScale) && fontScale > 0 ? fontScale : 1) * useFontScale();
+  return Math.max(44, Math.round(base * scale));
+}
 export function H1({ children, style }: { children: ReactNode; style?: StyleProp<TextStyle> }) {
-  const s = useFontScale();
+  const s = useTypeScale();
   return (
-    <Text accessibilityRole="header" style={[styles.h1, { fontSize: 28 * s, lineHeight: 34 * s }, style]}>
+    <Text accessibilityRole="header" style={[styles.h1, { color: t.text, fontSize: t.type.display.size * s, lineHeight: t.type.display.line * s, letterSpacing: t.type.display.tracking }, style]}>
       {children}
     </Text>
   );
 }
 export function H2({ children, style }: { children: ReactNode; style?: StyleProp<TextStyle> }) {
-  const s = useFontScale();
+  const s = useTypeScale();
   return (
-    <Text accessibilityRole="header" style={[styles.h2, { fontSize: 18 * s, lineHeight: 24 * s }, style]}>
+    <Text accessibilityRole="header" style={[styles.h2, { color: t.text, fontSize: t.type.title.size * s, lineHeight: t.type.title.line * s, letterSpacing: t.type.title.tracking }, style]}>
       {children}
     </Text>
   );
 }
 export function Body({ children, style, numberOfLines }: { children: ReactNode; style?: StyleProp<TextStyle>; numberOfLines?: number }) {
-  const s = useFontScale();
+  const s = useTypeScale();
   return (
-    <Text style={[styles.body, { fontSize: 16 * s, lineHeight: 23 * s }, style]} numberOfLines={numberOfLines}>
+    <Text style={[styles.body, { color: t.text, fontSize: t.type.body.size * s, lineHeight: t.type.body.line * s }, style]} numberOfLines={numberOfLines}>
       {children}
     </Text>
   );
 }
 export function Muted({ children, style }: { children: ReactNode; style?: StyleProp<TextStyle> }) {
-  const s = useFontScale();
-  return <Text style={[styles.muted, { fontSize: 15 * s, lineHeight: 21 * s }, style]}>{children}</Text>;
+  const s = useTypeScale();
+  return <Text style={[styles.muted, { color: t.muted, fontSize: 15 * s, lineHeight: 21 * s }, style]}>{children}</Text>;
 }
 export function Eyebrow({ children, style }: { children: ReactNode; style?: StyleProp<TextStyle> }) {
-  const s = useFontScale();
-  return <Text style={[styles.eyebrow, { fontSize: 12 * s }, style]}>{children}</Text>;
+  const s = useTypeScale();
+  return <Text style={[styles.eyebrow, { color: t.accentText, fontSize: t.type.eyebrow.size * s, letterSpacing: t.type.eyebrow.tracking }, style]}>{children}</Text>;
 }
 
 export function Card({ children, style, onPress, accessibilityLabel }: { children: ReactNode; style?: StyleProp<ViewStyle>; onPress?: () => void; accessibilityLabel?: string }) {
   const reduce = useReduceMotion();
+  const glass = useGlassLook();
+  const minH = useMinTarget(44);
+  const face: ViewStyle = { backgroundColor: t.surface, borderColor: t.border, borderRadius: t.radii.md };
+  if (glass) {
+    const inner = <View style={{ padding: 18 }}>{children}</View>;
+    if (onPress) {
+      return (
+        <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={accessibilityLabel} style={({ pressed, focused }: { pressed: boolean; focused?: boolean }) => [{ marginBottom: 12, borderRadius: t.radii.md, minHeight: minH }, pressed && !reduce && { transform: [{ scale: 0.985 }] }, pressed && reduce && { opacity: 0.92 }, focused && { borderWidth: 3, borderColor: isDark() ? '#F6C453' : t.accentText }, style]}>
+          <GlassLayers radius={t.radii.md}>{inner}</GlassLayers>
+        </Pressable>
+      );
+    }
+    return <GlassLayers radius={t.radii.md} style={[{ marginBottom: 12 }, style]}>{inner}</GlassLayers>;
+  }
   if (onPress) {
     return (
       <Pressable
         onPress={onPress}
         accessibilityRole="button"
         accessibilityLabel={accessibilityLabel}
-        style={({ pressed }) => [styles.card, pressed && { opacity: 0.85 }, pressed && !reduce && { transform: [{ scale: 0.995 }] }, style]}
+        style={({ pressed, focused }: { pressed: boolean; focused?: boolean }) => [styles.card, face, { minHeight: minH }, pressed && { opacity: 0.92 }, pressed && !reduce && { transform: [{ scale: 0.985 }] }, focused && { borderColor: isDark() ? '#F6C453' : t.primary, borderWidth: 3 }, style]}
       >
         {children}
       </Pressable>
     );
   }
-  return <View style={[styles.card, style]}>{children}</View>;
+  return <View style={[styles.card, face, style]}>{children}</View>;
 }
 
 export function Row({ children, style, gap = 8, wrap }: { children: ReactNode; style?: StyleProp<ViewStyle>; gap?: number; wrap?: boolean }) {
@@ -156,27 +190,48 @@ export function Button({
   small?: boolean;
   accessibilityLabel?: string;
 }) {
-  const s = useFontScale();
+  const s = useTypeScale();
+  const minH = useMinTarget(small ? 44 : 52);
+  const reduce = useReduceMotion();
+  const hapticsOn = useHapticsEnabled();
+  const fx = useVisualEffects();
+  const raised = variant !== 'ghost';
   const bg = { primary: t.primary, secondary: t.surfaceAlt, ghost: 'transparent', danger: t.danger }[variant];
   const fg = { primary: t.onPrimary, secondary: t.text, ghost: t.primary, danger: t.onDanger }[variant];
   const off = disabled || loading;
+  const motion = fx.motion && !reduce;
   return (
     <Pressable
-      onPress={off ? undefined : onPress}
+      onPress={off ? undefined : () => {
+        if (hapticsOn && motion && variant === 'primary' && !fx.tv) tapPrimary();
+        onPress?.();
+      }}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel ?? title}
       accessibilityState={{ disabled: !!off, busy: !!loading }}
       hitSlop={6}
-      style={({ pressed }) => [
+      style={({ pressed, focused }: { pressed: boolean; focused?: boolean }) => [
         styles.btn,
         small && styles.btnSmall,
-        { backgroundColor: bg, minHeight: Math.max(small ? 44 : 48, 44 * s) },
+        { backgroundColor: bg, borderRadius: t.radii.md, minHeight: minH, overflow: 'hidden' },
         variant === 'ghost' && { borderWidth: 1, borderColor: t.border },
-        pressed && !off && { opacity: 0.8 },
+        raised && raisedShadow(!!pressed && !off && !focused, motion),
+        pressed && !off && !motion && { opacity: 0.92 },
+        !raised && pressed && !off && motion && { opacity: 0.88, transform: [{ scale: 0.985 }] },
+        focused && {
+          borderWidth: fx.tv ? 6 : 3,
+          borderTopWidth: fx.tv ? 6 : 3,
+          borderBottomWidth: fx.tv ? 6 : 3,
+          borderLeftWidth: fx.tv ? 6 : 3,
+          borderRightWidth: fx.tv ? 6 : 3,
+          borderColor: isDark() ? '#F6C453' : t.accentText,
+        },
         off && { opacity: 0.45 },
         style,
       ]}
     >
+      {raised ? <View pointerEvents="none" style={{ position: 'absolute', top: 1, left: 14, right: 14, height: 7, borderRadius: 4, backgroundColor: 'rgba(255,255,255,0.30)' }} /> : null}
+      {raised ? <View pointerEvents="none" style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 8, backgroundColor: 'rgba(0,0,0,0.10)' }} /> : null}
       {loading ? (
         <ActivityIndicator color={fg} />
       ) : (
@@ -190,12 +245,13 @@ export function Button({
 }
 
 export function IconButton({ icon, onPress, label, color = t.text, size = 22 }: { icon: IconName; onPress: () => void; label: string; color?: string; size?: number }) {
+  const hit = useMinTarget(44);
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={label}
-      style={({ pressed }) => [styles.iconBtn, pressed && { backgroundColor: t.surfaceAlt }]}
+      style={({ pressed }) => [styles.iconBtn, { width: hit, height: hit, borderRadius: hit / 2 }, pressed && { backgroundColor: t.surfaceAlt }]}
     >
       <Ionicons name={icon} size={size} color={color} />
     </Pressable>
@@ -205,14 +261,16 @@ export function IconButton({ icon, onPress, label, color = t.text, size = 22 }: 
 export function Chip({ label, active, onPress, color }: { label: string; active?: boolean; onPress?: () => void; color?: string }) {
   const c = color ?? t.primary;
   const s = useFontScale();
+  const minH = useMinTarget(44);
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
+      accessibilityLabel={label}
       accessibilityState={{ selected: !!active }}
       style={({ pressed }) => [
         styles.chip,
-        { borderColor: active ? c : t.border, backgroundColor: active ? c : 'transparent', minHeight: Math.max(44, 44 * s) },
+        { borderColor: active ? c : t.border, backgroundColor: active ? c : 'transparent', minHeight: minH },
         pressed && { opacity: 0.8 },
       ]}
     >
@@ -247,13 +305,14 @@ export function Badge({ label, tone = 'neutral' }: { label: string; tone?: 'neut
 }
 
 export function Field({ label, hint, error, style, ...props }: TextInputProps & { label: string; hint?: string; error?: string | null }) {
+  const minH = useMinTarget(48);
   return (
-    <View style={{ marginBottom: 14 }}>
-      <Text style={styles.label}>{label}</Text>
+    <View style={{ marginBottom: t.space.md }}>
+      <Text style={[styles.label, { color: t.muted }]}>{label}</Text>
       <TextInput
         placeholderTextColor={t.muted}
         accessibilityLabel={label}
-        style={[styles.input, props.multiline && { minHeight: 88, textAlignVertical: 'top', paddingTop: 12 }, error ? { borderColor: t.danger } : null, style]}
+        style={[styles.input, { color: t.text, backgroundColor: t.surface, borderColor: t.border, borderRadius: t.radii.sm, minHeight: minH }, props.multiline && { minHeight: Math.max(88, minH), textAlignVertical: 'top', paddingTop: 12 }, error ? { borderColor: t.danger } : null, style]}
         {...props}
       />
       {error ? <Text style={{ color: t.danger, marginTop: 4, fontSize: 13 }}>{error}</Text> : hint ? <Muted style={{ marginTop: 4, fontSize: 13 }}>{hint}</Muted> : null}
@@ -263,10 +322,11 @@ export function Field({ label, hint, error, style, ...props }: TextInputProps & 
 
 /** Sélecteur segmenté (ex. TVA Oui / Non). */
 export function Segmented<T extends string | number>({ options, value, onChange, label }: { options: { label: string; value: T }[]; value: T; onChange: (v: T) => void; label?: string }) {
+  const minH = useMinTarget(44);
   return (
-    <View style={{ marginBottom: 14 }}>
-      {label ? <Text style={styles.label}>{label}</Text> : null}
-      <View style={styles.segment} accessibilityRole="radiogroup">
+    <View style={{ marginBottom: t.space.md }}>
+      {label ? <Text style={[styles.label, { color: t.muted }]}>{label}</Text> : null}
+      <View style={[styles.segment, { backgroundColor: t.surfaceAlt, borderRadius: t.radii.md }]} accessibilityRole="radiogroup" accessibilityLabel={label}>
         {options.map((o) => {
           const on = o.value === value;
           return (
@@ -274,8 +334,9 @@ export function Segmented<T extends string | number>({ options, value, onChange,
               key={String(o.value)}
               onPress={() => onChange(o.value)}
               accessibilityRole="radio"
+              accessibilityLabel={o.label}
               accessibilityState={{ checked: on }}
-              style={[styles.segItem, on && { backgroundColor: t.surface, ...shadow(1) }]}
+              style={[styles.segItem, { minHeight: minH }, on && { backgroundColor: t.surface, borderWidth: 1, borderColor: t.primary, borderTopColor: isDark() ? 'rgba(255,255,255,0.28)' : 'rgba(255,255,255,0.72)', ...shadow(1) }]}
             >
               <Text style={{ color: on ? t.text : t.muted, fontWeight: on ? '700' : '500', fontSize: 14 }}>{o.label}</Text>
             </Pressable>
@@ -287,13 +348,14 @@ export function Segmented<T extends string | number>({ options, value, onChange,
 }
 
 export function Toggle({ label, value, onChange, hint }: { label: string; value: boolean; onChange: (v: boolean) => void; hint?: string }) {
+  const minH = useMinTarget(48);
   return (
     <Pressable
       onPress={() => onChange(!value)}
       accessibilityRole="switch"
       accessibilityState={{ checked: value }}
       accessibilityLabel={label}
-      style={{ flexDirection: 'row', alignItems: 'center', minHeight: 48, gap: 12 }}
+      style={{ flexDirection: 'row', alignItems: 'center', minHeight: minH, gap: t.space.md }}
     >
       <View style={{ flex: 1 }}>
         <Body>{label}</Body>
@@ -307,40 +369,78 @@ export function Toggle({ label, value, onChange, hint }: { label: string; value:
 }
 
 export function Empty({ icon = 'sparkles-outline', title, text, action }: { icon?: IconName; title: string; text?: string; action?: ReactNode }) {
-  return (
-    <View style={styles.empty}>
-      <View style={styles.emptyIcon}>
+  const glass = useGlassLook();
+  const body = (
+    <>
+      <View style={[styles.emptyIcon, { backgroundColor: t.surfaceAlt }]}>
         <Ionicons name={icon} size={28} color={t.accent} />
       </View>
-      <Text style={[styles.h2, { textAlign: 'center', marginBottom: 6 }]}>{title}</Text>
-      {text ? <Muted style={{ textAlign: 'center', marginBottom: 14 }}>{text}</Muted> : null}
+      <Text accessibilityRole="header" style={[styles.h2, { color: t.text, textAlign: 'center', marginBottom: 6 }]}>{title}</Text>
+      {text ? <Muted style={{ textAlign: 'center', marginBottom: 14, maxWidth: 420 }}>{text}</Muted> : null}
+      {action}
+    </>
+  );
+  if (glass) {
+    return (
+      <GlassLayers radius={t.radii.lg} style={{ marginBottom: t.space.md }}>
+        <View style={[styles.empty, { borderWidth: 0, backgroundColor: 'transparent', marginBottom: 0 }]}>{body}</View>
+      </GlassLayers>
+    );
+  }
+  return <View style={[styles.empty, { borderColor: t.border, backgroundColor: t.surface, borderRadius: t.radii.lg }]}>{body}</View>;
+}
+
+/** Bandeau d’entrée : une promesse, une action, pas une publicité. */
+export function Hero({ kicker, title, text, action }: { kicker: string; title: string; text: string; action?: ReactNode }) {
+  return (
+    <View style={{ backgroundColor: t.primary, borderRadius: t.radii.lg, padding: t.space.xl, marginBottom: t.space.lg, gap: t.space.sm, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.35)', ...raisedShadow(false, false) }}>
+      <View pointerEvents="none" style={{ position: 'absolute', top: 1, left: 18, right: 18, height: 8, borderRadius: 4, backgroundColor: 'rgba(255,255,255,0.22)' }} />
+      <View pointerEvents="none" style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 10, backgroundColor: 'rgba(0,0,0,0.12)' }} />
+      <Text style={{ color: t.onPrimary, fontSize: 12, fontWeight: '700', letterSpacing: 1.4, textTransform: 'uppercase', opacity: 0.8 }}>{kicker}</Text>
+      <Text accessibilityRole="header" style={{ color: t.onPrimary, fontSize: 28, lineHeight: 34, fontWeight: '700', letterSpacing: -0.6 }}>{title}</Text>
+      <Text style={{ color: t.onPrimary, fontSize: 16, lineHeight: 23, opacity: 0.92 }}>{text}</Text>
       {action}
     </View>
   );
+}
+
+function tapPrimary() {
+  if (!shouldRequireNative('expo-haptics', (Platform as { isTV?: boolean }).isTV === true)) return;
+  try {
+    const Haptics = require('expo-haptics') as typeof import('expo-haptics');
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined);
+  } catch {
+    // Module absent : le bouton reste utilisable.
+  }
 }
 
 export function Notice({ tone = 'info', title, text, icon }: { tone?: 'info' | 'warning' | 'danger' | 'success'; title: string; text?: string; icon?: IconName }) {
   const map = { info: [t.infoBg, t.info], warning: [t.warningBg, t.warning], danger: [t.dangerBg, t.danger], success: [t.successBg, t.success] } as const;
   const [bg, fg] = map[tone];
   const ic: IconName = icon ?? ({ info: 'information-circle', warning: 'warning', danger: 'alert-circle', success: 'checkmark-circle' } as const)[tone];
+  const tv = isTv();
+  const titleSize = tv ? 26 : 14;
+  const bodySize = tv ? 22 : 13;
   return (
-    <View style={[styles.notice, { backgroundColor: bg }]} accessibilityRole="alert">
-      <Ionicons name={ic} size={20} color={fg} style={{ marginTop: 1 }} />
+    <View style={[styles.notice, { backgroundColor: bg, padding: tv ? 20 : 12, gap: tv ? 16 : 10 }]} accessibilityRole="alert">
+      <Ionicons name={ic} size={tv ? 32 : 20} color={fg} style={{ marginTop: 1 }} />
       <View style={{ flex: 1 }}>
-        <Text style={{ color: fg, fontWeight: '700', fontSize: 14 }}>{title}</Text>
-        {text ? <Text style={{ color: t.text, fontSize: 13, marginTop: 2, lineHeight: 19 }}>{text}</Text> : null}
+        <Text style={{ color: fg, fontWeight: '700', fontSize: titleSize, lineHeight: Math.round(titleSize * 1.25) }}>{title}</Text>
+        {text ? <Text style={{ color: t.text, fontSize: bodySize, marginTop: tv ? 6 : 2, lineHeight: Math.round(bodySize * 1.35) }}>{text}</Text> : null}
       </View>
     </View>
   );
 }
 
 export function ListItem({ title, subtitle, right, icon, onPress }: { title: string; subtitle?: string; right?: ReactNode; icon?: IconName; onPress?: () => void }) {
+  const minH = useMinTarget(56);
   return (
     <Pressable
       onPress={onPress}
       disabled={!onPress}
       accessibilityRole={onPress ? 'button' : undefined}
-      style={({ pressed }) => [styles.li, pressed && { backgroundColor: t.surfaceAlt }]}
+      accessibilityLabel={onPress ? title : undefined}
+      style={({ pressed }) => [styles.li, { minHeight: minH }, pressed && { backgroundColor: t.surfaceAlt }]}
     >
       {icon ? (
         <View style={styles.liIcon}>
@@ -348,7 +448,7 @@ export function ListItem({ title, subtitle, right, icon, onPress }: { title: str
         </View>
       ) : null}
       <View style={{ flex: 1 }}>
-        <Text style={[styles.body, { fontWeight: '600' }]} numberOfLines={1}>
+        <Text style={[styles.body, { color: t.text, fontWeight: '600' }]} numberOfLines={1}>
           {title}
         </Text>
         {subtitle ? (
@@ -424,8 +524,8 @@ export const styles = StyleSheet.create({
   eyebrow: { color: t.accentText, fontSize: 12, fontWeight: '700', letterSpacing: 1.6, textTransform: 'uppercase', marginBottom: 6 },
   card: {
     backgroundColor: t.surface,
-    borderRadius: t.radius,
-    padding: 16,
+    borderRadius: t.radii.md,
+    padding: 18,
     marginBottom: 12,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: t.border,

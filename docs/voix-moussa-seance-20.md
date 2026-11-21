@@ -1,0 +1,67 @@
+# Voix de Moussa — séance renforcement 20 min
+
+Script français de la séance exemple (semaine 1, intermédiaire). Élias ne parle pas ici : il intervient seulement dans la séance famille. Sans prise de son, l’app lit ces phrases avec AVSpeechSynthesizer, voix plus grave pour Moussa.
+
+- 00:00 · intro — Bonjour, c’est Moussa. On commence en douceur, l’effort monte, puis on revient au calme. Arrêtez si une douleur apparaît.
+- 00:00 · name — Dans cinq secondes : Tirage debout.
+- 00:02 · posture — Poitrine ouverte.
+- 00:43 · encourage — Beau rythme. Gardez la forme, pas la vitesse.
+- 01:23 · countdown — 3
+- 01:24 · countdown — 2
+- 01:25 · countdown — 1
+- 01:27 · rest — Repos. Ensuite : Flexion.
+- 02:29 · name — Dans cinq secondes : Flexion.
+- 02:35 · posture — Poussez les hanches vers l’arrière.
+- 03:17 · encourage — Beau rythme. Gardez la forme, pas la vitesse.
+- 03:55 · name — Dans cinq secondes : Flexion.
+- 03:57 · countdown — 3
+- 03:58 · countdown — 2
+- 03:59 · countdown — 1
+- 04:02 · posture — Poussez les hanches vers l’arrière.
+- 04:52 · encourage — Beau rythme. Gardez la forme, pas la vitesse.
+- 05:40 · countdown — 3
+- 05:41 · countdown — 2
+- 05:42 · countdown — 1
+- 05:44 · rest — Repos. Ensuite : Fente arrière courte.
+- 06:29 · name — Dans cinq secondes : Fente arrière courte.
+- 06:36 · posture — Le pas arrière reste court.
+- 07:26 · encourage — Beau rythme. Gardez la forme, pas la vitesse.
+- 08:15 · countdown — 3
+- 08:16 · countdown — 2
+- 08:17 · countdown — 1
+- 08:18 · rest — Repos. Ensuite : Pompes inclinées.
+- 09:03 · name — Dans cinq secondes : Pompes inclinées.
+- 09:10 · posture — Corps en planche, des épaules aux genoux ou aux pieds.
+- 10:00 · encourage — Beau rythme. Gardez la forme, pas la vitesse.
+- 10:49 · countdown — 3
+- 10:50 · countdown — 2
+- 10:51 · countdown — 1
+- 10:52 · rest — Repos. Ensuite : Tirage debout.
+- 11:37 · name — Dans cinq secondes : Tirage debout.
+- 11:44 · posture — Poitrine ouverte.
+- 12:34 · encourage — Beau rythme. Gardez la forme, pas la vitesse.
+- 13:23 · countdown — 3
+- 13:24 · countdown — 2
+- 13:25 · countdown — 1
+- 13:26 · rest — Repos. Ensuite : Planche sur les genoux.
+- 14:12 · name — Dans cinq secondes : Planche sur les genoux.
+- 14:18 · posture — Poussez le sol avec les avant-bras.
+- 15:08 · encourage — Beau rythme. Gardez la forme, pas la vitesse.
+- 15:55 · name — Dans cinq secondes : Superman au sol.
+- 15:57 · countdown — 3
+- 15:58 · countdown — 2
+- 15:59 · countdown — 1
+- 16:02 · posture — Front vers le sol, nuque longue.
+- 16:43 · encourage — Beau rythme. Gardez la forme, pas la vitesse.
+- 17:23 · countdown — 3
+- 17:24 · countdown — 2
+- 17:25 · countdown — 1
+- 17:27 · rest — Repos. Ensuite : Étoile debout.
+- 18:29 · name — Dans cinq secondes : Étoile debout.
+- 18:35 · posture — Les deux pieds restent au sol.
+- 19:17 · encourage — Beau rythme. Gardez la forme, pas la vitesse.
+- 19:57 · countdown — 3
+- 19:58 · countdown — 2
+- 19:59 · countdown — 1
+
+Les mêmes phrases en anglais sont dans `src/lib/training/example-seance-20.json`, champ `en`.

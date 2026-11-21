@@ -1,0 +1,1159 @@
+{
+  "id": "pro-strength-w1-20-intermediaire",
+  "title": {
+    "fr": "Renforcement",
+    "en": "Strength"
+  },
+  "type": "strength",
+  "minutes": 20,
+  "level": "intermediaire",
+  "week": 1,
+  "speakers": [
+    "moussa"
+  ],
+  "zones": [
+    "dos",
+    "jambes",
+    "bras",
+    "abdos",
+    "mobilite"
+  ],
+  "exercises": [
+    {
+      "id": "row",
+      "name": {
+        "fr": "Tirage debout",
+        "en": "Standing row"
+      },
+      "zone": "dos",
+      "dose": {
+        "kind": "reps",
+        "reps": 8
+      },
+      "tempo": "2-0-2",
+      "cues": {
+        "fr": [
+          "Poitrine ouverte.",
+          "Coudes frottent les côtes.",
+          "Épaules loin des oreilles."
+        ],
+        "en": [
+          "Chest open.",
+          "Elbows graze the ribs.",
+          "Shoulders away from the ears."
+        ]
+      },
+      "mistake": {
+        "fr": "Hausser les épaules vers les oreilles.",
+        "en": "Shrugging toward the ears."
+      },
+      "easier": {
+        "fr": "Amplitude plus courte, dos contre un mur.",
+        "en": "Shorter range, back against a wall."
+      },
+      "bpm": 56,
+      "video": {
+        "asset": "assets/coach-videos/row-coach-afrique-ouest.mp4",
+        "inMs": 0,
+        "outMs": 12000
+      },
+      "shot": {
+        "framing": "Corps entier, tête aux pieds, marge autour des mains.",
+        "angle": "Trois-quarts face, caméra à hauteur de hanche.",
+        "durationSec": 12,
+        "repsToFilm": 8,
+        "tempo": "2-0-2",
+        "light": "Lumière douce de face, pas de contre-jour.",
+        "background": "Mur clair uni, sol dégagé, cadre stable du premier au dernier photogramme.",
+        "status": "reutiliser",
+        "note": "Clip Moussa. Utile pour l’échauffement du dos et le bloc principal."
+      }
+    },
+    {
+      "id": "squat",
+      "name": {
+        "fr": "Flexion",
+        "en": "Squat"
+      },
+      "zone": "jambes",
+      "dose": {
+        "kind": "reps",
+        "reps": 8
+      },
+      "tempo": "2-0-2",
+      "cues": {
+        "fr": [
+          "Poussez les hanches vers l’arrière.",
+          "Genoux dans l’axe des orteils.",
+          "Talons lourds au sol."
+        ],
+        "en": [
+          "Send the hips back.",
+          "Knees track over the toes.",
+          "Heels stay heavy."
+        ]
+      },
+      "mistake": {
+        "fr": "Genoux qui rentrent vers l’intérieur.",
+        "en": "Knees collapsing inward."
+      },
+      "easier": {
+        "fr": "Descente plus haute, mains sur une chaise.",
+        "en": "Shallower squat, hands on a chair."
+      },
+      "bpm": 60,
+      "video": {
+        "asset": "assets/coach-videos/coach-homme-squat-v2.mp4",
+        "inMs": 0,
+        "outMs": 12000
+      },
+      "shot": {
+        "framing": "Corps entier, tête aux pieds, marge autour des mains.",
+        "angle": "Trois-quarts face, caméra à hauteur de hanche.",
+        "durationSec": 12,
+        "repsToFilm": 8,
+        "tempo": "2-0-2",
+        "light": "Lumière douce de face, pas de contre-jour.",
+        "background": "Mur clair uni, sol dégagé, cadre stable du premier au dernier photogramme.",
+        "status": "reutiliser",
+        "note": "Clip Marc. À regénérer si la fin de boucle ne rejoint pas le début."
+      }
+    },
+    {
+      "id": "fente",
+      "name": {
+        "fr": "Fente arrière courte",
+        "en": "Short reverse lunge"
+      },
+      "zone": "jambes",
+      "dose": {
+        "kind": "reps",
+        "reps": 6
+      },
+      "tempo": "2-0-2",
+      "cues": {
+        "fr": [
+          "Le pas arrière reste court.",
+          "Le genou avant suit le milieu du pied.",
+          "Le buste reste haut."
+        ],
+        "en": [
+          "The back step stays short.",
+          "Front knee tracks the middle of the foot.",
+          "Chest stays tall."
+        ]
+      },
+      "mistake": {
+        "fr": "Genou avant qui dépasse loin des orteils.",
+        "en": "Front knee shooting far past the toes."
+      },
+      "easier": {
+        "fr": "Un doigt sur le dossier d’une chaise.",
+        "en": "One finger on a chair back."
+      },
+      "bpm": 56,
+      "video": {
+        "asset": "assets/coach-videos/fente-coach-maghreb.mp4",
+        "inMs": 0,
+        "outMs": 12000
+      },
+      "shot": {
+        "framing": "Corps entier, tête aux pieds, marge autour des mains.",
+        "angle": "Trois-quarts face, caméra à hauteur de hanche.",
+        "durationSec": 12,
+        "repsToFilm": 6,
+        "tempo": "2-0-2",
+        "light": "Lumière douce de face, pas de contre-jour.",
+        "background": "Mur clair uni, sol dégagé, cadre stable du premier au dernier photogramme.",
+        "status": "reutiliser",
+        "note": "Clip Karim. Garder le même pied d’appui au raccord de boucle."
+      }
+    },
+    {
+      "id": "pompes",
+      "name": {
+        "fr": "Pompes inclinées",
+        "en": "Incline push-up"
+      },
+      "zone": "bras",
+      "dose": {
+        "kind": "reps",
+        "reps": 6
+      },
+      "tempo": "2-0-2",
+      "cues": {
+        "fr": [
+          "Corps en planche, des épaules aux genoux ou aux pieds.",
+          "Coudes à environ 45 degrés.",
+          "Le menton reste rentré."
+        ],
+        "en": [
+          "Body in one line from shoulders to knees or feet.",
+          "Elbows near 45 degrees.",
+          "Chin stays tucked."
+        ]
+      },
+      "mistake": {
+        "fr": "Hanches qui tombent ou montent.",
+        "en": "Hips sagging or piking."
+      },
+      "easier": {
+        "fr": "Mains sur un mur ou un plan de travail.",
+        "en": "Hands on a wall or counter."
+      },
+      "bpm": 52,
+      "video": {
+        "asset": "assets/coach-videos/pompes-coach-femme-voilee.mp4",
+        "inMs": 0,
+        "outMs": 12000
+      },
+      "shot": {
+        "framing": "Corps entier, tête aux pieds, marge autour des mains.",
+        "angle": "Trois-quarts face, caméra à hauteur de hanche.",
+        "durationSec": 12,
+        "repsToFilm": 6,
+        "tempo": "2-0-2",
+        "light": "Lumière douce de face, pas de contre-jour.",
+        "background": "Mur clair uni, sol dégagé, cadre stable du premier au dernier photogramme.",
+        "status": "reutiliser",
+        "note": "Clip Amina. Vérifier que les mains ne glissent pas entre le début et la fin."
+      }
+    },
+    {
+      "id": "planche",
+      "name": {
+        "fr": "Planche sur les genoux",
+        "en": "Knee plank"
+      },
+      "zone": "abdos",
+      "dose": {
+        "kind": "time",
+        "seconds": 20
+      },
+      "tempo": "0-0-0",
+      "cues": {
+        "fr": [
+          "Poussez le sol avec les avant-bras.",
+          "Fessiers serrés sans creuser.",
+          "Respirez sans bouger le bassin."
+        ],
+        "en": [
+          "Push the floor away with the forearms.",
+          "Glutes on, without an arch.",
+          "Breathe without rocking the hips."
+        ]
+      },
+      "mistake": {
+        "fr": "Retenir le souffle et laisser tomber le bassin.",
+        "en": "Holding the breath and dropping the hips."
+      },
+      "easier": {
+        "fr": "Planche debout contre un mur.",
+        "en": "Standing plank against a wall."
+      },
+      "bpm": 60,
+      "video": {
+        "asset": "assets/coach-videos/coach-femme-planche-v2.mp4",
+        "inMs": 0,
+        "outMs": 12000
+      },
+      "shot": {
+        "framing": "Corps entier, tête aux pieds, marge autour des mains.",
+        "angle": "Trois-quarts face, caméra à hauteur de hanche.",
+        "durationSec": 12,
+        "repsToFilm": 1,
+        "tempo": "0-0-0",
+        "light": "Lumière douce de face, pas de contre-jour.",
+        "background": "Mur clair uni, sol dégagé, cadre stable du premier au dernier photogramme.",
+        "status": "reutiliser",
+        "note": "Clip Léa, tenue. La posture de fin doit être celle du début."
+      }
+    },
+    {
+      "id": "superman",
+      "name": {
+        "fr": "Superman au sol",
+        "en": "Superman"
+      },
+      "zone": "dos",
+      "dose": {
+        "kind": "reps",
+        "reps": 6
+      },
+      "tempo": "2-1-2",
+      "cues": {
+        "fr": [
+          "Front vers le sol, nuque longue.",
+          "Mains et pieds se décollent ensemble.",
+          "Posez sans vous laisser tomber."
+        ],
+        "en": [
+          "Forehead toward the floor, neck long.",
+          "Hands and feet lift together.",
+          "Lower without dropping."
+        ]
+      },
+      "mistake": {
+        "fr": "Relever la tête pour voir devant.",
+        "en": "Lifting the head to look forward."
+      },
+      "easier": {
+        "fr": "Un seul bras, l’autre reste au sol.",
+        "en": "One arm only, the other stays down."
+      },
+      "bpm": 48,
+      "video": {
+        "asset": "assets/coach-videos/superman-coach-asie.mp4",
+        "inMs": 0,
+        "outMs": 12000
+      },
+      "shot": {
+        "framing": "Corps entier, tête aux pieds, marge autour des mains.",
+        "angle": "Trois-quarts face, caméra à hauteur de hanche.",
+        "durationSec": 12,
+        "repsToFilm": 6,
+        "tempo": "2-1-2",
+        "light": "Lumière douce de face, pas de contre-jour.",
+        "background": "Mur clair uni, sol dégagé, cadre stable du premier au dernier photogramme.",
+        "status": "reutiliser",
+        "note": "Clip de la coach asiatique. Sert aussi de retour au calme, plus lent."
+      }
+    },
+    {
+      "id": "etoile",
+      "name": {
+        "fr": "Étoile debout",
+        "en": "Standing star"
+      },
+      "zone": "mobilite",
+      "dose": {
+        "kind": "time",
+        "seconds": 30
+      },
+      "tempo": "2-0-2",
+      "cues": {
+        "fr": [
+          "Les deux pieds restent au sol.",
+          "Les bras s’ouvrent sans cambrer.",
+          "Le souffle est plus long que le geste."
+        ],
+        "en": [
+          "Both feet stay down.",
+          "Arms open without arching.",
+          "The breath is longer than the move."
+        ]
+      },
+      "mistake": {
+        "fr": "Se pencher d’un seul côté jusqu’à perdre l’équilibre.",
+        "en": "Leaning so far that balance goes."
+      },
+      "easier": {
+        "fr": "Mains sur les hanches, seulement ouvrir la poitrine.",
+        "en": "Hands on hips, only open the chest."
+      },
+      "bpm": 52,
+      "video": {
+        "asset": "assets/coach-videos/etoile-coach-papa-garcon.mp4",
+        "inMs": 0,
+        "outMs": 12000
+      },
+      "shot": {
+        "framing": "Corps entier, tête aux pieds, marge autour des mains.",
+        "angle": "Trois-quarts face, caméra à hauteur de hanche.",
+        "durationSec": 12,
+        "repsToFilm": 6,
+        "tempo": "2-0-2",
+        "light": "Lumière douce de face, pas de contre-jour.",
+        "background": "Mur clair uni, sol dégagé, cadre stable du premier au dernier photogramme.",
+        "status": "regenerer",
+        "note": "Le clip montre Élias. Le réutiliser en famille. Pour l’adulte seul, retourner le même geste avec Moussa."
+      }
+    }
+  ],
+  "segments": [
+    {
+      "id": "warmup-0",
+      "phase": "warmup",
+      "role": "work",
+      "startMs": 0,
+      "endMs": 86220,
+      "exerciseId": "row",
+      "video": {
+        "asset": "assets/coach-videos/row-coach-afrique-ouest.mp4",
+        "inMs": 0,
+        "outMs": 12000
+      },
+      "bpm": 56
+    },
+    {
+      "id": "warmup-1",
+      "phase": "warmup",
+      "role": "transition",
+      "startMs": 86220,
+      "endMs": 86720,
+      "exerciseId": "squat",
+      "video": {
+        "asset": "assets/coach-videos/coach-homme-squat-v2.mp4",
+        "inMs": 0,
+        "outMs": 12000
+      },
+      "bpm": 60
+    },
+    {
+      "id": "warmup-2",
+      "phase": "warmup",
+      "role": "rest",
+      "startMs": 86720,
+      "endMs": 153780,
+      "exerciseId": "squat",
+      "video": {
+        "asset": "assets/coach-videos/coach-homme-squat-v2.mp4",
+        "inMs": 0,
+        "outMs": 12000
+      },
+      "bpm": 60
+    },
+    {
+      "id": "warmup-3",
+      "phase": "warmup",
+      "role": "work",
+      "startMs": 153780,
+      "endMs": 240000,
+      "exerciseId": "squat",
+      "video": {
+        "asset": "assets/coach-videos/coach-homme-squat-v2.mp4",
+        "inMs": 0,
+        "outMs": 12000
+      },
+      "bpm": 60
+    },
+    {
+      "id": "main-0",
+      "phase": "main",
+      "role": "work",
+      "startMs": 240000,
+      "endMs": 343392,
+      "exerciseId": "squat",
+      "video": {
+        "asset": "assets/coach-videos/coach-homme-squat-v2.mp4",
+        "inMs": 0,
+        "outMs": 12000
+      },
+      "bpm": 60
+    },
+    {
+      "id": "main-1",
+      "phase": "main",
+      "role": "transition",
+      "startMs": 343392,
+      "endMs": 343892,
+      "exerciseId": "fente",
+      "video": {
+        "asset": "assets/coach-videos/fente-coach-maghreb.mp4",
+        "inMs": 0,
+        "outMs": 12000
+      },
+      "bpm": 56
+    },
+    {
+      "id": "main-2",
+      "phase": "main",
+      "role": "rest",
+      "startMs": 343892,
+      "endMs": 394152,
+      "exerciseId": "fente",
+      "video": {
+        "asset": "assets/coach-videos/fente-coach-maghreb.mp4",
+        "inMs": 0,
+        "outMs": 12000
+      },
+      "bpm": 56
+    },
+    {
+      "id": "main-3",
+      "phase": "main",
+      "role": "work",
+      "startMs": 394152,
+      "endMs": 497544,
+      "exerciseId": "fente",
+      "video": {
+        "asset": "assets/coach-videos/fente-coach-maghreb.mp4",
+        "inMs": 0,
+        "outMs": 12000
+      },
+      "bpm": 56
+    },
+    {
+      "id": "main-4",
+      "phase": "main",
+      "role": "transition",
+      "startMs": 497544,
+      "endMs": 498044,
+      "exerciseId": "pompes",
+      "video": {
+        "asset": "assets/coach-videos/pompes-coach-femme-voilee.mp4",
+        "inMs": 0,
+        "outMs": 12000
+      },
+      "bpm": 52
+    },
+    {
+      "id": "main-5",
+      "phase": "main",
+      "role": "rest",
+      "startMs": 498044,
+      "endMs": 548304,
+      "exerciseId": "pompes",
+      "video": {
+        "asset": "assets/coach-videos/pompes-coach-femme-voilee.mp4",
+        "inMs": 0,
+        "outMs": 12000
+      },
+      "bpm": 52
+    },
+    {
+      "id": "main-6",
+      "phase": "main",
+      "role": "work",
+      "startMs": 548304,
+      "endMs": 651696,
+      "exerciseId": "pompes",
+      "video": {
+        "asset": "assets/coach-videos/pompes-coach-femme-voilee.mp4",
+        "inMs": 0,
+        "outMs": 12000
+      },
+      "bpm": 52
+    },
+    {
+      "id": "main-7",
+      "phase": "main",
+      "role": "transition",
+      "startMs": 651696,
+      "endMs": 652196,
+      "exerciseId": "row",
+      "video": {
+        "asset": "assets/coach-videos/row-coach-afrique-ouest.mp4",
+        "inMs": 0,
+        "outMs": 12000
+      },
+      "bpm": 56
+    },
+    {
+      "id": "main-8",
+      "phase": "main",
+      "role": "rest",
+      "startMs": 652196,
+      "endMs": 702456,
+      "exerciseId": "row",
+      "video": {
+        "asset": "assets/coach-videos/row-coach-afrique-ouest.mp4",
+        "inMs": 0,
+        "outMs": 12000
+      },
+      "bpm": 56
+    },
+    {
+      "id": "main-9",
+      "phase": "main",
+      "role": "work",
+      "startMs": 702456,
+      "endMs": 805848,
+      "exerciseId": "row",
+      "video": {
+        "asset": "assets/coach-videos/row-coach-afrique-ouest.mp4",
+        "inMs": 0,
+        "outMs": 12000
+      },
+      "bpm": 56
+    },
+    {
+      "id": "main-10",
+      "phase": "main",
+      "role": "transition",
+      "startMs": 805848,
+      "endMs": 806348,
+      "exerciseId": "planche",
+      "video": {
+        "asset": "assets/coach-videos/coach-femme-planche-v2.mp4",
+        "inMs": 0,
+        "outMs": 12000
+      },
+      "bpm": 60
+    },
+    {
+      "id": "main-11",
+      "phase": "main",
+      "role": "rest",
+      "startMs": 806348,
+      "endMs": 856608,
+      "exerciseId": "planche",
+      "video": {
+        "asset": "assets/coach-videos/coach-femme-planche-v2.mp4",
+        "inMs": 0,
+        "outMs": 12000
+      },
+      "bpm": 60
+    },
+    {
+      "id": "main-12",
+      "phase": "main",
+      "role": "work",
+      "startMs": 856608,
+      "endMs": 960000,
+      "exerciseId": "planche",
+      "video": {
+        "asset": "assets/coach-videos/coach-femme-planche-v2.mp4",
+        "inMs": 0,
+        "outMs": 12000
+      },
+      "bpm": 60
+    },
+    {
+      "id": "cooldown-0",
+      "phase": "cooldown",
+      "role": "work",
+      "startMs": 960000,
+      "endMs": 1046220,
+      "exerciseId": "superman",
+      "video": {
+        "asset": "assets/coach-videos/superman-coach-asie.mp4",
+        "inMs": 0,
+        "outMs": 12000
+      },
+      "bpm": 48
+    },
+    {
+      "id": "cooldown-1",
+      "phase": "cooldown",
+      "role": "transition",
+      "startMs": 1046220,
+      "endMs": 1046720,
+      "exerciseId": "etoile",
+      "video": {
+        "asset": "assets/coach-videos/etoile-coach-papa-garcon.mp4",
+        "inMs": 0,
+        "outMs": 12000
+      },
+      "bpm": 52
+    },
+    {
+      "id": "cooldown-2",
+      "phase": "cooldown",
+      "role": "rest",
+      "startMs": 1046720,
+      "endMs": 1113780,
+      "exerciseId": "etoile",
+      "video": {
+        "asset": "assets/coach-videos/etoile-coach-papa-garcon.mp4",
+        "inMs": 0,
+        "outMs": 12000
+      },
+      "bpm": 52
+    },
+    {
+      "id": "cooldown-3",
+      "phase": "cooldown",
+      "role": "work",
+      "startMs": 1113780,
+      "endMs": 1200000,
+      "exerciseId": "etoile",
+      "video": {
+        "asset": "assets/coach-videos/etoile-coach-papa-garcon.mp4",
+        "inMs": 0,
+        "outMs": 12000
+      },
+      "bpm": 52
+    }
+  ],
+  "cues": [
+    {
+      "id": "intro",
+      "atMs": 0,
+      "speaker": "moussa",
+      "kind": "intro",
+      "fr": "Bonjour, c’est Moussa. On commence en douceur, l’effort monte, puis on revient au calme. Arrêtez si une douleur apparaît.",
+      "en": "Hello, I am Moussa. We start gently, the effort rises, then we come back down. Stop if something hurts."
+    },
+    {
+      "id": "name-warmup-0",
+      "atMs": 0,
+      "speaker": "moussa",
+      "kind": "name",
+      "fr": "Dans cinq secondes : Tirage debout.",
+      "en": "In five seconds: Standing row."
+    },
+    {
+      "id": "posture-warmup-0",
+      "atMs": 1500,
+      "speaker": "moussa",
+      "kind": "posture",
+      "fr": "Poitrine ouverte.",
+      "en": "Chest open."
+    },
+    {
+      "id": "go-warmup-0",
+      "atMs": 43110,
+      "speaker": "moussa",
+      "kind": "encourage",
+      "fr": "Beau rythme. Gardez la forme, pas la vitesse.",
+      "en": "Nice rhythm. Keep the shape, not the speed."
+    },
+    {
+      "id": "count-warmup-0-3",
+      "atMs": 83220,
+      "speaker": "moussa",
+      "kind": "countdown",
+      "fr": "3",
+      "en": "3"
+    },
+    {
+      "id": "count-warmup-0-2",
+      "atMs": 84220,
+      "speaker": "moussa",
+      "kind": "countdown",
+      "fr": "2",
+      "en": "2"
+    },
+    {
+      "id": "count-warmup-0-1",
+      "atMs": 85220,
+      "speaker": "moussa",
+      "kind": "countdown",
+      "fr": "1",
+      "en": "1"
+    },
+    {
+      "id": "rest-warmup-0",
+      "atMs": 86720,
+      "speaker": "moussa",
+      "kind": "rest",
+      "fr": "Repos. Ensuite : Flexion.",
+      "en": "Rest. Next: Squat."
+    },
+    {
+      "id": "name-warmup-3",
+      "atMs": 148780,
+      "speaker": "moussa",
+      "kind": "name",
+      "fr": "Dans cinq secondes : Flexion.",
+      "en": "In five seconds: Squat."
+    },
+    {
+      "id": "posture-warmup-3",
+      "atMs": 155280,
+      "speaker": "moussa",
+      "kind": "posture",
+      "fr": "Poussez les hanches vers l’arrière.",
+      "en": "Send the hips back."
+    },
+    {
+      "id": "go-warmup-3",
+      "atMs": 196890,
+      "speaker": "moussa",
+      "kind": "encourage",
+      "fr": "Beau rythme. Gardez la forme, pas la vitesse.",
+      "en": "Nice rhythm. Keep the shape, not the speed."
+    },
+    {
+      "id": "name-main-0",
+      "atMs": 235000,
+      "speaker": "moussa",
+      "kind": "name",
+      "fr": "Dans cinq secondes : Flexion.",
+      "en": "In five seconds: Squat."
+    },
+    {
+      "id": "count-warmup-3-3",
+      "atMs": 237000,
+      "speaker": "moussa",
+      "kind": "countdown",
+      "fr": "3",
+      "en": "3"
+    },
+    {
+      "id": "count-warmup-3-2",
+      "atMs": 238000,
+      "speaker": "moussa",
+      "kind": "countdown",
+      "fr": "2",
+      "en": "2"
+    },
+    {
+      "id": "count-warmup-3-1",
+      "atMs": 239000,
+      "speaker": "moussa",
+      "kind": "countdown",
+      "fr": "1",
+      "en": "1"
+    },
+    {
+      "id": "posture-main-0",
+      "atMs": 241500,
+      "speaker": "moussa",
+      "kind": "posture",
+      "fr": "Poussez les hanches vers l’arrière.",
+      "en": "Send the hips back."
+    },
+    {
+      "id": "go-main-0",
+      "atMs": 291696,
+      "speaker": "moussa",
+      "kind": "encourage",
+      "fr": "Beau rythme. Gardez la forme, pas la vitesse.",
+      "en": "Nice rhythm. Keep the shape, not the speed."
+    },
+    {
+      "id": "count-main-0-3",
+      "atMs": 340392,
+      "speaker": "moussa",
+      "kind": "countdown",
+      "fr": "3",
+      "en": "3"
+    },
+    {
+      "id": "count-main-0-2",
+      "atMs": 341392,
+      "speaker": "moussa",
+      "kind": "countdown",
+      "fr": "2",
+      "en": "2"
+    },
+    {
+      "id": "count-main-0-1",
+      "atMs": 342392,
+      "speaker": "moussa",
+      "kind": "countdown",
+      "fr": "1",
+      "en": "1"
+    },
+    {
+      "id": "rest-main-0",
+      "atMs": 343892,
+      "speaker": "moussa",
+      "kind": "rest",
+      "fr": "Repos. Ensuite : Fente arrière courte.",
+      "en": "Rest. Next: Short reverse lunge."
+    },
+    {
+      "id": "name-main-3",
+      "atMs": 389152,
+      "speaker": "moussa",
+      "kind": "name",
+      "fr": "Dans cinq secondes : Fente arrière courte.",
+      "en": "In five seconds: Short reverse lunge."
+    },
+    {
+      "id": "posture-main-3",
+      "atMs": 395652,
+      "speaker": "moussa",
+      "kind": "posture",
+      "fr": "Le pas arrière reste court.",
+      "en": "The back step stays short."
+    },
+    {
+      "id": "go-main-3",
+      "atMs": 445848,
+      "speaker": "moussa",
+      "kind": "encourage",
+      "fr": "Beau rythme. Gardez la forme, pas la vitesse.",
+      "en": "Nice rhythm. Keep the shape, not the speed."
+    },
+    {
+      "id": "count-main-3-3",
+      "atMs": 494544,
+      "speaker": "moussa",
+      "kind": "countdown",
+      "fr": "3",
+      "en": "3"
+    },
+    {
+      "id": "count-main-3-2",
+      "atMs": 495544,
+      "speaker": "moussa",
+      "kind": "countdown",
+      "fr": "2",
+      "en": "2"
+    },
+    {
+      "id": "count-main-3-1",
+      "atMs": 496544,
+      "speaker": "moussa",
+      "kind": "countdown",
+      "fr": "1",
+      "en": "1"
+    },
+    {
+      "id": "rest-main-3",
+      "atMs": 498044,
+      "speaker": "moussa",
+      "kind": "rest",
+      "fr": "Repos. Ensuite : Pompes inclinées.",
+      "en": "Rest. Next: Incline push-up."
+    },
+    {
+      "id": "name-main-6",
+      "atMs": 543304,
+      "speaker": "moussa",
+      "kind": "name",
+      "fr": "Dans cinq secondes : Pompes inclinées.",
+      "en": "In five seconds: Incline push-up."
+    },
+    {
+      "id": "posture-main-6",
+      "atMs": 549804,
+      "speaker": "moussa",
+      "kind": "posture",
+      "fr": "Corps en planche, des épaules aux genoux ou aux pieds.",
+      "en": "Body in one line from shoulders to knees or feet."
+    },
+    {
+      "id": "go-main-6",
+      "atMs": 600000,
+      "speaker": "moussa",
+      "kind": "encourage",
+      "fr": "Beau rythme. Gardez la forme, pas la vitesse.",
+      "en": "Nice rhythm. Keep the shape, not the speed."
+    },
+    {
+      "id": "count-main-6-3",
+      "atMs": 648696,
+      "speaker": "moussa",
+      "kind": "countdown",
+      "fr": "3",
+      "en": "3"
+    },
+    {
+      "id": "count-main-6-2",
+      "atMs": 649696,
+      "speaker": "moussa",
+      "kind": "countdown",
+      "fr": "2",
+      "en": "2"
+    },
+    {
+      "id": "count-main-6-1",
+      "atMs": 650696,
+      "speaker": "moussa",
+      "kind": "countdown",
+      "fr": "1",
+      "en": "1"
+    },
+    {
+      "id": "rest-main-6",
+      "atMs": 652196,
+      "speaker": "moussa",
+      "kind": "rest",
+      "fr": "Repos. Ensuite : Tirage debout.",
+      "en": "Rest. Next: Standing row."
+    },
+    {
+      "id": "name-main-9",
+      "atMs": 697456,
+      "speaker": "moussa",
+      "kind": "name",
+      "fr": "Dans cinq secondes : Tirage debout.",
+      "en": "In five seconds: Standing row."
+    },
+    {
+      "id": "posture-main-9",
+      "atMs": 703956,
+      "speaker": "moussa",
+      "kind": "posture",
+      "fr": "Poitrine ouverte.",
+      "en": "Chest open."
+    },
+    {
+      "id": "go-main-9",
+      "atMs": 754152,
+      "speaker": "moussa",
+      "kind": "encourage",
+      "fr": "Beau rythme. Gardez la forme, pas la vitesse.",
+      "en": "Nice rhythm. Keep the shape, not the speed."
+    },
+    {
+      "id": "count-main-9-3",
+      "atMs": 802848,
+      "speaker": "moussa",
+      "kind": "countdown",
+      "fr": "3",
+      "en": "3"
+    },
+    {
+      "id": "count-main-9-2",
+      "atMs": 803848,
+      "speaker": "moussa",
+      "kind": "countdown",
+      "fr": "2",
+      "en": "2"
+    },
+    {
+      "id": "count-main-9-1",
+      "atMs": 804848,
+      "speaker": "moussa",
+      "kind": "countdown",
+      "fr": "1",
+      "en": "1"
+    },
+    {
+      "id": "rest-main-9",
+      "atMs": 806348,
+      "speaker": "moussa",
+      "kind": "rest",
+      "fr": "Repos. Ensuite : Planche sur les genoux.",
+      "en": "Rest. Next: Knee plank."
+    },
+    {
+      "id": "name-main-12",
+      "atMs": 851608,
+      "speaker": "moussa",
+      "kind": "name",
+      "fr": "Dans cinq secondes : Planche sur les genoux.",
+      "en": "In five seconds: Knee plank."
+    },
+    {
+      "id": "posture-main-12",
+      "atMs": 858108,
+      "speaker": "moussa",
+      "kind": "posture",
+      "fr": "Poussez le sol avec les avant-bras.",
+      "en": "Push the floor away with the forearms."
+    },
+    {
+      "id": "go-main-12",
+      "atMs": 908304,
+      "speaker": "moussa",
+      "kind": "encourage",
+      "fr": "Beau rythme. Gardez la forme, pas la vitesse.",
+      "en": "Nice rhythm. Keep the shape, not the speed."
+    },
+    {
+      "id": "name-cooldown-0",
+      "atMs": 955000,
+      "speaker": "moussa",
+      "kind": "name",
+      "fr": "Dans cinq secondes : Superman au sol.",
+      "en": "In five seconds: Superman."
+    },
+    {
+      "id": "count-main-12-3",
+      "atMs": 957000,
+      "speaker": "moussa",
+      "kind": "countdown",
+      "fr": "3",
+      "en": "3"
+    },
+    {
+      "id": "count-main-12-2",
+      "atMs": 958000,
+      "speaker": "moussa",
+      "kind": "countdown",
+      "fr": "2",
+      "en": "2"
+    },
+    {
+      "id": "count-main-12-1",
+      "atMs": 959000,
+      "speaker": "moussa",
+      "kind": "countdown",
+      "fr": "1",
+      "en": "1"
+    },
+    {
+      "id": "posture-cooldown-0",
+      "atMs": 961500,
+      "speaker": "moussa",
+      "kind": "posture",
+      "fr": "Front vers le sol, nuque longue.",
+      "en": "Forehead toward the floor, neck long."
+    },
+    {
+      "id": "go-cooldown-0",
+      "atMs": 1003110,
+      "speaker": "moussa",
+      "kind": "encourage",
+      "fr": "Beau rythme. Gardez la forme, pas la vitesse.",
+      "en": "Nice rhythm. Keep the shape, not the speed."
+    },
+    {
+      "id": "count-cooldown-0-3",
+      "atMs": 1043220,
+      "speaker": "moussa",
+      "kind": "countdown",
+      "fr": "3",
+      "en": "3"
+    },
+    {
+      "id": "count-cooldown-0-2",
+      "atMs": 1044220,
+      "speaker": "moussa",
+      "kind": "countdown",
+      "fr": "2",
+      "en": "2"
+    },
+    {
+      "id": "count-cooldown-0-1",
+      "atMs": 1045220,
+      "speaker": "moussa",
+      "kind": "countdown",
+      "fr": "1",
+      "en": "1"
+    },
+    {
+      "id": "rest-cooldown-0",
+      "atMs": 1046720,
+      "speaker": "moussa",
+      "kind": "rest",
+      "fr": "Repos. Ensuite : Étoile debout.",
+      "en": "Rest. Next: Standing star."
+    },
+    {
+      "id": "name-cooldown-3",
+      "atMs": 1108780,
+      "speaker": "moussa",
+      "kind": "name",
+      "fr": "Dans cinq secondes : Étoile debout.",
+      "en": "In five seconds: Standing star."
+    },
+    {
+      "id": "posture-cooldown-3",
+      "atMs": 1115280,
+      "speaker": "moussa",
+      "kind": "posture",
+      "fr": "Les deux pieds restent au sol.",
+      "en": "Both feet stay down."
+    },
+    {
+      "id": "go-cooldown-3",
+      "atMs": 1156890,
+      "speaker": "moussa",
+      "kind": "encourage",
+      "fr": "Beau rythme. Gardez la forme, pas la vitesse.",
+      "en": "Nice rhythm. Keep the shape, not the speed."
+    },
+    {
+      "id": "count-cooldown-3-3",
+      "atMs": 1197000,
+      "speaker": "moussa",
+      "kind": "countdown",
+      "fr": "3",
+      "en": "3"
+    },
+    {
+      "id": "count-cooldown-3-2",
+      "atMs": 1198000,
+      "speaker": "moussa",
+      "kind": "countdown",
+      "fr": "2",
+      "en": "2"
+    },
+    {
+      "id": "count-cooldown-3-1",
+      "atMs": 1199000,
+      "speaker": "moussa",
+      "kind": "countdown",
+      "fr": "1",
+      "en": "1"
+    }
+  ]
+}

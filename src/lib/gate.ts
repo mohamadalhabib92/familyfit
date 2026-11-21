@@ -1,8 +1,10 @@
 /**
  * Décision de route une fois le stockage lu.
- * Sans session, on va à la connexion. Jamais à l'onboarding :
- * sinon « Terminer » renvoie vers /, qui renvoie vers l'onboarding,
- * et la famille déjà enregistrée devient inaccessible.
+ * Les coachs et les séances sont dans l’app : on les ouvre sans compte,
+ * même si les clés Supabase sont présentes, même hors ligne.
+ * L’onboarding n’est demandé que pour une session déjà connectée
+ * dont la famille n’est pas prête. Sans session, on n’y va jamais :
+ * « Terminer » ne peut pas boucler.
  * signOut ne doit pas effacer family.
  */
 export type GateInput = {
@@ -16,9 +18,8 @@ export type GateInput = {
 export type GateDest = 'trial' | 'auth' | 'onboarding' | 'app';
 
 export function routeAfterReady(input: GateInput): GateDest {
-  if (!input.hasSession && !input.supabaseConfigured && !input.hasFamily && !input.trialDeclined) return 'trial';
-  if (!input.hasSession) return 'auth';
-  if (!input.hasFamily || !input.onboarded) return 'onboarding';
+  if (input.hasSession && (!input.hasFamily || !input.onboarded)) return 'onboarding';
+  if (!input.hasSession && !input.hasFamily && !input.supabaseConfigured && !input.trialDeclined) return 'trial';
   return 'app';
 }
 
@@ -46,10 +47,10 @@ export function signOut(state: LocalState): LocalState {
   return { ...state, session: null };
 }
 
-/** Bouton Terminer de l'onboarding : prefs mises à jour, puis la route. */
-export function finishOnboarding(state: LocalState): { state: LocalState; href: '/' | '/auth' } {
+/** Bouton Terminer de l'onboarding : prefs mises à jour, puis l’accueil. Le compte reste facultatif. */
+export function finishOnboarding(state: LocalState): { state: LocalState; href: '/' } {
   const next: LocalState = { ...state, onboarded: true, trialDeclined: true, trialMode: false };
-  return { state: next, href: next.session ? '/' : '/auth' };
+  return { state: next, href: '/' };
 }
 
 /** /onboarding?replace=1 sans session et sans Supabase renvoie à la connexion. */
@@ -72,16 +73,16 @@ export function runGateSelfTests(): { name: string; ok: boolean }[] {
   check('avant déconnexion, l’app est ouverte', routeAfterReady(toGate(state)) === 'app');
   state = signOut(state);
   check('la déconnexion garde la même famille', state.session === null && state.family === family);
-  check('après déconnexion, l’écran est la connexion', routeAfterReady(toGate(state)) === 'auth');
+  check('après déconnexion, l’accueil reste ouvert hors ligne', routeAfterReady(toGate(state)) === 'app');
   check(
     'onboarding?replace=1 sans session locale va vers /auth',
     onboardingReplaceTarget(state, true) === '/auth',
   );
   const done = finishOnboarding(state);
-  check('terminer sans session va vers /auth', done.href === '/auth');
+  check('terminer sans session revient à l’accueil', done.href === '/');
   check(
-    'après terminer, on reste sur la connexion et la famille est là',
-    routeAfterReady(toGate(done.state)) === 'auth' && done.state.family === family,
+    'après terminer, l’app s’ouvre et la famille est là',
+    routeAfterReady(toGate(done.state)) === 'app' && done.state.family === family,
   );
 
   check(
@@ -89,8 +90,12 @@ export function runGateSelfTests(): { name: string; ok: boolean }[] {
     routeAfterReady({ supabaseConfigured: false, hasSession: false, hasFamily: false, onboarded: false, trialDeclined: false }) === 'trial',
   );
   check(
-    'clés présentes et pas de session : /auth',
-    routeAfterReady({ supabaseConfigured: true, hasSession: false, hasFamily: false, onboarded: false, trialDeclined: false }) === 'auth',
+    'clés présentes et pas de session : l’accueil, sans compte',
+    routeAfterReady({ supabaseConfigured: true, hasSession: false, hasFamily: false, onboarded: false, trialDeclined: false }) === 'app',
+  );
+  check(
+    'famille déjà là, sans session : pas de boucle d’onboarding',
+    routeAfterReady({ supabaseConfigured: true, hasSession: false, hasFamily: true, onboarded: true, trialDeclined: true }) === 'app',
   );
   check(
     'session sans famille : onboarding',

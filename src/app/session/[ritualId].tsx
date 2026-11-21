@@ -1,6 +1,6 @@
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, Text, useWindowDimensions, View } from 'react-native';
 import { useData } from '@/lib/data';
 import { todayISO } from '@/lib/dates';
 import { HEALTH_DISCLAIMER } from '@/lib/health';
@@ -24,6 +24,8 @@ export default function SessionScreen() {
     setSessions((l) => (l.some((x) => x.id === fin.id) ? l.map((x) => (x.id === fin.id ? fin : x)) : [...l, fin]));
     router.back();
   };
+  const { fontScale } = useWindowDimensions();
+  const target = Math.max(48, Math.round(44 * (fontScale > 0 ? fontScale : 1)));
   const pct = r.items.length ? s.done.length / r.items.length : 0;
   return (
     <Screen>
@@ -37,7 +39,7 @@ export default function SessionScreen() {
         {r.items.map((it) => {
           const on = s.done.includes(it);
           return (
-            <Pressable key={it} onPress={() => toggle('done', it)} accessibilityRole="checkbox" accessibilityState={{ checked: on }} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 48 }}>
+            <Pressable key={it} onPress={() => toggle('done', it)} accessibilityRole="checkbox" accessibilityLabel={it} accessibilityState={{ checked: on }} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: target }}>
               <Ionicons name={on ? 'checkmark-circle' : 'ellipse-outline'} size={26} color={on ? t.success : t.muted} />
               <Text style={{ color: t.text, fontSize: 16, textDecorationLine: on ? 'line-through' : 'none', flex: 1 }}>{it}</Text>
             </Pressable>
@@ -53,8 +55,8 @@ export default function SessionScreen() {
         {MOODS.map((e, i) => {
           const v = (i + 1) as Session['mood'];
           return (
-            <Pressable key={e} onPress={() => setS((x) => ({ ...x, mood: x.mood === v ? undefined : v }))} accessibilityLabel={`Humeur ${i + 1} sur 5`}
-              style={{ width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center', backgroundColor: s.mood === v ? t.surfaceAlt : 'transparent', borderWidth: s.mood === v ? 2 : 0, borderColor: t.primary }}>
+            <Pressable key={e} onPress={() => setS((x) => ({ ...x, mood: x.mood === v ? undefined : v }))} accessibilityLabel={`Humeur ${i + 1} sur 5`} accessibilityRole="button"
+              style={{ width: target, height: target, borderRadius: target / 2, alignItems: 'center', justifyContent: 'center', backgroundColor: s.mood === v ? t.surfaceAlt : 'transparent', borderWidth: s.mood === v ? 2 : 0, borderColor: t.primary }}>
               <Text style={{ fontSize: 24 }}>{e}</Text>
             </Pressable>
           );
