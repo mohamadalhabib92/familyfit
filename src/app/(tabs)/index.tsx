@@ -4,7 +4,7 @@ import { Pressable, Text, View } from 'react-native';
 import { EventRow } from '@/components/EventRow';
 import { ExampleLists } from '@/components/ExampleLists';
 import { useData } from '@/lib/data';
-import { markDiagnosticUnlocked, useSecretTap } from '@/lib/diagnosticAccess';
+import { openDevSurface, useSecretTap } from '@/lib/diagnosticAccess';
 import { dayLabel, todayISO } from '@/lib/dates';
 import { conflictsFor, occurrences } from '@/lib/events';
 import { encouragement, weekProgress } from '@/lib/goals';
@@ -19,9 +19,10 @@ export default function Today() {
   const { family, me, events, rituals, sessions, goals, activities, prefs, remoteError, setPrefs } = useData();
   const router = useRouter();
   const unlock = useSecretTap(() => {
-    markDiagnosticUnlocked();
-    setPrefs((p) => ({ ...p, devConfigUnlocked: true }));
-    router.push('/config');
+    openDevSurface(() => {
+      setPrefs((p) => ({ ...p, devConfigUnlocked: true }));
+      router.push('/config');
+    });
   });
   const today = todayISO();
   const occ = occurrences(events, today, 1);

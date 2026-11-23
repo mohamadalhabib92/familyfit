@@ -1,4 +1,7 @@
 import { useRef } from 'react';
+import { devBuild, showDevSurfaces } from '@/lib/releaseSurface';
+
+export { devBuild, showDevSurfaces };
 
 /**
  * L'écran Diagnostic n'est pas un écran produit.
@@ -20,6 +23,13 @@ export function clearDiagnosticMemory(): void {
 
 export function diagnosticUnlocked(persisted: boolean): boolean {
   return typeof __DEV__ !== 'undefined' && __DEV__ ? true : persisted || memoryUnlocked;
+}
+
+/** En release, le geste ne ouvre pas le diagnostic. Le code reste pour le développement. */
+export function openDevSurface(open: () => void): void {
+  if (!showDevSurfaces(devBuild())) return;
+  markDiagnosticUnlocked();
+  open();
 }
 
 export function useSecretTap(onUnlock: () => void, need = 7) {

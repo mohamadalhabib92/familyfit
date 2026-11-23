@@ -37,11 +37,20 @@ ok('pas d’haptique TV, réduit, ou réglage coupé', !haptics.shouldPulse(true
 const reach = await load('src/lib/reachability.ts', 'reachability.mjs');
 ok('hors ligne seulement si la connexion est fausse', reach.isOffline(false) && !reach.isOffline(true) && !reach.isOffline(null) && !reach.isOffline(undefined));
 
+const focusMod = await load('src/lib/tvFocus.ts', 'tvFocus.mjs');
+ok('échelle 1,05 seulement au focus', focusMod.tvFocusScale(true, false) === 1.05 && focusMod.tvFocusScale(true, true) === 1 && focusMod.tvFocusScale(false, false) === 1);
+ok('bord cuivre 3 pt au focus', focusMod.tvFocusBorderWidth(true) === 3 && focusMod.tvFocusBorderWidth(false) === 2);
+ok('rail vide non monté', focusMod.shouldMountFocusRail(0) === false && focusMod.shouldMountFocusRail(Number.NaN) === false && focusMod.focusRail([null, undefined]).length === 0);
+ok('rail avec éléments monté', focusMod.shouldMountFocusRail(2) && focusMod.focusRail(['a', null, 'b']).join(',') === 'a,b');
+const release = await load('src/lib/releaseSurface.ts', 'release.mjs');
+ok('surfaces dev cachées en release', release.showDevSurfaces(false) === false && release.showDevSurfaces(true) === true);
+
 const stage = read('src/components/moves/DemoStage.tsx');
 ok('lecteur sans plaque #1D2522', !stage.includes('#1D2522') && stage.includes('surfaceAlt') && stage.includes('videoPlaybackFailed'));
 ok('boundary qui remonte l’arbre', read('src/ui/ErrorBoundary.tsx').includes('attempt: state.attempt + 1'));
 const focus = read('src/components/tv/focus.tsx');
-ok('barre de focus salon', focus.includes('width: 10') && focus.includes('focusRing') && focus.includes('useReduceMotion'));
+ok('focus salon : crème, encre, cuivre, onFocus', focus.includes('onFocus') && focus.includes('onBlur') && focus.includes('TV_FOCUS_CREAM') && focus.includes('TV_FOCUS_INK') && focus.includes('TvRail') && focus.includes('shouldMountFocusRail'));
+ok('diagnostic absent de la release', read('src/app/config.tsx').includes('showDevSurfaces') && read('src/app/auth.tsx').includes('showDevSurfaces') && read('src/app/(tabs)/family.tsx').includes('showDevSurfaces'));
 
 const i18n = read('src/lib/i18n.ts');
 for (const key of ['moves.videoFailed', 'net.offline', 'health.disclaimer']) {

@@ -1,6 +1,6 @@
 import { Text, View, useWindowDimensions } from 'react-native';
 import { CoachPhoto } from '@/components/moves/CoachPhoto';
-import { TvFocusable, TvText } from '@/components/tv/focus';
+import { TvFocusable, TvRail, TvText } from '@/components/tv/focus';
 import { ROSTER, type RosterCoachId } from '@/lib/coachLibrary';
 import { isTv } from '@/lib/platform';
 import { profileGrid } from '@/lib/tvSurface';
@@ -22,7 +22,7 @@ export function CoachPicker({
   return (
     <View style={{ gap: tv ? 16 : 8 }}>
       {tv ? <TvText size={28} weight="800">{label}</TvText> : <Muted>{label}</Muted>}
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: tv ? grid.gap : 12 }}>
+      <TvRail items={ROSTER} style={{ flexDirection: 'row', flexWrap: 'wrap', gap: tv ? grid.gap : 12 }}>
         {ROSTER.map((coach) => {
           const active = coach.id === selected;
           const caption = `${coach.nameFr}. ${coach.role}${coach.note ? `. ${coach.note}` : ''}`;
@@ -54,7 +54,7 @@ export function CoachPicker({
             </Card>
           );
         })}
-      </View>
+      </TvRail>
     </View>
   );
 }

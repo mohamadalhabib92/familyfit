@@ -1,9 +1,9 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Text, View, useWindowDimensions } from 'react-native';
+import { Text, useWindowDimensions } from 'react-native';
 import { CoachPicker } from '@/components/moves/CoachPicker';
 import { MovesFrame } from '@/components/moves/MovesFrame';
-import { TvFocusable, TvText } from '@/components/tv/focus';
+import { TvFocusable, TvRail, TvText } from '@/components/tv/focus';
 import { useData } from '@/lib/data';
 import { BODY_PARTS, rosterCoachId, type BodyPartId, type RosterCoachId } from '@/lib/coachLibrary';
 import { translate, type CopyKey } from '@/lib/i18n';
@@ -46,7 +46,7 @@ export default function MovePicker() {
           <Muted>{copy('seance.lead')}</Muted>
         </Card>
       )}
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: tv ? grid.gap : 12 }}>
+      <TvRail items={BODY_PARTS} style={{ flexDirection: 'row', flexWrap: 'wrap', gap: tv ? grid.gap : 12 }}>
         {BODY_PARTS.map((part, index) => {
           if (tv) {
             return (
@@ -69,7 +69,7 @@ export default function MovePicker() {
             </Card>
           );
         })}
-      </View>
+      </TvRail>
     </MovesFrame>
   );
 }

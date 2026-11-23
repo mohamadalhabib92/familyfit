@@ -22,7 +22,7 @@ ok('cibles 44 pt et Dynamic Type', kit.includes('useMinTarget') && kit.includes(
 ok('texte non plafonné dans le kit', !kit.includes('allowFontScaling={false}'));
 
 const focus = read('src/components/tv/focus.tsx');
-ok('salon : verre, anneau doré, réduire les animations', focus.includes('glassVeil') && focus.includes('#F6C453') && focus.includes('useReduceMotion') && !focus.includes('#E7E0D4'));
+ok('salon : verre hors focus, cuivre au focus, réduire les animations', focus.includes('glassVeil') && focus.includes('TV_FOCUS_COPPER') && focus.includes('TV_FOCUS_CREAM') && focus.includes('useReduceMotion') && focus.includes('onFocus') && focus.includes('onBlur') && !focus.includes('#E7E0D4') && !focus.includes('#F6C453'));
 ok('salon plein écran, sans mesure forcée', focus.includes('flex: 1') && !focus.includes('measureInWindow') && !focus.includes('1080'));
 
 const tvFiles = ['src/app/tv.tsx', 'src/components/tv/LivingHome.tsx', 'src/components/tv/LivingSession.tsx', 'src/components/tv/LivingSettings.tsx', 'src/app/moves/index.tsx', 'src/components/SessionPlayer.tsx', 'src/components/moves/MovesFrame.tsx', 'src/app/moves/[part].tsx'];
