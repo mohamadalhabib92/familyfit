@@ -4,7 +4,7 @@ import { Text, View } from 'react-native';
 import { IntensityBar } from '@/components/moves/IntensityBar';
 import { CoachPicker } from '@/components/moves/CoachPicker';
 import { MovesFrame } from '@/components/moves/MovesFrame';
-import { TvFocusable, TvText } from '@/components/tv/focus';
+import { TvFocusable, TvRail, TvText } from '@/components/tv/focus';
 import { useData } from '@/lib/data';
 import { rosterCoachId, type RosterCoachId } from '@/lib/coachLibrary';
 import { translate, type CopyKey } from '@/lib/i18n';
@@ -96,7 +96,7 @@ function Choice<T extends string | number>({
   return (
     <View style={{ gap: tv ? 12 : 8 }}>
       {tv ? <TvText size={28} weight="800">{label}</TvText> : <Text style={{ color: t.text, fontWeight: '700', fontSize: 18 }}>{label}</Text>}
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: tv ? 16 : 8 }}>
+      <TvRail items={options} style={{ flexDirection: 'row', flexWrap: 'wrap', gap: tv ? 16 : 8 }}>
         {options.map((option) => {
           const on = option.id === selected;
           if (tv) {
@@ -112,7 +112,7 @@ function Choice<T extends string | number>({
             </Card>
           );
         })}
-      </View>
+      </TvRail>
     </View>
   );
 }

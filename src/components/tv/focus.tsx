@@ -1,12 +1,15 @@
-import { useState, type ReactNode } from 'react';
+import { createContext, useContext, useState, type ReactNode } from 'react';
 import { BlurView } from 'expo-blur';
 import { Pressable, ScrollView, View, type PressableProps, type StyleProp, type ViewStyle } from 'react-native';
+import { focusRail, shouldMountFocusRail, TV_FOCUS_COPPER, TV_FOCUS_CREAM, TV_FOCUS_INK, tvFocusBorderWidth, tvFocusScale } from '@/lib/tvFocus';
 import { TV_SAFE } from '@/lib/tvSurface';
 import { useVisualEffects } from '@/ui/effects';
 import { glassVeil, glassWash, raisedShadow, useGlassLook } from '@/ui/glass';
 import { useReduceMotion } from '@/ui/motion';
 import { isDark } from '@/ui/ThemeProvider';
 import { theme as t } from '@/ui/theme';
+
+const FocusInk = createContext<string | null>(null);
 
 export { TV_SAFE };
 
@@ -52,12 +55,21 @@ export function TvTitle({ children }: { children: ReactNode }) {
 
 export function TvText({ children, size = 28, weight = '600', color = t.text }: { children: ReactNode; size?: number; weight?: '600' | '700' | '800'; color?: string }) {
   const { Text } = require('react-native') as typeof import('react-native');
-  return <Text style={{ color, fontSize: size, lineHeight: Math.round(size * 1.25), fontWeight: weight }}>{children}</Text>;
+  const ink = useContext(FocusInk);
+  return <Text style={{ color: ink ?? color, fontSize: size, lineHeight: Math.round(size * 1.25), fontWeight: weight }}>{children}</Text>;
+}
+
+/** Rangée focusable. Vide : rien n’est monté, donc pas de contrôle à hauteur nulle. */
+export function TvRail({ items, children, style }: { items: readonly unknown[] | null | undefined; children: ReactNode; style?: StyleProp<ViewStyle> }) {
+  const kept = focusRail(items);
+  if (!shouldMountFocusRail(kept.length)) return null;
+  return <View style={style}>{children}</View>;
 }
 
 /**
- * Un seul habillage focusable. Focus : fond clair, bord épais, échelle 1,08, halo.
- * Hors focus : plus sombre. `preferred` ne s’applique qu’une fois, puis le relâche.
+ * Focus : fond crème, encre sombre, bord cuivre 3 pt, échelle 1,05, ombre.
+ * Hors focus : surface ou verre. `preferred` ne s’applique qu’une fois, puis le relâche.
+ * onFocus / onBlur suivent le crayon tvOS.
  */
 export function TvFocusable({
   children,
@@ -80,7 +92,7 @@ export function TvFocusable({
   const fx = useVisualEffects();
   const reduce = useReduceMotion();
   const dark = isDark();
-  const focusRing = '#F6C453';
+  const scale = tvFocusScale(focused, reduce);
   return (
     <Pressable
       accessibilityRole="button"
@@ -95,31 +107,34 @@ export function TvFocusable({
       onPress={onPress}
       style={[
         {
-          minHeight: 72,
           borderRadius: 22,
           paddingHorizontal: 22,
           paddingVertical: 16,
           justifyContent: 'center',
-          overflow: 'hidden',
+          overflow: focused ? 'visible' : 'hidden',
           opacity: 1,
-          transform: [{ scale: focused ? 1.08 : 1 }],
-          backgroundColor: glass ? 'transparent' : focused ? t.surfaceAlt : t.surface,
-          borderWidth: focused ? 6 : selected ? 4 : 2,
-          borderColor: focused ? focusRing : selected ? t.primary : t.border,
-          shadowColor: focused ? focusRing : dark ? '#000000' : '#1D2522',
-          shadowOpacity: focused ? 0.95 : 0.2,
-          shadowRadius: focused ? 28 : 10,
-          shadowOffset: { width: 0, height: focused ? 0 : 4 },
+          backgroundColor: glass ? 'transparent' : t.surface,
         },
-        reduce && { transform: [{ scale: 1 }] },
         !focused && !selected && raisedShadow(false, !reduce),
         style,
+        {
+          minHeight: 72,
+          borderWidth: tvFocusBorderWidth(focused),
+          borderColor: focused ? TV_FOCUS_COPPER : selected ? t.primary : t.border,
+          backgroundColor: focused ? TV_FOCUS_CREAM : glass ? 'transparent' : t.surface,
+          transform: [{ scale }],
+          shadowColor: focused ? TV_FOCUS_INK : dark ? '#000000' : '#1D2522',
+          shadowOpacity: focused ? 0.4 : 0.2,
+          shadowRadius: focused ? 18 : 10,
+          shadowOffset: { width: 0, height: focused ? 8 : 4 },
+          elevation: focused ? 12 : 2,
+        },
       ] as PressableProps['style']}
     >
-      {glass && fx.blur ? <BlurView intensity={fx.intensity} tint={dark ? 'dark' : 'light'} style={{ position: 'absolute', top: 0, right: 0, bottom: 0, left: 0 }} /> : null}
-      {glass ? <View pointerEvents="none" style={{ position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, backgroundColor: glassVeil() }} /> : null}
-      <View pointerEvents="none" style={{ position: 'absolute', top: 1, left: 16, right: 16, height: 6, borderRadius: 3, backgroundColor: focused ? 'rgba(255,255,255,0.55)' : dark ? 'rgba(255,255,255,0.16)' : 'rgba(255,255,255,0.45)' }} />
-      {children}
+      {glass && !focused && fx.blur ? <BlurView intensity={fx.intensity} tint={dark ? 'dark' : 'light'} style={{ position: 'absolute', top: 0, right: 0, bottom: 0, left: 0 }} /> : null}
+      {glass && !focused ? <View pointerEvents="none" style={{ position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, backgroundColor: glassVeil() }} /> : null}
+      {!focused ? <View pointerEvents="none" style={{ position: 'absolute', top: 1, left: 16, right: 16, height: 6, borderRadius: 3, backgroundColor: dark ? 'rgba(255,255,255,0.16)' : 'rgba(255,255,255,0.45)' }} /> : null}
+      <FocusInk.Provider value={focused ? TV_FOCUS_INK : null}>{children}</FocusInk.Provider>
     </Pressable>
   );
 }

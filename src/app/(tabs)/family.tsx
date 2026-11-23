@@ -3,7 +3,7 @@ import { Fragment, useEffect, useState } from 'react';
 import { Linking, Pressable, Text, View } from 'react-native';
 import { confirmAsk } from '@/lib/confirm';
 import { useData } from '@/lib/data';
-import { diagnosticUnlocked, markDiagnosticUnlocked, useSecretTap } from '@/lib/diagnosticAccess';
+import { devBuild, diagnosticUnlocked, openDevSurface, showDevSurfaces, useSecretTap } from '@/lib/diagnosticAccess';
 import { env } from '@/lib/config';
 import { downloadText } from '@/lib/download';
 import { dayCH, todayISO } from '@/lib/dates';
@@ -37,9 +37,10 @@ export default function FamilyTab() {
     });
   }, []);
   const unlock = useSecretTap(() => {
-    markDiagnosticUnlocked();
-    setPrefs((p) => ({ ...p, devConfigUnlocked: true }));
-    router.push('/config');
+    openDevSurface(() => {
+      setPrefs((p) => ({ ...p, devConfigUnlocked: true }));
+      router.push('/config');
+    });
   });
   const otherAdults = members.filter((m) => !m.isMe && !m.isMinor);
   const soleAdmin = me?.role === 'admin' && members.filter((m) => m.role === 'admin').length <= 1;
@@ -133,7 +134,7 @@ export default function FamilyTab() {
             void Linking.openURL(mail.configured && mail.value?.includes('@') ? `mailto:${mail.value}` : SUPPORT_PAGE);
           }}
         />
-        {diagnosticUnlocked(prefs.devConfigUnlocked) ? (
+        {showDevSurfaces(devBuild()) && diagnosticUnlocked(prefs.devConfigUnlocked) ? (
           <ListItem icon="settings-outline" title="Diagnostic" subtitle={supabaseConfigured ? 'Clés présentes' : 'Mode essai local'} onPress={() => router.push('/config')} />
         ) : null}
         <ListItem

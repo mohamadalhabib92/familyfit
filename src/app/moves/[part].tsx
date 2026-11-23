@@ -1,15 +1,16 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Text, View, useWindowDimensions } from 'react-native';
+import { Text, useWindowDimensions } from 'react-native';
 import { CoachPhoto } from '@/components/moves/CoachPhoto';
 import { CoachPicker } from '@/components/moves/CoachPicker';
 import { MovesFrame } from '@/components/moves/MovesFrame';
-import { TvFocusable, TvText } from '@/components/tv/focus';
+import { TvFocusable, TvRail, TvText } from '@/components/tv/focus';
 import { useData } from '@/lib/data';
 import {
   bodyPartById, exercisesFor, resolveDemo, rosterById, rosterCoachId, LEVEL_LABEL,
   type BodyPartId, type RosterCoachId,
 } from '@/lib/coachLibrary';
+import { focusRail } from '@/lib/tvFocus';
 import { translate, type CopyKey } from '@/lib/i18n';
 import { isTv } from '@/lib/platform';
 import { claimsPreferredFocus, profileGrid } from '@/lib/tvSurface';
@@ -36,7 +37,7 @@ export default function ExerciseList() {
       </MovesFrame>
     );
   }
-  const rows = exercisesFor(part.id as BodyPartId);
+  const rows = focusRail(exercisesFor(part.id as BodyPartId));
   const grid = profileGrid(window, rows.length);
   const open = (id: string) => {
     router.push({ pathname: '/moves/demo/[id]', params: { id, coach: coachId } });
@@ -44,7 +45,7 @@ export default function ExerciseList() {
   return (
     <MovesFrame title={part.title} subtitle={part.id === 'enfants' ? copy('moves.kidsNote') : part.blurb} backLabel={copy('moves.back')}>
       <CoachPicker selected={coachId} onSelect={setCoachId} label={copy('moves.coach')} />
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: tv ? grid.gap : 12 }}>
+      <TvRail items={rows} style={{ flexDirection: 'row', flexWrap: 'wrap', gap: tv ? grid.gap : 12 }}>
         {rows.map((exercise, index) => {
           const demo = resolveDemo(exercise, coachId);
           const shown = rosterById(demo.coachId);
@@ -75,7 +76,7 @@ export default function ExerciseList() {
             </Card>
           );
         })}
-      </View>
+      </TvRail>
     </MovesFrame>
   );
 }

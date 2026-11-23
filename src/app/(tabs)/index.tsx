@@ -4,13 +4,14 @@ import { Pressable, Text, View } from 'react-native';
 import { EventRow } from '@/components/EventRow';
 import { ExampleLists } from '@/components/ExampleLists';
 import { useData } from '@/lib/data';
-import { markDiagnosticUnlocked, useSecretTap } from '@/lib/diagnosticAccess';
+import { openDevSurface, useSecretTap } from '@/lib/diagnosticAccess';
 import { dayLabel, todayISO } from '@/lib/dates';
 import { conflictsFor, occurrences } from '@/lib/events';
 import { encouragement, weekProgress } from '@/lib/goals';
 import { formatHijri } from '@/lib/hijri';
 import { SLOT_LABEL, type Slot } from '@/lib/model';
 import { BodyPartGrid, CoachTeam, KidsSessionCard, openFilmedCoach, TodaySessionCard, WeekProgress } from '@/components/PracticeBlocks';
+import { OfflineNote } from '@/components/OfflineNote';
 import { Button, Card, Divider, Empty, Eyebrow, H1, H2, Muted, Notice, Row, Screen, Spacer } from '@/ui/kit';
 import { theme as t } from '@/ui/theme';
 
@@ -18,9 +19,10 @@ export default function Today() {
   const { family, me, events, rituals, sessions, goals, activities, prefs, remoteError, setPrefs } = useData();
   const router = useRouter();
   const unlock = useSecretTap(() => {
-    markDiagnosticUnlocked();
-    setPrefs((p) => ({ ...p, devConfigUnlocked: true }));
-    router.push('/config');
+    openDevSurface(() => {
+      setPrefs((p) => ({ ...p, devConfigUnlocked: true }));
+      router.push('/config');
+    });
   });
   const today = todayISO();
   const occ = occurrences(events, today, 1);
@@ -32,6 +34,7 @@ export default function Today() {
   return (
     <Screen>
       {remoteError ? <Notice tone="warning" title={remoteError} /> : null}
+      <OfflineNote />
       <Pressable onPress={unlock} accessibilityLabel={family?.name ?? 'FamilyFit'}>
         <Eyebrow>{family?.name || 'FamilyFit'}</Eyebrow>
       </Pressable>

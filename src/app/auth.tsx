@@ -2,7 +2,7 @@ import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { Pressable, Text, TextInput } from 'react-native';
 import { useData } from '@/lib/data';
-import { markDiagnosticUnlocked, useSecretTap, diagnosticUnlocked } from '@/lib/diagnosticAccess';
+import { devBuild, diagnosticUnlocked, openDevSurface, showDevSurfaces, useSecretTap } from '@/lib/diagnosticAccess';
 import { checkDemoOtp, isEmail, isPhone, makeDemoOtp, normContact, OtpError, sendOtp, supabaseConfigured, verifyOtp, type Channel, type DemoOtp } from '@/lib/supabase';
 import { uid } from '@/lib/storage';
 import { Button, Card, DemoBanner, Eyebrow, Field, H1, Muted, Notice, Row, Screen, Segmented, Spacer, styles } from '@/ui/kit';
@@ -13,10 +13,12 @@ const COOLDOWN = 30;
 export default function Auth() {
   const { setSession, setPrefs, prefs, session: current } = useData();
   const router = useRouter();
+  const dev = showDevSurfaces(devBuild());
   const unlock = useSecretTap(() => {
-    markDiagnosticUnlocked();
-    setPrefs((p) => ({ ...p, devConfigUnlocked: true }));
-    router.push('/config');
+    openDevSurface(() => {
+      setPrefs((p) => ({ ...p, devConfigUnlocked: true }));
+      router.push('/config');
+    });
   });
   const [ch, setCh] = useState<Channel>('email');
   const [contact, setContact] = useState('');
@@ -43,7 +45,10 @@ export default function Auth() {
     setBusy(true);
     try {
       if (supabaseConfigured) await sendOtp(c, ch);
-      else {
+      else if (!dev) {
+        setErr('La connexion par code n’est pas activée sur cette version. Continuez sans compte : les séances restent sur cet appareil.');
+        return;
+      } else {
         demo.current = makeDemoOtp(c);
         setDemoCode(demo.current.code);
       }
@@ -84,7 +89,7 @@ export default function Auth() {
       </Pressable>
       <Muted>Recevez un code à 6 chiffres. Aucune donnée n’est partagée hors de votre famille.</Muted>
       <Spacer />
-      {!supabaseConfigured ? <DemoBanner text="Mode démo : aucun e-mail ni SMS n’est envoyé. Le code est simulé et affiché ci-dessous." /> : null}
+      {dev && !supabaseConfigured ? <DemoBanner text="Mode démo : aucun e-mail ni SMS n’est envoyé. Le code est simulé et affiché ci-dessous." /> : null}
       {step === 'ask' ? (
         <>
           <Segmented options={[{ label: 'E-mail', value: 'email' as const }, { label: 'SMS', value: 'sms' as const }]} value={ch} onChange={(v) => { setCh(v); setErr(null); }} />
@@ -107,7 +112,7 @@ export default function Auth() {
         <>
           <Muted>Code envoyé à <Text style={{ color: t.text, fontWeight: '700' }}>{c}</Text></Muted>
           <Spacer h={8} />
-          {demoCode && !supabaseConfigured ? (
+          {dev && demoCode && !supabaseConfigured ? (
             <Card>
               <Muted style={{ fontSize: 12 }}>CODE DE DÉMONSTRATION (simulé, valable 10 min)</Muted>
               <Text selectable style={{ color: t.primary, fontSize: 30, fontWeight: '800', letterSpacing: 8 }}>{demoCode}</Text>
@@ -143,7 +148,7 @@ export default function Auth() {
           <Button small variant="ghost" title="Retour" onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))} />
         </>
       ) : null}
-      {diagnosticUnlocked(prefs.devConfigUnlocked) ? (
+      {dev && diagnosticUnlocked(prefs.devConfigUnlocked) ? (
         <>
           <Spacer h={20} />
           <Button small variant="ghost" icon="settings-outline" title="Diagnostic" onPress={() => router.push('/config')} />

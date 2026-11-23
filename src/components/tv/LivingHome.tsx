@@ -1,9 +1,10 @@
 import { useRouter } from 'expo-router';
 import { ScrollView, View, useWindowDimensions } from 'react-native';
+import { OfflineNote } from '@/components/OfflineNote';
 import { CoachAvatar } from '@/components/CoachAvatar';
 import { CoachPhoto } from '@/components/moves/CoachPhoto';
 import { IntensityBar } from '@/components/moves/IntensityBar';
-import { TvFocusable, TvText } from '@/components/tv/focus';
+import { TvFocusable, TvRail, TvText } from '@/components/tv/focus';
 import { useData } from '@/lib/data';
 import { todayISO } from '@/lib/dates';
 import { BODY_PARTS, ROSTER, rosterById, type RosterCoachId } from '@/lib/coachLibrary';
@@ -69,6 +70,7 @@ export function LivingHome({
             <TvText size={Math.min(64, Math.round(safe.width / 28))} weight="800">{title}</TvText>
             <TvText size={28} weight="800">{todayWorkout.title[prefs.locale === 'en' ? 'en' : 'fr']} · {todayWorkout.week}</TvText>
             <TvText size={28} color={t.muted}>{plan.minutes} {copy('seance.min')} · {copy(levelKey)} · {copy('home.offline')}</TvText>
+            <OfflineNote tv />
             <TvText size={24} color={t.text}>{copy('home.arc')}</TvText>
             <TvText size={24} weight="800">{timingCaption(plan)}</TvText>
           </View>
@@ -106,7 +108,7 @@ export function LivingHome({
             <TvText size={28} weight="800">{copy('tv.settings')}</TvText>
           </TvFocusable>
         </View>
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap }}>
+        <TvRail items={[...COACHES, ...ROSTER]} style={{ flexDirection: 'row', flexWrap: 'wrap', gap }}>
           {COACHES.map((coach) => (
             <TvFocusable
               key={coach.id}
@@ -126,19 +128,19 @@ export function LivingHome({
               <TvText size={18} color={t.muted}>{coach.note ?? coach.role}</TvText>
             </TvFocusable>
           ))}
-        </View>
+        </TvRail>
       </View>
 
       <View style={{ gap: 12 }}>
         <TvText size={32} weight="800">{copy('home.zones')}</TvText>
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: zoneGrid.gap }}>
+        <TvRail items={BODY_PARTS} style={{ flexDirection: 'row', flexWrap: 'wrap', gap: zoneGrid.gap }}>
           {BODY_PARTS.map((part) => (
             <TvFocusable key={part.id} label={part.title} onPress={() => openZone(part.id)} style={{ width: zoneGrid.cardWidth, minHeight: Math.max(110, Math.round(zoneGrid.cardHeight * 0.55)) }}>
               <TvText size={28} weight="800">{part.title}</TvText>
               <TvText size={18} color={t.muted}>{part.blurb}</TvText>
             </TvFocusable>
           ))}
-        </View>
+        </TvRail>
       </View>
     </ScrollView>
   );

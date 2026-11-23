@@ -1,7 +1,7 @@
 import { Redirect, useRouter } from 'expo-router';
 import { Text } from 'react-native';
 import { useData } from '@/lib/data';
-import { clearDiagnosticMemory, diagnosticUnlocked } from '@/lib/diagnosticAccess';
+import { clearDiagnosticMemory, devBuild, diagnosticUnlocked, showDevSurfaces } from '@/lib/diagnosticAccess';
 import { sentryConfigured } from '@/lib/sentry';
 import { SUPABASE_ANON_KEY, SUPABASE_URL, supabaseConfigured } from '@/lib/supabase';
 import { env } from '@/lib/config';
@@ -17,7 +17,7 @@ export default function Config() {
   const { ready, prefs, setPrefs } = useData();
   const router = useRouter();
   if (!ready) return <LoadingState />;
-  if (!diagnosticUnlocked(prefs.devConfigUnlocked)) return <Redirect href="/" />;
+  if (!showDevSurfaces(devBuild()) || !diagnosticUnlocked(prefs.devConfigUnlocked)) return <Redirect href="/" />;
   const support = env('EXPO_PUBLIC_SUPPORT_EMAIL', process.env.EXPO_PUBLIC_SUPPORT_EMAIL);
   const row = (k: string, ok: boolean) => (
     <Text key={k} style={{ color: t.text, marginBottom: 6 }}>{ok ? '✓' : '○'} {k} — {ok ? 'configuré' : 'non configuré'}</Text>

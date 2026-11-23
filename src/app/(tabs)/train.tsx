@@ -2,6 +2,7 @@ import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Text, View } from 'react-native';
 import { BodyPartGrid, CoachTeam, KidsSessionCard, openFilmedCoach, TodaySessionCard } from '@/components/PracticeBlocks';
+import { OfflineNote } from '@/components/OfflineNote';
 import { todayPlan, todayPlayParams } from '@/lib/homePractice';
 import { useData } from '@/lib/data';
 import { todayISO } from '@/lib/dates';
@@ -13,7 +14,7 @@ import { uid } from '@/lib/storage';
 import { useWideLayout } from '@/lib/platform';
 import {
   defaultAgeBand, EMPTY_FITNESS, guidedAllowed, leaderboard, ROUTINES, startOfWeekISO, streakEnding, weeklySeconds,
-  type AgeBand, type CoachId,
+  type CoachId,
 } from '@/lib/workoutEngine';
 import { Button, Card, Chip, Empty, H1, H2, Muted, Notice, Row, Screen, Spacer } from '@/ui/kit';
 import { theme as t } from '@/ui/theme';
@@ -42,6 +43,7 @@ export default function Train() {
     <Screen>
       <H1>{copy('train.title')}</H1>
       <Muted>{copy('train.lead')}</Muted>
+      <OfflineNote />
       <Spacer />
       <TodaySessionCard />
       <CoachTeam

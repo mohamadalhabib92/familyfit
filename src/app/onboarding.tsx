@@ -3,10 +3,9 @@ import { useEffect, useState } from 'react';
 import { Text, View } from 'react-native';
 import { confirmAsk } from '@/lib/confirm';
 import { useData } from '@/lib/data';
-import { todayISO } from '@/lib/dates';
-import { isTime } from '@/lib/dates';
+import { isTime, todayISO } from '@/lib/dates';
 import { CATEGORIES, RITUAL_TEMPLATES, ROLE_LABEL, type Category, type Invitation, type Role } from '@/lib/model';
-import { finishOnboarding, onboardingReplaceTarget } from '@/lib/gate';
+import { finishOnboarding, eventFamilyId, onboardingReplaceTarget } from '@/lib/gate';
 import { shareInvitation } from '@/lib/share';
 import { supabaseConfigured } from '@/lib/supabase';
 import { uid } from '@/lib/storage';
@@ -28,7 +27,7 @@ export default function Onboarding() {
   const [category, setCategory] = useState<Category>('family');
   const [start, setStart] = useState('19:00');
   const [err, setErr] = useState('');
-  const [t0] = useState(Date.now());
+  const [t0] = useState(() => Date.now());
   const [sec, setSec] = useState(0);
   useEffect(() => { const id = setInterval(() => setSec(Math.round((Date.now() - t0) / 1000)), 1000); return () => clearInterval(id); }, [t0]);
 
@@ -66,7 +65,12 @@ export default function Onboarding() {
             if (!fname.trim() || !myName.trim()) return setErr('Indiquez le nom de la famille et votre prénom.');
             setErr('');
             const run = async () => {
-              await createFamily(fname.trim(), myName.trim(), withDemo);
+              const ok = await createFamily(fname.trim(), myName.trim(), withDemo);
+              if (!ok) {
+                setErr('La famille n’a pas pu être enregistrée. Réessayez.');
+                return;
+              }
+              setErr('');
               setStep(1);
             };
             if (replacing && family) confirmAsk('La famille d’exemple sera remplacée sur cet appareil. Continuer ?', () => void run());
@@ -107,15 +111,19 @@ export default function Onboarding() {
           {err ? <Notice tone="danger" title={err} /> : null}
           <Button title="Ajouter et terminer" icon="checkmark" onPress={() => {
             if (!title.trim() || !isTime(start)) return setErr('Titre et heure (HH:MM) requis.');
+            const familyId = eventFamilyId(family);
+            if (!familyId) return setErr('Enregistrez d’abord la famille, puis réessayez.');
             const [h, m] = start.split(':').map(Number);
             const end = `${String(Math.min(23, h + 1)).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-            setEvents((l) => [...l, { id: uid('ev_'), familyId: family!.id, title: title.trim(), category, date: todayISO(), start, end, allDay: false, memberIds: [], recurrence: 'none', notes: '' }]);
+            setEvents((l) => [...l, { id: uid('ev_'), familyId, title: title.trim(), category, date: todayISO(), start, end, allDay: false, memberIds: [], recurrence: 'none', notes: '' }]);
             finish();
           }} />
           <Spacer h={8} />
           <Button variant="secondary" icon="repeat-outline" title="Plutôt : rituel « Bilan du soir »" onPress={() => {
+            const familyId = eventFamilyId(family);
+            if (!familyId) return setErr('Enregistrez d’abord la famille, puis réessayez.');
             const tpl = RITUAL_TEMPLATES[2];
-            setRituals((l) => [...l, { ...tpl, id: uid('rit_'), familyId: family!.id, template: false, reminder: '20:00' }]);
+            setRituals((l) => [...l, { ...tpl, id: uid('rit_'), familyId, template: false, reminder: '20:00' }]);
             finish();
           }} />
           <Button variant="ghost" title="Passer" onPress={finish} />

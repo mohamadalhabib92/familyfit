@@ -17,6 +17,8 @@ export default function SessionScreen() {
   const today = todayISO();
   const prev = sessions.find((s) => s.ritualId === ritualId && s.date === today);
   const [s, setS] = useState<Session>(() => prev ?? { id: uid('ses_'), familyId: family?.id ?? '', ritualId: ritualId ?? '', date: today, slot: r?.slot ?? 'evening', done: [], participants: me ? [me.id] : [] });
+  const { fontScale } = useWindowDimensions();
+  const target = Math.max(48, Math.round(44 * (fontScale > 0 ? fontScale : 1)));
   if (!r) return <Screen><Empty icon="help-circle-outline" title="Rituel introuvable" action={<Button small title="Retour" onPress={() => router.back()} />} /></Screen>;
   const toggle = (k: 'done' | 'participants', v: string) => setS((x) => ({ ...x, [k]: x[k].includes(v) ? x[k].filter((y) => y !== v) : [...x[k], v] }));
   const persist = (complete: boolean) => {
@@ -24,8 +26,6 @@ export default function SessionScreen() {
     setSessions((l) => (l.some((x) => x.id === fin.id) ? l.map((x) => (x.id === fin.id ? fin : x)) : [...l, fin]));
     router.back();
   };
-  const { fontScale } = useWindowDimensions();
-  const target = Math.max(48, Math.round(44 * (fontScale > 0 ? fontScale : 1)));
   const pct = r.items.length ? s.done.length / r.items.length : 0;
   return (
     <Screen>

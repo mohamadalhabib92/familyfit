@@ -28,6 +28,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npx tsc --noEmit
+      - run: npm test
       - run: npm run build:web
         env:
           # Variables de dépôt (Settings > Secrets and variables > Actions > Variables). Vide = mode démo.
